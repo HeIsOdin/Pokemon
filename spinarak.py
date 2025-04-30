@@ -21,7 +21,7 @@ def get_ebay_token(client_id: str, client_secret: str) -> str:
     response = requests.post(url, headers=headers, data=data, auth=(client_id, client_secret))
     
     if response.status_code != 200:
-        raise Exception(f"❌ Failed to retrieve token: {response.status_code} - {response.text}")
+        raise Exception(f"\033[31m[ERROR] Failed to retrieve token: {response.status_code} - {response.text}\033[0m")
     
     return response.json()['access_token']
 
@@ -46,7 +46,7 @@ def search_pokemon_cards(access_token: str, query="Evolution Box error Wartortle
     response = requests.get(search_url, headers=headers, params=params)
     
     if response.status_code != 200:
-        raise Exception(f"❌ Search failed: {response.status_code} - {response.text}")
+        raise Exception(f"\033[31m[ERROR] Search failed: {response.status_code} - {response.text}\033[0m")
     
     return response.json()
 
@@ -68,9 +68,9 @@ def download_image(image_url: str, title: str, save_dir='images') -> str:
     if response.status_code == 200:
         with open(filepath, 'wb') as f:
             f.write(response.content)
-        print(f"[✓] Saved: {filepath}")
+        print(f"\033[32m[SUCCESS] Saved: {filepath}\033[0m")
     else:
-        print(f"[✗] Failed to download image: {image_url}")
+        print(f"\033[31m[ERROR] Failed to download image: {image_url}\033[0m")
     
     return filepath
 
@@ -83,19 +83,19 @@ if __name__ == "__main__":
     CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 
     if not CLIENT_ID or not CLIENT_SECRET:
-        raise EnvironmentError("❌ CLIENT_ID or CLIENT_SECRET not set in environment.")
+        raise EnvironmentError("\033[31m[ERROR] CLIENT_ID or CLIENT_SECRET not set in environment.\033[0m")
 
-    print("[INFO] Authenticating with eBay...")
+    print("\033[34m[INFO] Authenticating with eBay...\033[0m")
     token = get_ebay_token(CLIENT_ID, CLIENT_SECRET)
 
-    print("[INFO] Searching for Pokémon card listings...")
+    print("\033[34m[INFO] Searching for Pokémon card listings...\033[0m")
     results = search_pokemon_cards(token)
 
-    print("[INFO] Downloading listing images...")
+    print("\033[34m[INFO] Downloading listing images...\033[0m")
     for item in results.get('itemSummaries', []):
         title = item.get('title', 'no_title')
         image_url = item.get('image', {}).get('imageUrl')
         if image_url:
             download_image(image_url, title)
         else:
-            print(f"[!] No image found for: {title}")
+            print(f"\033[31m[ERROR] No image found for: {title}\033[0m")
