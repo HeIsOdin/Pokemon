@@ -1,0 +1,14 @@
+Image Name,Notes,Comments
+Pokemon_Wartortle_Evolution_Box_Error_Ba.jpg,OK,Almost perfect placement and the image quality is too low
+Wartortle_42-102_-_Pokemon_Card_-_Base_S.jpg,Missing Aligned Image,More than 4 corners were detected by OpenCV
+Pokemon_Wartortle_Evolution_Box_Error_Po.jpg,OK,Perfect placement but the image quality is low
+Pokémon_TCG_Base_Set_Unlimited_Wartortle.jpg,OK,"I believe that the ""One Piece"" background caused problems"
+1999_pokemon_card_Wartortle_evolution_bo.jpg,OK,Contour was drawn around the wrong detail
+POKEMON_TCG__WARTORTLE_EVOLUTION_BOX_ERR.jpg,Missing Aligned Image,More than 4 corners were detected by OpenCV
+Wartortle_42-102_Base_Uncommon_Portugues.jpg,OK,More than 4 corners were detected by OpenCV
+1999_Wartortle_Evo_Box_Error_Misprint_Po.jpg,OK,Perfect placement but the image quality is low
+Base_Set_Wartortle_Evo._Box_Error_and_Ch.jpg,OK,Picked the wrong card out of a set of three
+Wartortle_Evolution_Box_ERROR_Base_Set_4.jpg,Missing Aligned Image,Perfect placement but the image quality is low
+Pokémon_Wartortle_Evolution_Box_Error_Ba.jpg,Missing Aligned Image,Pefect placement but the image quality is low
+1999_Pokémon_Wartortle_Evolution_Box_ERR.jpg,OK,Contour was not perfectly drawn so the ROI was off
+EVOLUTION_BOX_ERROR_-_Wartortle_42-102_-.jpg,OK,Perfect placement but the image quality is low
