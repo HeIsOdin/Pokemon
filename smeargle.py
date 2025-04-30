@@ -1,93 +1,91 @@
 """
-smeagle.py — Aligns and crops a Pokémon card image to extract the evolution portrait region.
+smeagle.py — Aligns and crops Pokémon card images from a folder, extracting the evolution portrait region.
 
-- Finds the card in the image using edge + contour detection
+For each image in the `images/` directory:
+- Finds the card using edge + contour detection
 - Applies a perspective warp to deskew the card
-- Extracts a region in the top-left (evolution portrait area)
+- Extracts the portrait region in the top-left
+- Saves debug images to `adjusted-images/<image-name>/`
 """
 
 import cv2
 import numpy as np
+import os
+from pathlib import Path
 
 # -------------------------------
-# Load and preprocess image
+# Configuration
 # -------------------------------
-img = cv2.imread("images/best_picture.jpg")
-assert img is not None, "❌ Could not load image. Check the path."
-
-print("[INFO] Original image shape:", img.shape)
-
-# Convert to grayscale and apply blur
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-blur = cv2.GaussianBlur(gray, (5, 5), 0)
-
-# Edge detection
-edges = cv2.Canny(blur, 50, 150)
-cv2.imshow("Edges", edges)
-cv2.waitKey(0)
+INPUT_DIR = "images"
+OUTPUT_DIR = "adjusted-images"
+CARD_WIDTH, CARD_HEIGHT = 480, 680
+ROI_BOX = (40, 45, 60, 60)  # (x, y, width, height)
 
 # -------------------------------
-# Detect card contour
-# -------------------------------
-contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-print(f"[INFO] Found {len(contours)} contours.")
-
-# Use the largest contour as the card
-card_contour = max(contours, key=cv2.contourArea)
-peri = cv2.arcLength(card_contour, True)
-approx = cv2.approxPolyDP(card_contour, 0.02 * peri, True)
-
-if len(approx) != 4:
-    raise Exception(f"❌ Could not detect card corners — found {len(approx)} points.")
-
-pts = approx.reshape(4, 2)
-print("[INFO] Card corner points:\n", pts)
-
-# Visualize the detected contour
-debug_img = img.copy()
-cv2.drawContours(debug_img, [approx], -1, (0, 255, 0), 3)
-cv2.imshow("Detected Card Outline", debug_img)
-cv2.waitKey(0)
-
-# -------------------------------
-# Order corner points (TL, TR, BR, BL)
+# Utility: Order Points
 # -------------------------------
 def order_points(pts):
     rect = np.zeros((4, 2), dtype="float32")
     s = pts.sum(axis=1)
     rect[0] = pts[np.argmin(s)]      # Top-left
     rect[2] = pts[np.argmax(s)]      # Bottom-right
-
     diff = np.diff(pts, axis=1)
     rect[1] = pts[np.argmin(diff)]   # Top-right
     rect[3] = pts[np.argmax(diff)]   # Bottom-left
     return rect
 
-rect = order_points(pts)
-print("[INFO] Ordered points:\n", rect)
-
 # -------------------------------
-# Warp card to upright rectangle
+# Process Each Image
 # -------------------------------
-(w, h) = (480, 680)  # Target size for aligned card
-dst = np.array([[0, 0], [w-1, 0], [w-1, h-1], [0, h-1]], dtype="float32")
+for file in os.listdir(INPUT_DIR):
+    if not file.lower().endswith(('.jpg', '.jpeg', '.png')):
+        continue
 
-M = cv2.getPerspectiveTransform(rect, dst)
-aligned = cv2.warpPerspective(img, M, (w, h), flags=cv2.INTER_LANCZOS4)  # Higher-quality interpolation
+    image_path = os.path.join(INPUT_DIR, file)
+    image_name = Path(file).stem
+    save_path = os.path.join(OUTPUT_DIR, image_name)
+    os.makedirs(save_path, exist_ok=True)
 
-cv2.imshow("Aligned Card", aligned)
-cv2.waitKey(0)
+    print(f"\033[34m[INFO] Processing {file}...\033[0m")
 
-# -------------------------------
-# Crop evolution portrait region
-# -------------------------------
-x, y, w_roi, h_roi = 40, 45, 60, 60  # Fine-tuned based on aligned image layout
-portrait = aligned[y:y+h_roi, x:x+w_roi]
+    # Load and preprocess
+    img = cv2.imread(image_path)
+    assert img is not None, f"\033[31m[ERROR] Could not load image: {image_path}\033[0m"
+    cv2.imwrite(os.path.join(save_path, "1_original.jpg"), img)
 
-# Draw rectangle on aligned image
-cv2.rectangle(aligned, (x, y), (x+w_roi, y+h_roi), (0, 0, 255), 2)
-cv2.imshow("Aligned Card with ROI", aligned)
-cv2.imshow("Evolution Portrait", portrait)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blur, 50, 150)
 
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    cv2.imwrite(os.path.join(save_path, "2_edges.jpg"), edges)
+
+    # Detect contours
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    card_contour = max(contours, key=cv2.contourArea)
+    peri = cv2.arcLength(card_contour, True)
+    approx = cv2.approxPolyDP(card_contour, 0.02 * peri, True)
+
+    if len(approx) != 4:
+        print(f"\033[33m[WARNING] Skipping {file} — could not detect card corners.\033[0m")
+        continue
+
+    pts = approx.reshape(4, 2)
+    rect = order_points(pts)
+
+    # Visualize and save contour overlay
+    debug_img = img.copy()
+    cv2.drawContours(debug_img, [approx], -1, (0, 255, 0), 3)
+    cv2.imwrite(os.path.join(save_path, "3_contour.jpg"), debug_img)
+
+    # Perspective transform
+    dst = np.array([[0, 0], [CARD_WIDTH - 1, 0], [CARD_WIDTH - 1, CARD_HEIGHT - 1], [0, CARD_HEIGHT - 1]], dtype="float32")
+    M = cv2.getPerspectiveTransform(rect, dst)
+    aligned = cv2.warpPerspective(img, M, (CARD_WIDTH, CARD_HEIGHT), flags=cv2.INTER_LANCZOS4)
+    cv2.imwrite(os.path.join(save_path, "4_aligned.jpg"), aligned)
+
+    # Extract ROI (evolution portrait box)
+    x, y, w_roi, h_roi = ROI_BOX
+    roi = aligned[y:y+h_roi, x:x+w_roi]
+    cv2.imwrite(os.path.join(save_path, "5_roi.jpg"), roi)
+
+    print(f"\033[32m[SUCCESS] Saved debug images for {file} to {save_path}\033[0m")
