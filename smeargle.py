@@ -5,7 +5,7 @@ For each image in the `images/` directory:
 - Finds the card using edge + contour detection
 - Applies a perspective warp to deskew the card
 - Extracts the portrait region in the top-left
-- Saves debug images to `adjusted-images/<image-name>/`
+- Saves debug images to `adjusted_images/<image-name>/`
 """
 
 import cv2
@@ -17,7 +17,7 @@ from pathlib import Path
 # Configuration
 # -------------------------------
 INPUT_DIR = "images"
-OUTPUT_DIR = "adjusted-images"
+OUTPUT_DIR = "adjusted_images"
 CARD_WIDTH, CARD_HEIGHT = 480, 680
 ROI_BOX = (40, 45, 60, 60)  # (x, y, width, height)
 
@@ -83,9 +83,13 @@ for file in os.listdir(INPUT_DIR):
     aligned = cv2.warpPerspective(img, M, (CARD_WIDTH, CARD_HEIGHT), flags=cv2.INTER_LANCZOS4)
     cv2.imwrite(os.path.join(save_path, "4_aligned.jpg"), aligned)
 
-    # Extract ROI (evolution portrait box)
     x, y, w_roi, h_roi = ROI_BOX
+    aligned_with_box = aligned.copy()
+    cv2.rectangle(aligned_with_box, (x, y), (x + w_roi, y + h_roi), (0, 0, 255), 2)  # Red border around ROI
+    cv2.imwrite(os.path.join(save_path, "5_aligned_with_roi.jpg"), aligned_with_box)
+
+    # Extract ROI (evolution portrait box)
     roi = aligned[y:y+h_roi, x:x+w_roi]
-    cv2.imwrite(os.path.join(save_path, "5_roi.jpg"), roi)
+    cv2.imwrite(os.path.join(save_path, "6_roi.jpg"), roi)
 
     print(f"\033[32m[SUCCESS] Saved debug images for {file} to {save_path}\033[0m")
