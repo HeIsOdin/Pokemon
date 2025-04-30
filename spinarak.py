@@ -97,4 +97,5 @@ if __name__ == "__main__":
         image_url = item.get('image', {}).get('imageUrl')
         if image_url:
             download_image(image_url, title)
-
+        else:
+            print(f"\033[31m[ERROR] No image found for: {title}\033[0m")
