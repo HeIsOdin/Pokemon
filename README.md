@@ -78,7 +78,9 @@ Use this pipeline to:
 
 ## 🧙 Credits
 
-- Created by [Odin](https://github.com/Odin3141)  
+- Created by [Odin](https://github.com/HeIsOdin)  
+- Mentored by **Professor Andrew Kramer**, who originally proposed the idea and guided its development  
 - Inspired by real-world defect detection and card misprints  
 - Named after 🕷️ **Spinarak** (the crawler) and 🎨 **Smeargle** (the artist Pokémon)  
+ 
 
