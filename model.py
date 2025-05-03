@@ -1,74 +1,110 @@
-import tensorflow as tf
 import cv2
 import numpy as np
-import pandas as pd
 import os
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from keras import layers, models
+from keras import layers, models, Input
 
-# Our data is in this directory
-data_dir = "data/"
-file_names = os.listdir(data_dir)
-print(file_names[5])
+# CLear Terminal
+os.system('cls' if os.name == 'nt' else 'clear')
 
-# Initializing two arrays to store the images and labels
+# -------------------------------
+# Configuration
+# -------------------------------
+data_dir = "training_data/"
+input_shape = (128, 128)
+num_classes = 6
+
+# -------------------------------
+# Load and label images
+# -------------------------------
 X = []
 y = []
 
+try:
+    file_names = os.listdir(data_dir)
+except FileNotFoundError:
+    print(f"\033[31m[ERROR] No such directory '{data_dir}'\033[0m")
+    exit(1)
+print(f"\033[34m[INFO] Found {len(file_names)} files in {data_dir}\033[0m")
+
 for file in file_names:
-    #print("File name: ", file)
+    filepath = os.path.join(data_dir, file)
     
-    # Reading image using OpenCV and storing it to the array 'X'. It stores each image as an array.
-    # cv2 (OpenCV) is a handy Python package used for Computer Vision tasks. We use it to read the images.
-    img = cv2.imread(f'{data_dir}/{file}', cv2.IMREAD_GRAYSCALE) 
+    # Read as grayscale and resize to match input shape
+    img = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        print(f"\033[33m[WARNING] Could not read image: {filepath}. Skipping...\033[0m")
+        continue
+
+    img = cv2.resize(img, input_shape)
     X.append(img)
-    
-    # Label: temporarily remove the file format ".png", then get the label from it.
-    # eg. from the file name xyz_0.png, we remove ".png", and get the last character after that.
-    label = file.replace(".png", "").split('_')[1]
-    #print(label)
-    y.append(int(label))
-    
-    #print("Label from file:", label)
 
-cv2.imshow("First Image", X[0])
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    try:
+        label = int(file.replace(".png", "").split('_')[1])
+        y.append(label)
+    except (IndexError, ValueError):
+        print(f"\033[33m[WARNING] Could not extract label from filename: {file}\033[0m")
 
-# When reading using cv2.imread(), the image is read as a numpy array of dimension (height, width, channel)
-print(type(X[0]))
+# Display a sample
+if X:
+    print(f"\033[34m[INFO] Showing sample image and label: {file_names[0]}, label = {y[0]}. Press any key to continue...\033[0m")
+    cv2.imshow("Sample Image", X[0])
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+# Convert to NumPy arrays and normalize
+X = np.array(X, dtype=np.float32) / 255.0
+X = X.reshape(-1, 128, 128, 1)  # Add channel dimension
 y = np.array(y)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2)
-X_train = np.array(X_train, dtype=np.float32, ndmin=1)
-X_test = np.array(X_test, dtype=np.float32, ndmin=1)
-X_train[0].shape
+print(f"\033[34m[INFO] Dataset shape: {X.shape}, Labels shape: {y.shape}\033[0m")
 
-len(X_train), len(y_train)
+# -------------------------------
+# Split dataset
+# -------------------------------
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print(f"\033[34m[INFO] Training samples: {len(X_train)}, Test samples: {len(X_test)}\033[0m")
 
+# -------------------------------
+# Build model
+# -------------------------------
 model = models.Sequential()
-model.add(layers.Conv2D(8, (3, 3), activation='relu', input_shape=(128, 128, 1)))
-# The first layer is a 2-D Convolutional layer. It has 8 kernels, each of size 3x3. It uses relu activation function
-# The first layer in a Keras model requires the shape of input, which in this case is 128x128x1 (a 128x128 greyscale image)
-
-          
+model.add(Input(shape=(128, 128, 1)))
+model.add(layers.Conv2D(8, (3, 3), activation='relu'))
 model.add(layers.Flatten())
-# Flatten() is used to flatten the output from the previous array into a 1-D array.
-          
-model.add(layers.Dense(6, activation='softmax')) 
-# The last layer of a Neural Network should have the same number of nodes as the number of output classes.
-# Since the labels are 0, 1, 2, 3, 4 and 5, we define the last layer as having 6 nodes.
+model.add(layers.Dense(num_classes, activation='softmax'))
 
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-# Model.compile() is used to configure the learning process before training. Here, we define the optimizer, loss functions and performance metrics.
 
-model.fit(X_train, y_train, epochs=3, batch_size=32)
-# Model.fit() is used to train the model. We define how many epochs to train it on, the batch size, 
+# -------------------------------
+# Train model
+# -------------------------------
+print("\033[34m[INFO] Training model...\033[0m")
+history = model.fit(X_train, y_train, epochs=3, batch_size=32, validation_split=0.1)
 
-# Model.evaluate() is used to evaluate the model using the metric defined in model.compile()
-print(model.evaluate(X_test, y_test)) 
+# -------------------------------
+# Evaluate model
+# -------------------------------
+print("\033[34m[INFO] Evaluating model...\033[0m")
+test_loss, test_acc = model.evaluate(X_test, y_test)
+print(f"\033[34m[RESULT] Test accuracy: {test_acc:.4f}, Loss: {test_loss:.4f}\033[32m]")
 
-img = X_test[1]
-cv2.imshow("Prediction", img)
-print(model.predict(img.reshape(1, 128, 128, 1), batch_size=1))
+# -------------------------------
+# Predict and visualize
+# -------------------------------
+sample_idx = 1
+img = X_test[sample_idx]
+true_label = y_test[sample_idx]
+pred_probs = model.predict(img.reshape(1, 128, 128, 1), batch_size=1)
+predicted_class = np.argmax(pred_probs)
+
+print(f"\033[34m[INFO] True label: {true_label}, Predicted: {predicted_class}\033[0m")
+print(f"\033[34m[INFO] Probabilities: {pred_probs}\033[0m")
+
+cv2.imshow(f"The hand has {true_label} fingers up", img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+if predicted_class == true_label:
+    print(f'\033[32m[SUCCESS] The model was right! 🥳\033[0m')
+else:
+    print(f'\033[31m[FAILURE] Oh No! The model was wrong! 🥺\033[0m')
