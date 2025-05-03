@@ -104,8 +104,3 @@ Use this pipeline to:
   - 🕷️ **Spinarak** – the web crawler  
   - 🎨 **Smeargle** – the image processor  
   - 🧠 **Porygon** – the machine-learning classifier, made of pixels and code  
-```
-
----
- 
-
