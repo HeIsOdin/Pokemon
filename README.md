@@ -28,6 +28,20 @@ This project includes:
 
 This is useful for training a model to detect cards that erroneously evolve from Wartortle instead of Squirtle.
 
+### 3. `model.py`
+> Trains a CNN to distinguish between evolution portraits (e.g., Squirtle vs. Wartortle) based on the cropped ROI images.
+
+- Loads grayscale ROI images from the `training_images/` directory
+- Resizes inputs to 128×128 and normalizes pixel values
+- Trains a simple Convolutional Neural Network (CNN) on labeled image data
+- Outputs predictions and evaluation metrics
+
+This model is intended to help automatically detect whether a card has a correct or erroneous evolution box.
+
+> ⚠️ **Note**: The `training_images/` directory contains only a partial dataset due to GitHub file size constraints.  
+To access the full dataset, please visit the original source:  
+🔗 [Finger Digits Dataset on Kaggle](https://www.kaggle.com/datasets/roshea6/finger-digits-05)
+
 ---
 
 ## 🛠️ Setup
