@@ -2,3 +2,6 @@ requests
 opencv-python
 numpy
 python-dotenv
+tensorflow
+matplotlib
+scikit-learn
