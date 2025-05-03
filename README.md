@@ -1,53 +1,53 @@
 # PokéPrint Inspector 🧠🎴
 
-A two-part toolset for detecting known printing defects in Pokémon cards — specifically focusing on the famous **Wartortle Evolution Box error**.
+A three-part toolset for detecting known printing defects in Pokémon cards — with a focus on the iconic **Wartortle Evolution Box error**.
 
 This project includes:
 
 - 🕷️ `spinarak.py`: A web crawler that uses the eBay Browse API to search and download Pokémon card listings.
-- 🎨 `smeagle.py`: An image alignment tool that deskews the card and extracts the **evolution portrait region** for analysis or classification.
+- 🎨 `smeagle.py`: An image alignment tool that deskews card images and extracts the **evolution portrait region**.
+- 🧠 `porygon.py`: A convolutional neural network (CNN) that classifies evolution portraits (e.g., Squirtle vs. Wartortle).
 
 ---
 
 ## 🔍 What This Does
 
-### 1. `spinarak.py`
+### 1. `spinarak.py`  
 > Crawls eBay for rare or error Pokémon cards and downloads their images locally.
 
 - Authenticates with the eBay API using OAuth2
-- Searches for cards using a custom query (e.g., `"Wartortle Evolution Box Error"`)
-- Downloads the listing image and saves it as a `.jpg` in the `images/` directory
+- Searches listings using a custom query (e.g., `"Wartortle Evolution Box Error"`)
+- Downloads listing images to the `images/` directory
 
-### 2. `smeagle.py`
+---
+
+### 2. `smeagle.py`  
 > Aligns card images and extracts the **evolution box portrait** region.
 
-- Detects the card in the image via contour/edge detection
-- Deskews and crops the card using a perspective transform
-- Extracts the region where the evolution portrait is printed (top-left corner)
-- Displays the aligned card and cropped region
+- Detects the card using edge and contour detection
+- Applies a perspective transform to deskew the card
+- Crops the top-left evolution portrait region
+- Saves debug outputs and aligned ROIs to the `adjusted_images/` directory
 
-This is useful for training a model to detect cards that erroneously evolve from Wartortle instead of Squirtle.
+---
 
-### 3. `model.py`
-> Trains a CNN to distinguish between evolution portraits (e.g., Squirtle vs. Wartortle) based on the cropped ROI images.
+### 3. `porygon.py`  
+> Trains a CNN to classify evolution portraits as either correct (Squirtle) or erroneous (Wartortle).
 
-- Loads grayscale ROI images from the `training_images/` directory
+- Loads grayscale portrait ROIs from the `training_images/` directory
 - Resizes inputs to 128×128 and normalizes pixel values
-- Trains a simple Convolutional Neural Network (CNN) on labeled image data
-- Outputs predictions and evaluation metrics
+- Trains a simple CNN on labeled image data
+- Evaluates model performance and outputs predictions
 
-This model is intended to help automatically detect whether a card has a correct or erroneous evolution box.
-
-> ⚠️ **Note**: The `training_images/` directory contains only a partial dataset due to GitHub file size constraints.  
-To access the full dataset, please visit the original source:  
-🔗 [Finger Digits Dataset on Kaggle](https://www.kaggle.com/datasets/roshea6/finger-digits-05)
+> ⚠️ **Note**: The `training_images/` directory includes only a **partial dataset** due to GitHub file size limits.  
+For the complete image set, please visit the original source on Kaggle:  
+🔗 [Finger Digits Dataset](https://www.kaggle.com/datasets/roshea6/finger-digits-05)
 
 ---
 
 ## 🛠️ Setup
 
-1. **Clone this repo:**
-
+1. **Clone the repository**
 ```
 git clone https://github.com/yourusername/pokeprint-inspector.git
 cd pokeprint-inspector
@@ -75,18 +75,23 @@ export CLIENT_SECRET=your_ebay_client_secret
 
 ### 🕷️ Crawl for error cards
 
-```
-python spinarak.py
-python smeagle.py
-```
+```python spinarak.py```
+
+### Align and extract evolution box ROIs
+
+```python smeagle.py```
+
+### Train the classification model
+
+```python porygon.py```
 
 ## 🧪 Example Use Case
 
 Use this pipeline to:
 
-- Build a dataset of defect and non-defect cards  
-- Train a model to detect visual misprints  
-- Automate inspection for collectors or resale authentication  
+- Build a clean dataset of Pokémon card ROIs
+- Train a model to detect visual misprints (like the Wartortle error)
+- Automate defect screening for collectors and sellers 
 
 ---
 
@@ -95,6 +100,12 @@ Use this pipeline to:
 - Created by [Odin](https://github.com/HeIsOdin)  
 - Mentored by **Professor Andrew Kramer**, who originally proposed the idea and guided its development  
 - Inspired by real-world defect detection and card misprints  
-- Named after 🕷️ **Spinarak** (the crawler) and 🎨 **Smeargle** (the artist Pokémon)  
+- Named after:
+  - 🕷️ **Spinarak** – the web crawler  
+  - 🎨 **Smeargle** – the image processor  
+  - 🧠 **Porygon** – the machine-learning classifier, made of pixels and code  
+```
+
+---
  
 
