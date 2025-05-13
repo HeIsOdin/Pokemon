@@ -53,10 +53,19 @@ def search_pokemon_cards(access_token: str, query="Evolution Box error Wartortle
 # ----------------------------------------
 # Step 3: Download card image from eBay
 # ----------------------------------------
-def download_image(image_url: str, title: str, save_dir='images') -> str:
+def download_image(original_image_url: str, title: str, save_dir='images') -> str:
     """
     Downloads the image from the given URL and saves it with a sanitized filename.
     """
+    image_url = ""
+    try:
+        # Try high-res first
+        image_url = original_image_url.replace("s-l225.jpg", "s-l1600.jpg")
+        response = requests.get(image_url)
+        if response.status_code != 200:
+            raise Exception("Fallback to low-res")
+    except:
+        image_url = original_image_url  # fallback
     os.makedirs(save_dir, exist_ok=True)
 
     # Truncate and sanitize title for filename
