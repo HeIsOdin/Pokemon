@@ -14,7 +14,7 @@ os.system('cls' if os.name == 'nt' else 'clear')
 # -------------------------------
 data_dir = "training_data/"
 input_shape = (128, 128)
-num_classes = 6
+num_classes = 2
 
 # -------------------------------
 # Load and label images
@@ -46,10 +46,12 @@ for file in file_names:
     X.append(img)
 
     try:
-        label = int(file.replace(".png", "").split('_')[1])
+        name, ext = os.path.splitext(file)
+        label = int(name.split('_')[1])
         y.append(label)
     except (IndexError, ValueError):
-        print(f"\033[33m[WARNING] Could not extract label from filename: {file}\033[0m")
+        print(f"\033[31m[WARNING] Could not extract label from filename: {file}\033[0m")
+        exit(1)
 
 # Display a sample
 if X:
@@ -97,7 +99,7 @@ history = model.fit(X_train, y_train, epochs=3, batch_size=32, validation_split=
 # -------------------------------
 print("\033[34m[INFO] Evaluating model...\033[0m")
 test_loss, test_acc = model.evaluate(X_test, y_test)
-print(f"\033[34m[RESULT] Test accuracy: {test_acc:.4f}, Loss: {test_loss:.4f}\033[32m]")
+print(f"\033[34m[RESULT] Test accuracy: {test_acc:.4f}, Loss: {test_loss:.4f}\033[0m")
 
 # -------------------------------
 # Predict and visualize
@@ -114,7 +116,7 @@ predicted_class = np.argmax(pred_probs)
 print(f"\033[34m[INFO] True label: {true_label}, Predicted: {predicted_class}\033[0m")
 print(f"\033[34m[INFO] Probabilities: {pred_probs}\033[0m")
 
-cv2.imshow(f"The hand has {true_label} fingers up", img)
+cv2.imshow(f"Pokemon", img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 if predicted_class == true_label:
