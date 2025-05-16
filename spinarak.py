@@ -28,7 +28,7 @@ def get_ebay_token(client_id: str, client_secret: str) -> str:
 # ----------------------------------------
 # Step 2: Search for Pokémon card listings
 # ----------------------------------------
-def search_pokemon_cards(access_token: str, query="Evolution Box error Wartortle", limit=30) -> dict:
+def search_pokemon_cards(access_token: str, query: str ="Evolution Box error Wartortle", limit: int = 30) -> dict:
     """
     Searches eBay listings using the Browse API for the specified Pokémon card query.
     """
@@ -53,7 +53,7 @@ def search_pokemon_cards(access_token: str, query="Evolution Box error Wartortle
 # ----------------------------------------
 # Step 3: Download card image from eBay
 # ----------------------------------------
-def download_image(original_image_url: str, title: str, save_dir='images') -> str:
+def download_image(original_image_url: str, title: str, save_dir:str ='images') -> str:
     """
     Downloads the image from the given URL and saves it with a sanitized filename.
     """
