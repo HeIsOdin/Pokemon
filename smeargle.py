@@ -1,5 +1,5 @@
 """
-smeagle.py — Aligns and crops Pokémon card images from a folder, extracting the evolution portrait region.
+Aligns and crops Pokémon card images from a folder, extracting the evolution portrait region.
 
 For each image in the `images/` directory:
 - Finds the card using edge + contour detection
@@ -16,8 +16,6 @@ from pathlib import Path
 # -------------------------------
 # Configuration
 # -------------------------------
-INPUT_DIR = "images"
-OUTPUT_DIR = "adjusted_images"
 CARD_WIDTH, CARD_HEIGHT = 480, 680
 ROI_BOX = (40, 45, 60, 60)  # (x, y, width, height)
 
@@ -37,59 +35,77 @@ def order_points(pts):
 # -------------------------------
 # Process Each Image
 # -------------------------------
-for file in os.listdir(INPUT_DIR):
-    if not file.lower().endswith(('.jpg', '.jpeg', '.png')):
-        continue
-
+def load_file_from_directory(file: str, INPUT_DIR: str='images', OUTPUT_DIR: str='adjusted_images'):
+    file = file[:40].replace(' ', '_').replace('/', '-')+'.jpg'
     image_path = os.path.join(INPUT_DIR, file)
     image_name = Path(file).stem
     save_path = os.path.join(OUTPUT_DIR, image_name)
     os.makedirs(save_path, exist_ok=True)
 
-    print(f"\033[34m[INFO] Processing {file}...\033[0m")
-
     # Load and preprocess
-    img = cv2.imread(image_path)
-    assert img is not None, f"\033[31m[ERROR] Could not load image: {image_path}\033[0m"
-    cv2.imwrite(os.path.join(save_path, "1_original.jpg"), img)
+    if not os.path.isfile(image_path):
+        print(f"\033[31m[ERROR] File '{image_path}' does not exist\033[0m")
+        exit()
 
+    img = cv2.imread(image_path)
+    if img is None:
+        print(f"\033[31m[ERROR] Could not load image: {image_path}\033[0m")
+        exit()
+    cv2.imwrite(os.path.join(save_path, "1_original.jpg"), img)
+    return img, save_path
+
+def load_file_from_bytearray(file: bytearray, save_path: str):
+    image_bytes = np.asarray(file, dtype=np.uint8)
+    img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
+    if img is None:
+        print(f"\033[31m[ERROR] Could not load image as bytes\033[0m")
+        exit()
+    return img, save_path
+
+def detect_edges(img: cv2.typing.MatLike, save_path: str) -> cv2.typing.MatLike:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blur, 50, 150)
 
-    cv2.imwrite(os.path.join(save_path, "2_edges.jpg"), edges)
+    if save_path:
+        cv2.imwrite(os.path.join(save_path, "2_edges.jpg"), edges)
+    return edges
 
+def detect_contours(edges: cv2.typing.MatLike):
     # Detect contours
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     card_contour = max(contours, key=cv2.contourArea)
     peri = cv2.arcLength(card_contour, True)
     approx = cv2.approxPolyDP(card_contour, 0.02 * peri, True)
+    return approx
 
-    if len(approx) != 4:
-        print(f"\033[33m[WARNING] Skipping {file} — could not detect card corners.\033[0m")
-        continue
-
+def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path: str):
     pts = approx.reshape(4, 2)
-    rect = order_points(pts)
 
     # Visualize and save contour overlay
     debug_img = img.copy()
     cv2.drawContours(debug_img, [approx], -1, (0, 255, 0), 3)
-    cv2.imwrite(os.path.join(save_path, "3_contour.jpg"), debug_img)
+    if save_path:
+        cv2.imwrite(os.path.join(save_path, "3_contour.jpg"), debug_img)
 
+    rect = order_points(pts)
     # Perspective transform
     dst = np.array([[0, 0], [CARD_WIDTH - 1, 0], [CARD_WIDTH - 1, CARD_HEIGHT - 1], [0, CARD_HEIGHT - 1]], dtype="float32")
     M = cv2.getPerspectiveTransform(rect, dst)
     aligned = cv2.warpPerspective(img, M, (CARD_WIDTH, CARD_HEIGHT), flags=cv2.INTER_LANCZOS4)
-    cv2.imwrite(os.path.join(save_path, "4_aligned.jpg"), aligned)
+    if save_path:
+        cv2.imwrite(os.path.join(save_path, "4_aligned.jpg"), aligned)
+    return aligned
 
+def roi_extraction(aligned: cv2.typing.MatLike, save_path: str):
     x, y, w_roi, h_roi = ROI_BOX
     aligned_with_box = aligned.copy()
     cv2.rectangle(aligned_with_box, (x, y), (x + w_roi, y + h_roi), (0, 0, 255), 2)  # Red border around ROI
-    cv2.imwrite(os.path.join(save_path, "5_aligned_with_roi.jpg"), aligned_with_box)
+    if save_path:
+        cv2.imwrite(os.path.join(save_path, "5_aligned_with_roi.jpg"), aligned_with_box)
 
     # Extract ROI (evolution portrait box)
     roi = aligned[y:y+h_roi, x:x+w_roi]
-    cv2.imwrite(os.path.join(save_path, "6_roi.jpg"), roi)
-
-    print(f"\033[32m[SUCCESS] Saved debug images for {file} to {save_path}\033[0m")
+    if save_path:
+        cv2.imwrite(os.path.join(save_path, "6_roi.jpg"), roi)
+    return roi
