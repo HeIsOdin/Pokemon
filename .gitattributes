@@ -1,0 +1,17 @@
+# --- Code files ---
+*.py linguist-language=Python
+
+# --- Ignore dataset and image folders for language stats ---
+pokeprint-dataset/ linguist-documentation=true
+training_data/ linguist-generated=true
+adjusted_images/ linguist-generated=true
+images/ linguist-generated=true
+
+# --- Ignore Jupyter checkpoints or virtual environments (if present) ---
+**/.ipynb_checkpoints/ linguist-generated=true
+venv/ linguist-generated=true
+.pypikachu/ linguist-generated=true
+
+# --- Optional: ignore compiled or cache files ---
+*.pyc linguist-generated=true
+__pycache__/ linguist-generated=true
