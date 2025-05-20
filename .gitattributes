@@ -1,3 +1,4 @@
 # --- Code files ---
 *.py linguist-language=Python
-docs/index.html -linguist-detectable
+docs/index.html linguist-detectable=true
+docs/index.html linguist-documentation=false
