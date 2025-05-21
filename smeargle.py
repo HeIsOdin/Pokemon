@@ -15,12 +15,6 @@ from pathlib import Path
 import miscellaneous
 
 # -------------------------------
-# Configuration
-# -------------------------------
-CARD_WIDTH, CARD_HEIGHT = 480, 680
-ROI_BOX = (40, 45, 60, 60)  # (x, y, width, height)
-
-# -------------------------------
 # Utility: Order Points
 # -------------------------------
 def order_points(pts):
@@ -77,9 +71,9 @@ def detect_contours(edges: cv2.typing.MatLike):
     approx = cv2.approxPolyDP(card_contour, 0.02 * peri, True)
     return approx
 
-def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path: str):
+def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path: str, CARD_DIM: tuple[int, int]):
     pts = approx.reshape(4, 2)
-
+    CARD_WIDTH, CARD_HEIGHT = CARD_DIM
     # Visualize and save contour overlay
     debug_img = img.copy()
     cv2.drawContours(debug_img, [approx], -1, (0, 255, 0), 3)
@@ -95,7 +89,7 @@ def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path
         cv2.imwrite(os.path.join(save_path, "4_aligned.jpg"), aligned)
     return aligned
 
-def roi_extraction(aligned: cv2.typing.MatLike, save_path: str):
+def roi_extraction(aligned: cv2.typing.MatLike, save_path: str, ROI_BOX: tuple[int, int, int, int]):
     x, y, w_roi, h_roi = ROI_BOX
     aligned_with_box = aligned.copy()
     cv2.rectangle(aligned_with_box, (x, y), (x + w_roi, y + h_roi), (0, 0, 255), 2)  # Red border around ROI
