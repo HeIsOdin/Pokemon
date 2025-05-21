@@ -62,12 +62,13 @@ def directory_check(data_dir: str) -> bool:
         print_with_color(f"No such directory '{data_dir}'", 1, False)
         return False
     else:
-        print_with_color(f"Found {len(file_names)} files in {data_dir}", 4)
+        print_with_color(f"Found {len(file_names)} images in {data_dir}", 4)
         return True if len(file_names) > 0 else False
     
 def extract_zipfile(dataset_name: str, TRAINING_DIR: str):
     zip_file_path = dataset_name
     extract_to = TRAINING_DIR
+    print_with_color(f"Extracting compressed dataset '{dataset_name}' to {TRAINING_DIR}...", 4)
     try:
         with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
             zip_ref.extractall(extract_to)

@@ -35,14 +35,14 @@ if __name__ == "__main__":
         TRAINING_DIR = porygon.get_dataset(TRAINING_DIR, author, dataset_name)
         attempts-=1
         directoryCheck = miscellaneous.directory_check(TRAINING_DIR)
-    images, labels, filenames = porygon.load_dataset_from_directory(TRAINING_DIR, input_shape)
+    images, labels, filenames = porygon.load_dataset_from_directory(TRAINING_DIR, input_shape, USE_RGB)
     porygon.display_sample(images, labels, filenames)
     new_images, new_labels = porygon.convert_and_reshape(images, labels)
     training_images, testing_images, training_labels, testing_labels = porygon.split_dataset(new_images, new_labels)
     AI = porygon.build_model(num_classes, USE_RGB)
     porygon.train_model(AI, training_images, training_labels)
     porygon.evaluate_model(AI, testing_images, testing_labels)
-    porygon.predict_and_visualize(AI, testing_images, testing_labels)
+    porygon.predict_and_visualize(AI, testing_images, testing_labels, USE_RGB)
 
 
     CLIENT_ID, CLIENT_SECRET = miscellaneous.credentials()

@@ -24,17 +24,12 @@ def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str):
             miscellaneous.print_with_color(f"Unable to download dataset: {str(e)}", 1)
         else:
             miscellaneous.print_with_color("Dataset Download was successful!", 2)
-            dataset_name = path
+            TRAINING_DIR = path
     else:
         dataset_name, _ = miscellaneous.make_a_choice('Enter the path to the dataset: ', dataset_name)
-
-    if not os.path.exists(dataset_name):
-        return dataset_name
-
-    # If the dataset is a ZIP file, extract it
-    if dataset_name.endswith('.zip'):
-        miscellaneous.extract_zipfile(dataset_name, TRAINING_DIR)
-    return dataset_name
+        if os.path.isfile(dataset_name) and dataset_name.endswith('.zip'):
+            miscellaneous.extract_zipfile(dataset_name, TRAINING_DIR)
+    return TRAINING_DIR
 
 def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool = True) -> tuple[list[cv2.typing.MatLike], list[int], list[str]]:
     # -------------------------------
@@ -80,7 +75,7 @@ def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool
 def display_sample(X: list[cv2.typing.MatLike], y: list[int], file_names: list[str], sample_idx: int = 0) -> None:
     # Display a sample
     if X:
-        miscellaneous.print_with_color(f"Showing sample image and label: {(file_names[sample_idx])[:10]}, label = {y[sample_idx]}. Press any key to continue...", 4)
+        miscellaneous.print_with_color(f"Showing sample image and label: {(file_names[sample_idx])[:20]}, label = {y[sample_idx]}. Press any key to continue...", 4)
         cv2.imshow("Sample Image", X[sample_idx])
         cv2.waitKey(0)
         cv2.destroyAllWindows()
@@ -166,14 +161,16 @@ def evaluate_model(model: models.Sequential, X_test: np.ndarray, y_test: np.ndar
     test_loss, test_acc = model.evaluate(X_test, y_test)
     miscellaneous.print_with_color(f"Test accuracy: {test_acc:.4f}, Loss: {test_loss:.4f}", 4)
 
-def predict_and_visualize(model: models.Sequential, X_test: np.ndarray, y_test: np.ndarray, sample_idx: int = 1, USE_RGB: bool = True) -> None:
+def predict_and_visualize(model: models.Sequential, X_test: np.ndarray, y_test: np.ndarray, USE_RGB: bool = True, sample_idx: int = 1) -> None:
     # -------------------------------
     # Predict and visualize
     # -------------------------------
     miscellaneous.print_with_color("Preparing to make predictions", 4)
     img = X_test[sample_idx]
     true_label = y_test[sample_idx]
-    pred_probs = model.predict(img.reshape(1, 128, 128, 3), batch_size=1) if USE_RGB else model.predict(img.reshape(1, 128, 128, 1), batch_size=1)
+    channels = 3 if USE_RGB else 1
+    img_reshaped = img.reshape(1, 128, 128, channels)
+    pred_probs = model.predict(img_reshaped, batch_size=1)
     predicted_class = np.argmax(pred_probs)
 
     miscellaneous.print_with_color(f"True label: {true_label}, Predicted: {predicted_class}", 4)
