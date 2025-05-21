@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     directoryCheck = miscellaneous.directory_check(TRAINING_DIR)
     attempts = 3
-    while not directoryCheck[0]:
+    while not directoryCheck:
         if attempts<0:
             exit()
         TRAINING_DIR = porygon.get_dataset(TRAINING_DIR, author, dataset_name)

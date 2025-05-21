@@ -51,15 +51,19 @@ def pause(seconds: float):
 # ----------------------------------------
 # Directory Check
 # ----------------------------------------
-def directory_check(data_dir: str) -> tuple[bool, list[str]]:
+def directory_check(data_dir: str) -> bool:
+    file_names = []
     try:
-        file_names = os.listdir(data_dir)
+        for root, _, files in os.walk(data_dir):
+            for file in files:
+                if file.endswith((".jpg", ".png", ".jpeg")):
+                    file_names.append(os.path.join(root, file))
     except FileNotFoundError:
         print_with_color(f"No such directory '{data_dir}'", 1, False)
-        return False, []
+        return False
     else:
         print_with_color(f"Found {len(file_names)} files in {data_dir}", 4)
-        return True, file_names
+        return True if len(file_names) > 0 else False
     
 def extract_zipfile(dataset_name: str, TRAINING_DIR: str):
     zip_file_path = dataset_name

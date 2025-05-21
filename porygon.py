@@ -13,7 +13,7 @@ def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str):
         path = ''
         try:
             kagglehub.login()
-            os.environ["KAGGLEHUB_CACHE"] = f"{dataset_name}"
+            os.environ["KAGGLEHUB_CACHE"] = TRAINING_DIR
             miscellaneous.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle", 4)
             path = kagglehub.dataset_download(f"{author}/{dataset_name}")
         except Exception as e:
