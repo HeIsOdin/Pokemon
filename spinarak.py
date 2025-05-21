@@ -22,7 +22,6 @@ def get_ebay_token(client_id: str, client_secret: str) -> str:
     
     if response.status_code != 200:
         miscellaneous.print_with_color(f"Failed to retrieve token: {response.status_code} - {response.text}", 1)
-        exit()
     
     return response.json()['access_token']
 
@@ -48,7 +47,6 @@ def search_pokemon_cards(access_token: str, query: str ="Evolution Box error War
     
     if response.status_code != 200:
         miscellaneous.print_with_color(f"Search failed: {response.status_code} - {response.text}", 1)
-        exit()
     
     return response.json()
 

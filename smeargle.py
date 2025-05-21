@@ -46,12 +46,10 @@ def load_file_from_directory(file: str, INPUT_DIR: str='images', OUTPUT_DIR: str
     # Load and preprocess
     if not os.path.isfile(image_path):
         miscellaneous.print_with_color(f"File '{image_path}' does not exist", 1)
-        exit()
 
     img = cv2.imread(image_path)
     if img is None:
         miscellaneous.print_with_color(f"Could not load image: {image_path}", 1)
-        exit()
     cv2.imwrite(os.path.join(save_path, "1_original.jpg"), img)
     return img, save_path
 
@@ -60,7 +58,6 @@ def load_file_from_bytearray(file: bytearray, save_path: str):
     img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
     if img is None:
         miscellaneous.print_with_color("Could not load image as bytes", 1)
-        exit()
     return img, save_path
 
 def detect_edges(img: cv2.typing.MatLike, save_path: str) -> cv2.typing.MatLike:
