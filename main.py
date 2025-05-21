@@ -30,11 +30,12 @@ if __name__ == "__main__":
     directoryCheck = miscellaneous.directory_check(TRAINING_DIR)
     attempts = 3
     while not directoryCheck:
-        if attempts<0:
+        if attempts < 0:
             exit()
         TRAINING_DIR = porygon.get_dataset(TRAINING_DIR, author, dataset_name)
-        attempts-=1
+        attempts -= 1
         directoryCheck = miscellaneous.directory_check(TRAINING_DIR)
+
     images, labels, filenames = porygon.load_dataset_from_directory(TRAINING_DIR, input_shape, USE_RGB)
     porygon.display_sample(images, labels, filenames)
     new_images, new_labels = porygon.convert_and_reshape(images, labels)
@@ -44,33 +45,32 @@ if __name__ == "__main__":
     porygon.evaluate_model(AI, testing_images, testing_labels)
     porygon.predict_and_visualize(AI, testing_images, testing_labels, USE_RGB)
 
-
     CLIENT_ID, CLIENT_SECRET = miscellaneous.credentials()
 
-    print("\033[34m[INFO] Authenticating with eBay...\033[0m")
+    miscellaneous.print_with_color("Authenticating with eBay...", 4)
     token = spinarak.get_ebay_token(CLIENT_ID, CLIENT_SECRET)
 
-    print("\033[34m[INFO] Searching for Pokémon card listings...\033[0m")
+    miscellaneous.print_with_color("Searching for Pokémon card listings...", 4)
     results = spinarak.search_pokemon_cards(token)
 
-    print("\033[34m[INFO] Downloading listing images...\033[0m")
+    miscellaneous.print_with_color("Downloading listing images...", 4)
     items = []
     for item in results.get('itemSummaries', []):
-        card = {}
-        card['title'] = item.get('title', 'no_title')
+        card = {'title': item.get('title', 'no_title')}
         image_url = item.get('image', {}).get('imageUrl')
         if image_url:
             card['image'] = bytearray(spinarak.download_image(image_url, card['title'], INPUT_DIR, USE_LOCAL_STORAGE))
         else:
-            print(f"\033[31m[ERROR] No image found for: {card['title']}\033[0m")
+            miscellaneous.print_with_color(f"No image found for: {card['title']}", 1)
         items.append(card)
-    print('\033[32m[SUCCESS] Listed Images have been downloaded! 🥳')
 
+    miscellaneous.print_with_color("Listed Images have been downloaded! 🥳", 2)
     miscellaneous.pause(10)
 
     for item in items:
-        print(f"\033[34m[INFO] Processing {item['title']}...\033[0m")
-        image = None; path = ''
+        miscellaneous.print_with_color(f"Processing {item['title']}...", 4)
+        image = None
+        path = ''
         if USE_LOCAL_STORAGE:
             image, path = smeargle.load_file_from_directory(item['title'], INPUT_DIR, OUTPUT_DIR)
         else:
@@ -79,11 +79,11 @@ if __name__ == "__main__":
 
         approx = smeargle.detect_contours(image_edges)
         if len(approx) != 4:
-            print(f"\033[33m[WARNING] Skipping '{item['title']}' — could not detect card corners.\033[0m\n")
+            miscellaneous.print_with_color(f"Skipping '{item['title']}' — could not detect card corners.", 3)
             continue
 
         aligned = smeargle.draw_contours(image, approx, path, CARD_DIM)
         roi = smeargle.roi_extraction(aligned, path, ROI_BOX)
-        print(f'\033[32m[SUCCESS] Finished Processing {item['title']}\033[0m\n')
+        miscellaneous.print_with_color(f"Finished Processing {item['title']}", 2)
 
     miscellaneous.pause(10)
