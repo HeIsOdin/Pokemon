@@ -12,8 +12,12 @@ def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str):
     if download:
         path = ''
         try:
-            kagglehub.login()
-            os.environ["KAGGLEHUB_CACHE"] = TRAINING_DIR
+            kaggle_json_path = os.path.expanduser('~/.kaggle/kaggle.json')
+            if os.path.isfile(kaggle_json_path):
+                os.system(f'kaggle download {author}/{dataset_name} --path {TRAINING_DIR}')
+            else:
+                kagglehub.login()
+                os.environ["KAGGLEHUB_CACHE"] = TRAINING_DIR
             miscellaneous.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle", 4)
             path = kagglehub.dataset_download(f"{author}/{dataset_name}")
         except Exception as e:
