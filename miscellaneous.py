@@ -1,8 +1,20 @@
 import threading
 import os
 import time
+import zipfile
 
-def make_a_choice(prompt, default_value, timeout=30):
+def print_with_color(string: str, mode: int, quit: bool = True) -> None:
+    def helper(mode: int) -> str:
+        if mode == 1: return 'ERROR'
+        elif mode == 2: return 'SUCCESS'
+        elif mode == 3: return 'WARNING'
+        elif mode == 4: return 'INFO'
+        else: return ''
+    print(f"\033[3{str(mode)}m[{helper(mode)}] {string}\033[0m")
+    if mode == 1 and quit: exit()
+
+
+def make_a_choice(prompt: str, default_value: str, timeout: int=30) -> tuple[str, bool]:
     user_input = [default_value, False]  # Store in list for mutability
 
     def ask():
@@ -17,7 +29,7 @@ def make_a_choice(prompt, default_value, timeout=30):
             user_input[1] = str(user_input[0]).lower().startswith('y')
         except:
             user_input[1] = False
-    return user_input
+    return tuple(user_input)
 
 def clear_terminal():
     # CLear Terminal
@@ -34,3 +46,28 @@ def credentials() -> tuple[str, str]:
 
 def pause(seconds: float):
     time.sleep(seconds)
+    print("")
+
+# ----------------------------------------
+# Directory Check
+# ----------------------------------------
+def directory_check(data_dir: str) -> tuple[bool, list[str]]:
+    try:
+        file_names = os.listdir(data_dir)
+    except FileNotFoundError:
+        print_with_color(f"No such directory '{data_dir}'", 1, False)
+        return False, []
+    else:
+        print_with_color(f"Found {len(file_names)} files in {data_dir}", 4)
+        return True, file_names
+    
+def extract_zipfile(dataset_name: str, TRAINING_DIR: str):
+    zip_file_path = dataset_name
+    extract_to = TRAINING_DIR
+    try:
+        with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
+            zip_ref.extractall(extract_to)
+    except Exception as e:
+        print_with_color(f"Unable to extract compressed dataset: {str(e)}", 1)
+    else:
+        print_with_color("Dataset Extracted Successfully.", 2)
