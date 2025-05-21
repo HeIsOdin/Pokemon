@@ -1,5 +1,6 @@
 import requests
 import os
+import miscellaneous
 
 # ----------------------------------------
 # Step 1: Authenticate with eBay API
@@ -17,11 +18,10 @@ def get_ebay_token(client_id: str, client_secret: str) -> str:
         'scope': 'https://api.ebay.com/oauth/api_scope'
     }
 
-    # Use HTTP Basic Auth with client ID and secret
     response = requests.post(url, headers=headers, data=data, auth=(client_id, client_secret))
     
     if response.status_code != 200:
-        print(f"\033[31m[ERROR] Failed to retrieve token: {response.status_code} - {response.text}\033[0m")
+        miscellaneous.print_with_color(f"Failed to retrieve token: {response.status_code} - {response.text}", 1)
         exit()
     
     return response.json()['access_token']
@@ -41,22 +41,23 @@ def search_pokemon_cards(access_token: str, query: str ="Evolution Box error War
     params = {
         'q': query,
         'limit': str(limit),
-        'filter': 'conditionIds:{1000|3000|4000}',  # New, Used, etc
+        'filter': 'conditionIds:{1000|3000|4000}',
         'category_ids': '183454'  # Collectible Card Games
     }
     response = requests.get(search_url, headers=headers, params=params)
     
     if response.status_code != 200:
-        print(f"\033[31m[ERROR] Search failed: {response.status_code} - {response.text}\033[0m")
+        miscellaneous.print_with_color(f"Search failed: {response.status_code} - {response.text}", 1)
         exit()
+    
     return response.json()
 
 # ----------------------------------------
 # Step 3: Download card image from eBay
 # ----------------------------------------
-def download_image(original_image_url: str, title: str, save_dir:str, save: bool= False) -> bytes:
+def download_image(original_image_url: str, title: str, save_dir: str, save: bool = False) -> bytes:
     """
-    Downloads the image from the given URL and, in some cases, saves it with a sanitized filename.
+    Downloads the image from the given URL and optionally saves it with a sanitized filename.
     """
     image_url = ""
     try:
@@ -67,22 +68,22 @@ def download_image(original_image_url: str, title: str, save_dir:str, save: bool
             raise Exception("Fallback to low-res!")
     except:
         image_url = original_image_url  # fallback
-        print("\033[33m[WARNING] Unable to fetch image with better quality. Falling Back...\033[0m")
+        miscellaneous.print_with_color("Unable to fetch high-quality image. Falling back...", 3)
 
     response = requests.get(image_url)
 
     if save:
         os.makedirs(save_dir, exist_ok=True)
 
-        # Truncate and sanitize title for filename
-        filename = f"{title[:40].replace(' ', '_').replace('/', '-')}.jpg" # Ensure this is consistent in smeagle
+        # Sanitize title for filename
+        filename = f"{title[:40].replace(' ', '_').replace('/', '-')}.jpg"
         filepath = os.path.join(save_dir, filename)
 
         if response.status_code == 200:
             with open(filepath, 'wb') as f:
                 f.write(response.content)
-            print(f"\033[32m[SUCCESS] Saved: {filepath}\033[0m")
+            miscellaneous.print_with_color(f"Saved: {filepath}", 2)
         else:
-            print(f"\033[31m[ERROR] Failed to download image: {image_url}\033[0m")
-    
+            miscellaneous.print_with_color(f"Failed to download image: {image_url}", 1)
+
     return response.content
