@@ -1,0 +1,37 @@
+{
+  "wartortle-evolution-error": {
+	"title": "Wartortle Evolution Box Error",
+    "dataset": "benjaminadedowole/wartortle-evolution-error",
+    "queries": [
+      "Wartortle 42/102",
+      "Wartortle base set",
+      "Wartortle WOTC base",
+      "Wartortle vintage"
+    ],
+	"marketplace": ["eBay", "Facebook Marketplace"]
+  },
+  
+  "dark-dragonite-error": {
+	"title": "Dark Dragonite Error",
+    "dataset": "benjaminadedowole/dark-dragonite-no-holo-error",
+    "queries": [
+      "Dark Dragonite 5/82",
+      "Team Rocket Dark Dragonite error",
+      "Dark Dragonite non-holo 5/82",
+      "Dark Dragonite no holo rare"
+    ],
+		"marketplace": ["eBay", "Facebook Marketplace"]
+  },
+
+  "ninetales-lure-error": {
+	"title": "Ninetales Lure Error",
+    "dataset": "benjaminadedowole/ninetales-lure-error",
+    "queries": [
+      "Ninetales 12/102",
+      "Ninetales base set error",
+      "Ninetales no damage Lure error",
+      "Lure no effect description"
+    ],
+		"marketplace": ["eBay", "Facebook Marketplace"]
+  }
+}
