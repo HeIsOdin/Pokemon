@@ -37,8 +37,8 @@ def clear_terminal():
 
 def credentials() -> tuple[str, str]:
     # Load credentials from environment variables
-    CLIENT_ID = os.getenv('CLIENT_ID')
-    CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+    CLIENT_ID = os.getenv('EBAY_CLIENT_ID')
+    CLIENT_SECRET = os.getenv('EBAY_CLIENT_SECRET')
     if not CLIENT_ID or not CLIENT_SECRET:
         print("\033[31m[ERROR] CLIENT_ID or CLIENT_SECRET not set in environment.\033[0m")
         exit()
