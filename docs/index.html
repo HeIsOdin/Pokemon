@@ -8,6 +8,37 @@
     </head>
         <script src="script.js"></script>
     <body>
-        <h1 style="color: white;">PyPikachu</h1>
+        <h2>PokéPrint Alert Configuration 🧠🎴</h2>
+
+  <form method="POST" action="https://9a1a-138-247-96-33.ngrok-free.app /submit">
+    
+    <label for="defect">Select Defect Type:</label>
+    <select name="defect" id="defect" required>
+      <option value="">-- Choose a defect --</option>
+      <option value="wartortle-evo-box">Wartortle Evolution Box Error</option>
+      <option value="koga-ninja-trick">Koga’s Ninja Trick</option>
+      <!-- Future options: <option value="ninetales-hp-error">Ninetales HP Misprint</option> -->
+    </select>
+
+    <label for="price">Max Price Threshold ($):</label>
+    <input type="number" name="price" id="price" required min="0" step="0.01">
+
+    <label for="contact">Contact Info (Email or Discord ID):</label>
+    <input type="text" name="contact" id="contact" required>
+
+    <label for="keywords">Extra Search Keywords (Optional):</label>
+    <textarea name="keywords" id="keywords" rows="3" placeholder="e.g., shadowless, 1st edition"></textarea>
+
+    <label for="notify">Notification Method:</label>
+    <select name="notify" id="notify">
+      <option value="email">Email</option>
+      <option value="discord">Discord</option>
+      <option value="none">No Notification (log only)</option>
+    </select>
+
+    <input type="hidden" name="marketplace" value="ebay">
+
+    <input type="submit" value="Submit Search Terms">
+  </form>
     </body>
 </html>
