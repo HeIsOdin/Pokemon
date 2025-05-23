@@ -19,12 +19,14 @@ function load_options_from_JSON() {
     const form = document.querySelector('form');
     if (!form) return;
 	url = form.action.replace('submit', 'options')
-	console.log(defectConfig)
-    fetch(url)
+    fetch(url, {headers: {
+    "ngrok-skip-browser-warning": "true"
+		}
+	})
       .then(response => response.json())
       .then(data => {
         defectConfig = data; // Save for later use
-
+		console.log(defectConfig)
         const defectSelect = document.getElementById("defect");
         defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
 
