@@ -1,5 +1,11 @@
-function get_url_from_JSON() {
-  fetch('env.json')
+document.addEventListener("DOMContentLoaded", function () {
+    body();
+  });
+
+let defectConfig = {}; // Store all config data globally
+
+async function get_url_from_JSON() {
+  return fetch('env.json')
     .then(response => response.json())
     .then(data => {
       const form = document.querySelector('form'); // safer than getElementsByTagName
@@ -8,8 +14,6 @@ function get_url_from_JSON() {
       }
     });
 }
-
-let defectConfig = {}; // Store all config data globally
 
 function load_options_from_JSON() {
     const form = document.querySelector('form');
@@ -52,6 +56,7 @@ function updateMarketplaceOptions() {
     }
   }
 
-function body() {
-	get_url_from_JSON().then(load_options_from_JSON);
+async function body() {
+	await get_url_from_JSON();
+	load_options_from_JSON();
 };
