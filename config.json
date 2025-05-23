@@ -8,9 +8,9 @@
       "Wartortle WOTC base",
       "Wartortle vintage"
     ],
-	"marketplace": ["eBay", "Facebook Marketplace"]
+	"marketplace": ["eBay"]
   },
-  
+
   "dark-dragonite-error": {
 	"title": "Dark Dragonite Error",
     "dataset": "benjaminadedowole/dark-dragonite-no-holo-error",
