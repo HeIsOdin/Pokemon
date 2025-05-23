@@ -7,3 +7,4 @@ matplotlib
 scikit-learn
 kaggle
 flask
+flask_cors

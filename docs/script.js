@@ -4,7 +4,7 @@ function get_url_from_JSON() {
     .then(data => {
       const form = document.querySelector('form'); // safer than getElementsByTagName
       if (form && data.url) {
-        form.action = data.url;
+        form.action = data.url + '/submit';
       }
     });
 }
@@ -14,8 +14,9 @@ let defectConfig = {}; // Store all config data globally
 function load_options_from_JSON() {
     const form = document.querySelector('form');
     if (!form) return;
-
-    fetch(form.action + '/options')
+	url = form.action.replace('submit', 'options')
+	console.log(form.action)
+    fetch(form.action)
       .then(response => response.json())
       .then(data => {
         defectConfig = data; // Save for later use
@@ -26,7 +27,7 @@ function load_options_from_JSON() {
         for (const key in data) {
           const option = document.createElement("option");
           option.value = key;
-          option.textContent = data[key]["title"];
+          option.textContent = data.key.title;
           defectSelect.appendChild(option);
         }
 
