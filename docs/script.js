@@ -19,7 +19,7 @@ function load_options_from_JSON() {
     const form = document.querySelector('form');
     if (!form) return;
 	url = form.action.replace('submit', 'options')
-	console.log(form.action)
+	console.log(defectConfig)
     fetch(form.action)
       .then(response => response.json())
       .then(data => {
@@ -31,7 +31,7 @@ function load_options_from_JSON() {
         for (const key in data) {
           const option = document.createElement("option");
           option.value = key;
-          option.textContent = data[key]["title"];
+          option.textContent = data[key]['title'];
           defectSelect.appendChild(option);
         }
 
