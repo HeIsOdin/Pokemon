@@ -27,7 +27,7 @@ function load_options_from_JSON() {
         for (const key in data) {
           const option = document.createElement("option");
           option.value = key;
-          option.textContent = data.key.title;
+          option.textContent = data[key]["title"];
           defectSelect.appendChild(option);
         }
 
@@ -53,6 +53,5 @@ function updateMarketplaceOptions() {
   }
 
 function body() {
-	get_url_from_JSON();
-	load_options_from_JSON();
+	get_url_from_JSON().then(load_options_from_JSON);
 };
