@@ -20,7 +20,7 @@ function load_options_from_JSON() {
     if (!form) return;
 	url = form.action.replace('submit', 'options')
 	console.log(defectConfig)
-    fetch(form.action)
+    fetch(url)
       .then(response => response.json())
       .then(data => {
         defectConfig = data; // Save for later use
