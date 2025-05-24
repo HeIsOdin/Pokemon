@@ -84,7 +84,7 @@ function updateMarketplaceOptions() {
     }
   }
 
-async function body(retries=max_retries, timeout=10000) {
+async function body(retries=max_retries, timeout=15000) {
 	if (await get_url_from_JSON(retries, timeout)) {
 		load_options_from_JSON();
 	}
