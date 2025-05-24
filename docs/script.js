@@ -4,27 +4,46 @@ document.addEventListener("DOMContentLoaded", function () {
 
 let defectConfig = {}; // Store all config data globally
 
-async function get_url_from_JSON() {
-	return fetch('env.json')
-	.then(response => response.json())
-	.then(data => {
-		const form = document.querySelector('form'); // safer than getElementsByTagName
-		if (form && data.url) {
-			form.action = data.url + '/submit';
-		}
-	});
+async function get_url_from_JSON(retries, timeout) {
+    try {
+        const response = await fetch('env.json');
+        const data = await response.json();
+
+        const form = document.querySelector('form');
+        if (form && data.url && data.state !== "expired") {
+            form.action = data.url + '/submit';
+        } else {
+            handleRetry(retries, timeout);
+        }
+    } catch (error) {
+        console.error("❌ Failed to fetch env.json:", error);
+        handleRetry(retries, timeout);
+    }
+}
+
+function handleRetry(retries, timeout) {
+    document.documentElement.style.transition = "filter 0.5s ease";
+    document.documentElement.style.filter = "grayscale(1)";
+    document.body.style.pointerEvents = "none";
+
+    if (retries > 0) {
+        console.warn(`🔁 Retrying in ${timeout / 1000} seconds... (${retries} left)`);
+        setTimeout(() => {
+            get_url_from_JSON(retries - 1, timeout * 2);
+        }, timeout);
+    } else {
+        console.error("❌ All retries exhausted. Giving up.");
+    }
 }
 
 async function load_options_from_JSON() {
-  const form = document.querySelector('form');
-  if (!form) return;
-
-  const url = form.action.replace('submit', 'options');
-
-  try {
-    const response = await fetch(url, {
-      headers: { "ngrok-skip-browser-warning": "true" }
-    });
+	const form = document.querySelector('form');
+	if (!form) return;
+	
+	const url = form.action.replace('submit', 'options');
+	const response = await fetch(url, {
+		headers: { "ngrok-skip-browser-warning": "true" }
+	});
 
     const data = await response.json();
     defectConfig = data;
@@ -40,17 +59,6 @@ async function load_options_from_JSON() {
     }
 
     defectSelect.addEventListener("change", updateMarketplaceOptions);
-
-  } catch (error) {
-    console.error("❌ Failed to load options:", error);
-	document.documentElement.style.transition = "filter 0.5s ease";
-    document.documentElement.style.filter = "grayscale(1)";
-    document.body.style.pointerEvents = "none";
-
-    setTimeout(() => {
-      load_options_from_JSON();
-    }, 3000);
-  }
 }
 
 
@@ -70,7 +78,7 @@ function updateMarketplaceOptions() {
     }
   }
 
-async function body() {
-	await get_url_from_JSON();
+async function body(retries=3, timeout=3000) {
+	await get_url_from_JSON(retries, timeout);
 	load_options_from_JSON();
 };
