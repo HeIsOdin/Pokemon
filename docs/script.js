@@ -2,7 +2,8 @@ document.addEventListener("DOMContentLoaded", function () {
     body();
   });
 
-let defectConfig = {}; // Store all config data globally
+let defectConfig = {};
+let max_retries = 3;
 
 async function get_url_from_JSON(retries, timeout) {
     try {
@@ -12,6 +13,9 @@ async function get_url_from_JSON(retries, timeout) {
         const form = document.querySelector('form');
         if (form && data.url && data.state !== "expired") {
             form.action = data.url + '/submit';
+			if (retries < max_retries) {
+				location.reload();
+			}
         } else {
             handleRetry(retries, timeout);
 			return false
@@ -19,7 +23,6 @@ async function get_url_from_JSON(retries, timeout) {
 		return true
     } catch (error) {
         console.error("❌ Failed to fetch env.json:", error);
-        handleRetry(retries, timeout);
 		return false
     }
 }
@@ -81,7 +84,7 @@ function updateMarketplaceOptions() {
     }
   }
 
-async function body(retries=3, timeout=3000) {
+async function body(retries=max_retries, timeout=10000) {
 	if (await get_url_from_JSON(retries, timeout)) {
 		load_options_from_JSON();
 	}
