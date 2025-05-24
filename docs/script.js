@@ -15,39 +15,43 @@ async function get_url_from_JSON() {
 	});
 }
 
-function load_options_from_JSON() {
-    const form = document.querySelector('form');
-    if (!form) return;
-	url = form.action.replace('submit', 'options')
-	try {
-    	fetch(url, {headers: {
-			"ngrok-skip-browser-warning": "true"
-		}
-	})
-	.then(response => response.json())
-	.then(data => {
-        defectConfig = data; // Save for later use
-        const defectSelect = document.getElementById("defect");
-        defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
+async function load_options_from_JSON() {
+  const form = document.querySelector('form');
+  if (!form) return;
 
-        for (const key in data) {
-          const option = document.createElement("option");
-          option.value = key;
-          option.textContent = data[key]['title'];
-          defectSelect.appendChild(option);
-        }
+  const url = form.action.replace('submit', 'options');
 
-        defectSelect.addEventListener("change", updateMarketplaceOptions);
-	});
-	} catch (error) {
-		console.log(error)
-		document.body.style.filter = "grayscale(1)";
-		document.body.style.pointerEvents = "none";
-		setTimeout(() => {
-			get_url_from_JSON();
-		}, 3000);
-	}
+  try {
+    const response = await fetch(url, {
+      headers: { "ngrok-skip-browser-warning": "true" }
+    });
+
+    const data = await response.json();
+    defectConfig = data;
+
+    const defectSelect = document.getElementById("defect");
+    defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
+
+    for (const key in data) {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = data[key]['title'];
+      defectSelect.appendChild(option);
+    }
+
+    defectSelect.addEventListener("change", updateMarketplaceOptions);
+
+  } catch (error) {
+    console.error("❌ Failed to load options:", error);
+    document.body.style.filter = "grayscale(1)";
+    document.body.style.pointerEvents = "none";
+
+    setTimeout(() => {
+      load_options_from_JSON();
+    }, 3000);
+  }
 }
+
 
 function updateMarketplaceOptions() {
 	const selectedDefect = document.getElementById("defect").value;
