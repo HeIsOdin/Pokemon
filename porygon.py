@@ -1,3 +1,27 @@
+"""
+# Porygon
+Core model training and dataset management module for PokéPrint Inspector.
+
+This module handles:
+- Downloading datasets (including from Kaggle)
+- Loading and preprocessing image data
+- Splitting datasets into training and test sets
+- Building and training a Convolutional Neural Network (CNN) using Keras
+- Evaluating model performance
+- Visualizing predictions
+
+Dependencies:
+- OpenCV (cv2)
+- NumPy
+- scikit-learn (for train/test splitting)
+- TensorFlow/Keras
+- kagglehub (for programmatic Kaggle downloads)
+- miscellaneous (custom helper functions)
+
+This module is intended to be called from the main execution pipeline and
+provides essential ML components for the PokéPrint Inspector project.
+"""
+
 import cv2
 import numpy as np
 import os
@@ -6,16 +30,32 @@ from keras import layers, models, Input
 import miscellaneous
 import kagglehub
 
-def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str):
-    _, download = miscellaneous.make_a_choice(f"Download dataset '{author}/{dataset_name}' using Kagglehub (Kaggle API key required!)? Y/n: ", 'n')
-    
+def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str, download: bool, use_local_storage: bool) -> str:
+    """
+    Download or extract a dataset, returning the directory path.
+
+    Args:
+        - TRAINING_DIR (str): Path to save or load the dataset.
+        - author (str): Kaggle dataset author.
+        - dataset_name (str): Kaggle dataset name.
+        - download (bool): Whether to download from Kaggle.
+        - use_local_storage (bool): Whether to save Kaggle download locally.
+
+    Returns:
+    - str: Path to the dataset directory.
+    """
     if download:
         path = ''
         try:
             kaggle_json_path = os.path.expanduser('~/.kaggle/kaggle.json')
             if os.path.isfile(kaggle_json_path):
-                os.system(f'kaggle download {author}/{dataset_name} --path {TRAINING_DIR}')
+                # Use Kaggle CLI
+                if use_local_storage:
+                    os.system(f'kaggle datasets download {author}/{dataset_name} --path {TRAINING_DIR}')
+                else:
+                    os.system(f'kaggle datasets download {author}/{dataset_name}')
             else:
+                # Use kagglehub fallback
                 kagglehub.login()
                 os.environ["KAGGLEHUB_CACHE"] = TRAINING_DIR
             miscellaneous.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle", 4)
@@ -26,34 +66,39 @@ def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str):
             miscellaneous.print_with_color("Dataset Download was successful!", 2)
             TRAINING_DIR = path
     else:
-        dataset_name, _ = miscellaneous.make_a_choice('Enter the path to the dataset: ', dataset_name)
-        if os.path.isfile(dataset_name) and dataset_name.endswith('.zip'):
-            miscellaneous.extract_zipfile(dataset_name, TRAINING_DIR)
+        # Extract ZIP file if provided
+        if os.path.isfile(TRAINING_DIR) and TRAINING_DIR.endswith('.zip'):
+            TRAINING_DIR = miscellaneous.extract_zipfile(TRAINING_DIR)
     return TRAINING_DIR
 
 def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool = True) -> tuple[list[cv2.typing.MatLike], list[int], list[str]]:
-    # -------------------------------
-    # Load and label images
-    # -------------------------------
-    miscellaneous.print_with_color(f"Loading dataset from the directory '{data_dir}'...'", 4)
-    X = list[cv2.typing.MatLike](); y = list[int](); file_names = list[str]()
+    """
+    Load and label images from a directory.
+
+    Args:
+        - data_dir (str): Directory containing images.
+        - input_shape (tuple): Target image shape (width, height).
+        - USE_RGB (bool): Load as RGB or grayscale.
+
+    Returns:
+    - tuple: (X images, y labels, filenames)
+    """
+    miscellaneous.print_with_color(f"Loading dataset from the directory '{data_dir}'...", 4)
+    X = list(); y = list(); file_names = list()
     try:
         for root, _, files in os.walk(data_dir):
             for file in files:
                 if file.endswith((".jpg", ".png", ".jpeg")):
                     file_names.append(os.path.join(root, file))
     except:
-        miscellaneous.print_with_color(f"Unable to transverse through '{data_dir}'", 1)
+        miscellaneous.print_with_color(f"Unable to traverse through '{data_dir}'", 1)
 
     miscellaneous.print_with_color(f"Reading images as {'RGB' if USE_RGB else 'Grayscale'}...", 4)
     for filepath in file_names:
-
-        # Read as grayscale/RGB and resize to match input shape
         img = cv2.imread(filepath, cv2.IMREAD_COLOR) if USE_RGB else cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
         if img is None:
             miscellaneous.print_with_color(f"Could not read image: {filepath}. Skipping...", 3)
             continue
-
         try:
             img = cv2.resize(img, input_shape)
         except:
@@ -73,7 +118,15 @@ def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool
     return X, y, file_names
 
 def display_sample(X: list[cv2.typing.MatLike], y: list[int], file_names: list[str], sample_idx: int = 0) -> None:
-    # Display a sample
+    """
+    Display a sample image and its label.
+
+    Args:
+        - X (list): Image data.
+        - y (list): Labels.
+        - file_names (list): Image file paths.
+        - sample_idx (int): Index of the sample to display.
+    """
     if X:
         miscellaneous.print_with_color(f"Showing sample image and label: {(file_names[sample_idx])[:20]}, label = {y[sample_idx]}. Press any key to continue...", 4)
         cv2.imshow("Sample Image", X[sample_idx])
@@ -81,7 +134,17 @@ def display_sample(X: list[cv2.typing.MatLike], y: list[int], file_names: list[s
         cv2.destroyAllWindows()
 
 def convert_and_reshape(origX: list[cv2.typing.MatLike], orig_y: list[int], USE_RGB: bool = True) -> tuple[np.ndarray, np.ndarray]:
-    # Convert to NumPy arrays and normalize
+    """
+    Convert image data to NumPy arrays, normalize, and reshape.
+
+    Args:
+        - origX (list): Original image data.
+        - orig_y (list): Original labels.
+        - USE_RGB (bool): Whether data is RGB or grayscale.
+
+    Returns:
+    - tuple: (X as np.ndarray, y as np.ndarray)
+    """
     miscellaneous.print_with_color("Converting and reshaping images...", 4)
     try:
         X = np.array(origX, dtype=np.float32) / 255.0
@@ -108,9 +171,16 @@ def convert_and_reshape(origX: list[cv2.typing.MatLike], orig_y: list[int], USE_
     return X, y
 
 def split_dataset(X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    # -------------------------------
-    # Split dataset
-    # -------------------------------
+    """
+    Split dataset into training and testing sets.
+
+    Args:
+        - X (np.ndarray): Image data.
+        - y (np.ndarray): Labels.
+
+    Returns:
+    - tuple: (X_train, X_test, y_train, y_test)
+    """
     miscellaneous.print_with_color("Splitting dataset into training and testing sets...", 4)
     try:
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -122,13 +192,20 @@ def split_dataset(X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray,
     return X_train, X_test, y_train, y_test
 
 def build_model(num_classes: int, USE_RGB: bool = True) -> models.Sequential:
+    """
+    Build and compile a simple CNN model.
+
+    Args:
+        - num_classes (int): Number of output classes.
+        - USE_RGB (bool): Whether input is RGB or grayscale.
+
+    Returns:
+    - models.Sequential: Compiled Keras model.
+    """
     miscellaneous.print_with_color("Building model...", 4)
-    # -------------------------------
-    # Build model
-    # -------------------------------
     try:
         model = models.Sequential()
-        model.add(Input(shape=(128, 128, 3))) if USE_RGB else model.add(Input(shape=(128, 128, 1)))
+        model.add(Input(shape=(128, 128, 3)) if USE_RGB else Input(shape=(128, 128, 1)))
         model.add(layers.Conv2D(8, (3, 3), activation='relu'))
         model.add(layers.Flatten())
         model.add(layers.Dense(num_classes, activation='softmax'))
@@ -137,34 +214,54 @@ def build_model(num_classes: int, USE_RGB: bool = True) -> models.Sequential:
     except Exception as e:
         miscellaneous.print_with_color(f"Failed to build model. {e}", 1)
     else:
-        miscellaneous.print_with_color(f"Model was built successful", 2)
+        miscellaneous.print_with_color("Model was built successfully", 2)
     return model
 
 def train_model(model: models.Sequential, X_train: np.ndarray, y_train: np.ndarray):
-    # -------------------------------
-    # Train model
-    # -------------------------------
+    """
+    Train the CNN model.
+
+    Args:
+        - model (models.Sequential): Keras model.
+        - X_train (np.ndarray): Training images.
+        - y_train (np.ndarray): Training labels.
+
+    Returns:
+    - History object: Keras training history.
+    """
     miscellaneous.print_with_color("Training model...", 4)
     try:
         history = model.fit(X_train, y_train, epochs=3, batch_size=32, validation_split=0.1)
     except Exception as e:
         miscellaneous.print_with_color(f"Model training failed. {e}", 1)
     else:
-        miscellaneous.print_with_color(f"Trained Model Successfully", 2)
+        miscellaneous.print_with_color("Trained model successfully", 2)
     return history
 
 def evaluate_model(model: models.Sequential, X_test: np.ndarray, y_test: np.ndarray) -> None:
-    # -------------------------------
-    # Evaluate model
-    # -------------------------------
+    """
+    Evaluate the model on test data.
+
+    Args:
+        - model (models.Sequential): Keras model.
+        - X_test (np.ndarray): Test images.
+        - y_test (np.ndarray): Test labels.
+    """
     miscellaneous.print_with_color("Evaluating model...", 4)
     test_loss, test_acc = model.evaluate(X_test, y_test)
     miscellaneous.print_with_color(f"Test accuracy: {test_acc:.4f}, Loss: {test_loss:.4f}", 4)
 
 def predict_and_visualize(model: models.Sequential, X_test: np.ndarray, y_test: np.ndarray, USE_RGB: bool = True, sample_idx: int = 1) -> None:
-    # -------------------------------
-    # Predict and visualize
-    # -------------------------------
+    """
+    Predict and visualize a single test image.
+
+    Args:
+        - model (models.Sequential): Keras model.
+        - X_test (np.ndarray): Test images.
+        - y_test (np.ndarray): Test labels.
+        - USE_RGB (bool): Whether images are RGB.
+        - sample_idx (int): Index of the sample to visualize.
+    """
     miscellaneous.print_with_color("Preparing to make predictions", 4)
     img = X_test[sample_idx]
     true_label = y_test[sample_idx]
@@ -176,7 +273,10 @@ def predict_and_visualize(model: models.Sequential, X_test: np.ndarray, y_test: 
     miscellaneous.print_with_color(f"True label: {true_label}, Predicted: {predicted_class}", 4)
     miscellaneous.print_with_color(f"Probabilities: {pred_probs}", 4)
 
-    cv2.imshow(f"Pokemon", img)
+    cv2.imshow("Pokemon", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    miscellaneous.print_with_color("The model was right! 🥳", 2) if predicted_class == true_label else miscellaneous.print_with_color("Oh No! The model was wrong! 🥺", 1)
+    if predicted_class == true_label:
+        miscellaneous.print_with_color("The model was right! 🥳", 2)
+    else:
+        miscellaneous.print_with_color("Oh no! The model was wrong! 🥺", 1)
