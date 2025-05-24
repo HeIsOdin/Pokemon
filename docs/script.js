@@ -5,14 +5,20 @@ document.addEventListener("DOMContentLoaded", function () {
 let defectConfig = {}; // Store all config data globally
 
 async function get_url_from_JSON() {
-  return fetch('env.json')
-    .then(response => response.json())
-    .then(data => {
-      const form = document.querySelector('form'); // safer than getElementsByTagName
-      if (form && data.url) {
-        form.action = data.url + '/submit';
-      }
-    });
+  try {
+	return fetch('env.json')
+	.then(response => response.json())
+	.then(data => {
+		const form = document.querySelector('form'); // safer than getElementsByTagName
+		if (form && data.url) {
+			form.action = data.url + '/submit';
+		}
+	});
+	} catch {
+		document.body.style.filter = "grayscale";
+		document.body.style.pointerEvents = "none";
+		setTimeout(await get_url_from_JSON(), 3000);
+  }
 }
 
 function load_options_from_JSON() {
@@ -26,7 +32,6 @@ function load_options_from_JSON() {
       .then(response => response.json())
       .then(data => {
         defectConfig = data; // Save for later use
-		console.log(defectConfig)
         const defectSelect = document.getElementById("defect");
         defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
 
