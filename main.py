@@ -3,27 +3,8 @@ import smeargle
 import porygon
 import miscellaneous
 
-if __name__ == "__main__":
-    # -------------------------------
-    # Configuration
-    # -------------------------------
-    input_shape = (128, 128)
-    num_classes = 2
-    author = 'benjaminadedowole'
-    dataset_name = 'wartortle-evolution-error'
-    CARD_DIM = (480, 680)
-    ROI_BOX = (40, 45, 60, 60)  # (x, y, width, height)
-
-    # -------------------------------
-    # Preamble
-    # -------------------------------
-    _, USE_LOCAL_STORAGE = miscellaneous.make_a_choice('\nUse local storage? Y/n: ', 'n')
-    INPUT_DIR = OUTPUT_DIR = ''
-    if USE_LOCAL_STORAGE:
-        INPUT_DIR, _ = miscellaneous.make_a_choice('Provide the directory path for storing eBay images: ', 'images')
-        OUTPUT_DIR, _ = miscellaneous.make_a_choice('Provide the directory path for storing debugging images: ', 'adjusted_images')
-    TRAINING_DIR, _ = miscellaneous.make_a_choice('Provide the directory path for storing model dataset: ', 'dataset')
-    _, USE_RGB = miscellaneous.make_a_choice('Use RGB? Y/n: ', 'y')
+def main(defect: str, USE_LOCAL_STORAGE: bool, USE_RGB: bool, download_dataset: bool):
+    author, dataset_name, input_shape, num_classes, CARD_DIM, ROI_BOX, INPUT_DIR, OUTPUT_DIR, TRAINING_DIR  = miscellaneous.parse_JSON_as_arguments('config.json', defect, ["input_shape", "dataset", "num_classes","dimensions","roi","local_storage","input_dir","debugging_dir","rgb", "training_dir"])
     
     miscellaneous.clear_terminal()
 
@@ -32,7 +13,7 @@ if __name__ == "__main__":
     while not directoryCheck:
         if attempts < 0:
             exit()
-        TRAINING_DIR = porygon.get_dataset(TRAINING_DIR, author, dataset_name)
+        TRAINING_DIR = porygon.get_dataset(TRAINING_DIR, author, dataset_name, download_dataset, USE_LOCAL_STORAGE)
         attempts -= 1
         directoryCheck = miscellaneous.directory_check(TRAINING_DIR)
 
@@ -87,3 +68,7 @@ if __name__ == "__main__":
         miscellaneous.print_with_color(f"Finished Processing {item['title']}", 2)
 
     miscellaneous.pause(10)
+
+if __name__ == "__main__":
+    args = miscellaneous.pass_arguments_to_main()
+    main(args.defect, args.use_local_storage, args.use_rgb, args.kaggle_download)
