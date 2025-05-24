@@ -1,5 +1,5 @@
 {
-  "wartortle-evolution-error": {
+  "wartortle_evolution_error": {
 	"title": "Wartortle Evolution Box Error",
     "dataset": "benjaminadedowole/wartortle-evolution-error",
     "queries": [
@@ -8,10 +8,17 @@
       "Wartortle WOTC base",
       "Wartortle vintage"
     ],
-	"marketplace": ["eBay"]
+	"marketplace": ["eBay", "Facebook Marketplace"],
+	"input_shape": [128, 128],
+	"num_classes": 2,
+	"dimensions": [480, 680],
+	"roi": [40, 45, 60, 60],
+	"input_dir": "imag",
+	"debugging_dir": "adjust",
+	"training_dir": "wartortle-evolution-error"
   },
 
-  "dark-dragonite-error": {
+  "dark_dragonite_error": {
 	"title": "Dark Dragonite Error",
     "dataset": "benjaminadedowole/dark-dragonite-no-holo-error",
     "queries": [
@@ -23,7 +30,7 @@
 		"marketplace": ["eBay", "Facebook Marketplace"]
   },
 
-  "ninetales-lure-error": {
+  "ninetales_lure_error": {
 	"title": "Ninetales Lure Error",
     "dataset": "benjaminadedowole/ninetales-lure-error",
     "queries": [
