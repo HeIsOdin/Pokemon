@@ -6,20 +6,26 @@ let defectConfig = {}; // Store all config data globally
 
 async function get_url_from_JSON() {
   try {
-	return fetch('env.json')
-	.then(response => response.json())
-	.then(data => {
-		const form = document.querySelector('form'); // safer than getElementsByTagName
-		if (form && data.url) {
-			form.action = data.url + '/submit';
-		}
-	});
-	} catch {
-		document.body.style.filter = "grayscale";
-		document.body.style.pointerEvents = "none";
-		setTimeout(await get_url_from_JSON(), 3000);
+    const response = await fetch('env.json');
+    const data = await response.json();
+
+    const form = document.querySelector('form');
+    if (form && data.url) {
+      form.action = data.url + '/submit';
+    }
+
+  } catch (error) {
+    // Visual feedback
+    document.body.style.filter = "grayscale(1)";
+    document.body.style.pointerEvents = "none";
+
+    // Wait and retry
+    setTimeout(() => {
+      get_url_from_JSON();  // retry after 3 seconds
+    }, 3000);
   }
 }
+
 
 function load_options_from_JSON() {
     const form = document.querySelector('form');
