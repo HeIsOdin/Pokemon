@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 let defectConfig = {};
 let max_retries = 3;
+let interval = 15000;
 
 async function get_url_from_JSON(retries, timeout) {
     try {
@@ -84,7 +85,7 @@ function updateMarketplaceOptions() {
     }
   }
 
-async function body(retries=max_retries, timeout=15000) {
+async function body(retries=max_retries, timeout=interval) {
 	if (await get_url_from_JSON(retries, timeout)) {
 		load_options_from_JSON();
 	}
