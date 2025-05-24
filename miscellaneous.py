@@ -26,6 +26,7 @@ import time
 import zipfile
 import json
 import argparse
+import dotenv
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -56,19 +57,26 @@ def clear_terminal():
     """
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def credentials() -> tuple[str, str]:
+def enviromentals(*vars: str) -> tuple:
     """
-    Retrieve eBay API credentials from environment variables.
+    Retrieve environment variables.
+
+    Args:
+        - *vars (unknown number of strings): variables set in the environment
     
     Returns:
-    - tuple: (CLIENT_ID, CLIENT_SECRET)
+    - tuple (number of arguments passed): values of environmental variables
     """
-    CLIENT_ID = os.getenv('EBAY_CLIENT_ID')
-    CLIENT_SECRET = os.getenv('EBAY_CLIENT_SECRET')
-    if not CLIENT_ID or not CLIENT_SECRET:
-        print("\033[31m[ERROR] CLIENT_ID or CLIENT_SECRET not set in environment.\033[0m")
+    dotenv.load_dotenv()
+    values = []
+    for var in vars:
+        value = os.getenv(var)
+        if value: values.append(value)
+
+    if len(values) != len(vars):
+        print(f"\033[31m[ERROR] Some or all values in {vars} not set in environment.\033[0m")
         exit()
-    return CLIENT_ID, CLIENT_SECRET
+    return tuple(values)
 
 def pause(seconds: float):
     """Pause the script for a specified number of seconds.
@@ -166,3 +174,9 @@ def pass_arguments_to_main() -> argparse.Namespace:
     parser.add_argument("--use_rgb", action='store_true', help="Use RGB instead of grayscale")
     parser.add_argument("--kaggle_download", action='store_true', help="Download Kaggle dataset")
     return parser.parse_args()
+
+def flask_app_details() -> tuple[str | None, str | None]:
+    """
+    Returns the port used by the Flask Application and the ngrok api
+    """
+    return os.getenv('FLASK_PORT'), os.getenv('NGROK_API')

@@ -26,7 +26,7 @@ def main(defect: str, USE_LOCAL_STORAGE: bool, USE_RGB: bool, download_dataset: 
     porygon.evaluate_model(AI, testing_images, testing_labels)
     porygon.predict_and_visualize(AI, testing_images, testing_labels, USE_RGB)
 
-    CLIENT_ID, CLIENT_SECRET = miscellaneous.credentials()
+    CLIENT_ID, CLIENT_SECRET = miscellaneous.enviromentals('EBAY_CLIENT_ID', 'EBAY_CLIENT_SECRET')
 
     miscellaneous.print_with_color("Authenticating with eBay...", 4)
     token = spinarak.get_ebay_token(CLIENT_ID, CLIENT_SECRET)
