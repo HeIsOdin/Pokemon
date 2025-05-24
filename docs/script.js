@@ -52,10 +52,10 @@ async function load_options_from_JSON() {
     defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
 
     for (const key in data) {
-      const option = document.createElement("option");
-      option.value = key;
-      option.textContent = data[key]['title'];
-      defectSelect.appendChild(option);
+		const option = document.createElement("option");
+		option.value = key;
+		option.textContent = data[key]['title'];
+		defectSelect.appendChild(option);
     }
 
     defectSelect.addEventListener("change", updateMarketplaceOptions);
