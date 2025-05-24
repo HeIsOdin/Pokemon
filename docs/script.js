@@ -43,7 +43,8 @@ async function load_options_from_JSON() {
 
   } catch (error) {
     console.error("❌ Failed to load options:", error);
-    document.body.style.filter = "grayscale(1)";
+	document.documentElement.style.transition = "filter 0.5s ease";
+    document.documentElement.style.filter = "grayscale(1)";
     document.body.style.pointerEvents = "none";
 
     setTimeout(() => {
