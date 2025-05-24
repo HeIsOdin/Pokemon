@@ -14,10 +14,13 @@ async function get_url_from_JSON(retries, timeout) {
             form.action = data.url + '/submit';
         } else {
             handleRetry(retries, timeout);
+			return false
         }
+		return true
     } catch (error) {
         console.error("❌ Failed to fetch env.json:", error);
         handleRetry(retries, timeout);
+		return false
     }
 }
 
@@ -79,6 +82,7 @@ function updateMarketplaceOptions() {
   }
 
 async function body(retries=3, timeout=3000) {
-	await get_url_from_JSON(retries, timeout);
-	load_options_from_JSON();
+	if (await get_url_from_JSON(retries, timeout)) {
+		load_options_from_JSON();
+	}
 };
