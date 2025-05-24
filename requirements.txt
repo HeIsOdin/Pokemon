@@ -8,3 +8,4 @@ scikit-learn
 kaggle
 flask
 flask_cors
+gitpython
