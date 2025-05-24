@@ -1,5 +1,5 @@
 """
-# Miscellaneous.py
+# Miscellaneous
 Utility functions for the PokéPrint Inspector system.
 
 This module provides helper functions used across the project, including:
