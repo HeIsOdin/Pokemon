@@ -18,11 +18,11 @@ async function get_url_from_JSON() {
 				location.reload();
 			}
         } else {
-            window.location.replace('/docs/pages/hamster.html')
+            window.location.replace('/Pokemon/pages/hamster.html')
         }
 		return true
     } catch (error) {
-        window.location.replace('/docs/pages/hamster.html')
+        window.location.replace('/Pokemon/pages/hamster.html')
     }
 }
 
