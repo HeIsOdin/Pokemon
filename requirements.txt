@@ -9,3 +9,4 @@ kaggle
 flask
 flask_cors
 gitpython
+psycopg2-binary

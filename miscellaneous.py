@@ -175,8 +175,5 @@ def pass_arguments_to_main() -> argparse.Namespace:
     parser.add_argument("--kaggle_download", action='store_true', help="Download Kaggle dataset")
     return parser.parse_args()
 
-def flask_app_details() -> tuple[str | None, str | None]:
-    """
-    Returns the port used by the Flask Application and the ngrok api
-    """
-    return os.getenv('FLASK_PORT'), os.getenv('NGROK_API')
+def hash_function(defect: str, price: int) -> str:
+    return "deadbeef"
