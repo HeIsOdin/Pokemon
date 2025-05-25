@@ -8,21 +8,20 @@ let interval = 15000;
 
 async function get_url_from_JSON() {
     try {
-        const response = await fetch('env.json');
+        const response = await fetch('/Pokemon/env.json');
         const data = await response.json();
 
         const form = document.querySelector('form');
         if (form && data.url && data.state !== "expired") {
             form.action = data.url + '/submit';
-			if (retries < max_retries) {
-				location.reload();
-			}
         } else {
-            window.location.replace('/Pokemon/pages/hamster.html')
+            window.location.replace('/Pokemon/pages/hamster.html');
+            return false;
         }
-		return true
+		return true;
     } catch (error) {
-        window.location.replace('/Pokemon/pages/hamster.html')
+        window.location.replace('/Pokemon/pages/hamster.html');
+        return false;
     }
 }
 

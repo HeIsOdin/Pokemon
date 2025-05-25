@@ -20,7 +20,7 @@ async function get_url_from_JSON() {
 
         const form = document.querySelector('form');
         if (form && data.url && data.state !== "expired") {
-            window.location.replace('/Pokemon/pages/main.html');
+            window.location.replace('/Pokemon/index.html');
         }
 		return true
     } catch (error) {
