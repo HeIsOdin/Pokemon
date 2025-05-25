@@ -2,7 +2,7 @@ body {
 	font-family: Arial, sans-serif;
 	max-width: 600px;
     margin: 40px auto;
-    background-image: url('/media/favicon.jpg');
+    background-image: url('../media/favicon.jpg');
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
