@@ -6,7 +6,7 @@ let defectConfig = {};
 let max_retries = 3;
 let interval = 15000;
 
-async function get_url_from_JSON(retries, timeout) {
+async function get_url_from_JSON() {
     try {
         const response = await fetch('env.json');
         const data = await response.json();
@@ -18,28 +18,11 @@ async function get_url_from_JSON(retries, timeout) {
 				location.reload();
 			}
         } else {
-            handleRetry(retries, timeout);
-			return false
+            window.location.replace('/docs/pages/hamster.html')
         }
 		return true
     } catch (error) {
-        console.error("❌ Failed to fetch env.json:", error);
-		return false
-    }
-}
-
-function handleRetry(retries, timeout) {
-    document.documentElement.style.transition = "filter 0.5s ease";
-    document.documentElement.style.filter = "grayscale(1)";
-    document.body.style.pointerEvents = "none";
-
-    if (retries > 0) {
-        console.warn(`🔁 Retrying in ${timeout / 1000} seconds... (${retries} left)`);
-        setTimeout(() => {
-            get_url_from_JSON(retries - 1, timeout * 2);
-        }, timeout);
-    } else {
-        console.error("❌ All retries exhausted. Giving up.");
+        window.location.replace('/docs/pages/hamster.html')
     }
 }
 
@@ -67,7 +50,6 @@ async function load_options_from_JSON() {
 
     defectSelect.addEventListener("change", updateMarketplaceOptions);
 }
-
 
 function updateMarketplaceOptions() {
 	const selectedDefect = document.getElementById("defect").value;
