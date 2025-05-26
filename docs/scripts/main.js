@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-    if (getCookie('url') && getCookie('state') === 'active') body();
+    if (getCookie('url') && getCookie('state') === "active") body();
     else window.location.replace('/Pokemon/pages/hamster.html');
   });
 
