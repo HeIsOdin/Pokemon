@@ -28,7 +28,7 @@ function getCookie(name) {
 }
 
 async function waitForCookie() {
-    if (!getCookie('url') || getCookie('state') === 'expired') {
+    if (getCookie('state') === 'expired') {
         await setCookie(3);
         console.clear();
         setTimeout(waitForCookie, 3000);
