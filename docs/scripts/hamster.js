@@ -13,7 +13,7 @@ async function logo_animation() {
     document.documentElement.style.setProperty('--log_width', `calc(100% - ${2 * r}px - ${offset}px)`);
     
     // Apply initial animations
-    logo.style.display = "block"; document.getElementById('container').style.justifyContent('flex-start');
+    logo.style.display = "block"; document.getElementById('container').style.justifyContent = 'flex-start';
     logo.style.animation = 'wheelHamster 5s ease-out forwards alternate';
     ani.style.animation = 'textstroke 10s ease-out forwards alternate';
 
