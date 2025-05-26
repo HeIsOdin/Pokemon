@@ -76,7 +76,7 @@ function delay(ms) {
 
 async function waitForCookie() {
     let retries = 0;
-    const maxRetries = 10;
+    const maxRetries = 40;
 
     while (retries < maxRetries) {
         const state = getCookie('state');
@@ -84,14 +84,14 @@ async function waitForCookie() {
 
         if (!url) {
             await setCookie(3);
-            await delay(10000);
+            await delay(5000);
             retries++;
             continue;
         }
 
         if (state === 'expired') {
             await setCookie(3);
-            await delay(10000);
+            await delay(5000);
             retries++;
             continue;
         }
@@ -106,7 +106,7 @@ async function waitForCookie() {
         } catch (error) {
             console.log(error)
             await setCookie(3, 'expired');
-            await delay(10000);
+            await delay(5000);
             retries++;
         }
     }
