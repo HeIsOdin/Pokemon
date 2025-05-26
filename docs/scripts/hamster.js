@@ -82,6 +82,7 @@ async function waitForCookie() {
         const url = getCookie('url');
 
         if (!url) {
+            await setCookie(3);
             await delay(10000);
             retries++;
             continue;
