@@ -19,7 +19,7 @@ body {
 
 #container {
 	display: flex;
-	justify-content: space-evenly;
+	/* justify-content: space-evenly; */
 	margin: auto;
 	height: var(--diameter);
 	max-height: 200px;
@@ -34,22 +34,22 @@ body {
 }
 
 svg {
-        display:inline-block;
+    display:inline-block;
 	width: 100%;
 	height: 35vw;
 	max-height: 200px;
 }
 
 text {
-        fill:none;
-        stroke:url('#GradientColor');
-        stroke-width:3px;
-        stroke-dasharray:10;
-        stroke-dashoffset:1;
-        font-family:Grand Hotel;
+    fill:none;
+    stroke:url('#GradientColor');
+    stroke-width:3px;
+    stroke-dasharray:10;
+    stroke-dashoffset:1;
+    font-family:Grand Hotel;
 	position: absolute;
 	font-size: var(--logo_size);
-	text-anchor:middle;
+	text-anchor: middle;
 }
 
 .wheel-and-hamster {
