@@ -1,38 +1,45 @@
-async function logo_animation() {
-    // Get elements
-    const wah = document.querySelector('.wheel-and-hamster');
-    const logo = document.getElementById('log');
-    const ani = document.getElementById('anim');
-    
-    // Calculate dimensions
-    const r = parseFloat(getComputedStyle(wah).height) / 2;
-    const offset = Math.sqrt(2 * (r ** 2)) - r;
-    
-    // Set CSS variables
-    document.documentElement.style.setProperty('--spoke_offset', `${offset}px`);
-    document.documentElement.style.setProperty('--log_width', `calc(100% - ${2 * r}px - ${offset}px)`);
-    
-    // Apply initial animations
-    logo.style.display = "block"; document.getElementById('container').style.justifyContent = 'flex-start';
-    logo.style.animation = 'wheelHamster 5s ease-out forwards alternate';
-    ani.style.animation = 'textstroke 10s ease-out forwards alternate';
+async function logoAnimation() {
+    return new Promise((resolve) => {
+        const wah = document.querySelector('.wheel-and-hamster');
+        const logo = document.getElementById('log');
+        const ani = document.getElementById('anim');
+        const container = document.getElementById('container');
 
-    // Handle animation end
-    ani.addEventListener('animationend', () => {
-        let opacity = 1;
-        const fadeOut = () => {
-            if (opacity <= 0) {
-                logo.style.opacity = '0';
-                wah.style.opacity = '0';
-                return;
-            }
-            opacity -= 0.03;
-            logo.style.opacity = wah.style.opacity = opacity.toString();
+        if (!wah || !logo || !ani || !container) {
+            console.warn('Required elements not found.');
+            resolve();
+            return;
+        }
+
+        const r = parseFloat(getComputedStyle(wah).height) / 2;
+        const offset = Math.sqrt(2 * (r ** 2)) - r;
+
+        document.documentElement.style.setProperty('--spoke_offset', `${offset}px`);
+        document.documentElement.style.setProperty('--log_width', `calc(100% - ${2 * r}px - ${offset}px)`);
+
+        logo.style.display = 'block';
+        container.style.justifyContent = 'flex-start';
+        logo.style.animation = 'wheelHamster 5s ease-out forwards alternate';
+        ani.style.animation = 'textstroke 10s ease-out forwards alternate';
+
+        ani.addEventListener('animationend', () => {
+            let opacity = 1;
+            const fadeOut = () => {
+                if (opacity <= 0) {
+                    logo.style.opacity = '0';
+                    wah.style.opacity = '0';
+                    resolve();  // ✅ resolve when fade-out completes
+                    return;
+                }
+                opacity -= 0.03;
+                logo.style.opacity = wah.style.opacity = opacity.toString();
+                requestAnimationFrame(fadeOut);
+            };
             requestAnimationFrame(fadeOut);
-        };
-        requestAnimationFrame(fadeOut);
+        }, { once: true });
     });
 }
+
 
 async function setCookie(hours, state='') {
     try {
@@ -93,7 +100,6 @@ async function waitForCookie() {
             await fetch(url, {
                 headers: { "ngrok-skip-browser-warning": "true" }
             });
-            console.log('passed');
             await logo_animation();
             window.location.replace('/Pokemon');
             return;
