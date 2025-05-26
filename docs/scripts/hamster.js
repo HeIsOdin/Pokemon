@@ -5,8 +5,8 @@ async function setCookie(hours, state='') {
         const data = await response.json();
 
         if (data) {
-            for (const [key, value] of Object.entries(data)) {
-                if (key === 'state' && state !== '') value = state;
+            for (const [key, originalValue] of Object.entries(data)) {
+                const value = (key === 'state' && state !== '') ? state : originalValue;
                 const expires = new Date(Date.now() + hours * 36e5).toUTCString();
                 document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
             }
@@ -36,20 +36,18 @@ async function waitForCookie() {
         if (getCookie('state') === 'expired') {
             setCookie(3);
             await delay(10000);
-        } else {
-            try {
-                await fetch(url, {
-                    headers: { "ngrok-skip-browser-warning": "true" }
-                });
-                window.location.replace('/Pokemon');
-            } catch {
-                setCookie(3, 'expired');
-                await delay(10000);
-                location.reload();
-            }
+            continue;
+        }
+        try {
+            await fetch(getCookie('url'), {
+                headers: { "ngrok-skip-browser-warning": "true" }
+            });
+            window.location.replace('/Pokemon');
+        } catch {
+            setCookie(3, 'expired');
+            await delay(10000);
         }
     }
-    
 }
 
 waitForCookie();
