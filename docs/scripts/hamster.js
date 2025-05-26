@@ -1,29 +1,42 @@
-function handleRetry(retries, timeout) {
-    document.documentElement.style.transition = "filter 0.5s ease";
-    document.documentElement.style.filter = "grayscale(1)";
-    document.body.style.pointerEvents = "none";
-
-    if (retries > 0) {
-        console.warn(`🔁 Retrying in ${timeout / 1000} seconds... (${retries} left)`);
-        setTimeout(() => {
-            get_url_from_JSON(retries - 1, timeout * 2);
-        }, timeout);
-    } else {
-        console.error("❌ All retries exhausted. Giving up.");
-    }
-}
-
-async function get_url_from_JSON() {
+async function setCookie(hours) {
     try {
-        const response = await fetch('env.json');
+        const response = await fetch('/Pokemon/env.json');
+        /** @type {{ url: string, state: string }} */
         const data = await response.json();
-
         const form = document.querySelector('form');
-        if (form && data.url && data.state !== "expired") {
-            window.location.replace('/Pokemon/index.html');
+
+        if (form && data.url) {
+            form.action = data.url + '/submit';
+            for (const [key, value] of Object.entries(data)) {
+                const expires = new Date(Date.now() + hours * 36e5).toUTCString();
+                document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
+            }
         }
-		return true
     } catch (error) {
-        window.location.replace('/Pokemon/pages/unknown.html')
+        window.location.replace('/Pokemon/pages/hamster.html');
     }
 }
+
+function getCookie(name) {
+    const cookies = document.cookie.split('; ');
+    for (let cookie of cookies) {
+        let [key, val] = cookie.split('=');
+        if (key === name) {
+            if (val !== "") return decodeURIComponent(val);
+        }
+    }
+  return null;
+}
+
+async function waitForCookie() {
+    if (!getCookie('url') || getCookie('state') === 'expired') {
+        await setCookie(3);
+        setTimeout(waitForCookie, 3000);
+    } else {
+        window.location.replace('/Pokemon/index.html');
+    }
+}
+setCookie(3);
+waitForCookie();
+
+

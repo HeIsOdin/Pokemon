@@ -1,53 +1,50 @@
 document.addEventListener("DOMContentLoaded", function () {
-    body();
+    if (getCookie('url') && getCookie('state') === 'active') body();
+    else window.location.replace('/Pokemon/pages/hamster.html');
   });
 
 let defectConfig = {};
-let max_retries = 3;
-let interval = 15000;
 
-async function get_url_from_JSON() {
-    try {
-        const response = await fetch('/Pokemon/env.json');
-        const data = await response.json();
-
-        const form = document.querySelector('form');
-        if (form && data.url && data.state !== "expired") {
-            form.action = data.url + '/submit';
-        } else {
-            window.location.replace('/Pokemon/pages/hamster.html');
-            return false;
+function getCookie(name) {
+    const cookies = document.cookie.split('; ');
+    for (let cookie of cookies) {
+        let [key, val] = cookie.split('=');
+        if (key === name) {
+            if (val !== "") return decodeURIComponent(val);
         }
-		return true;
-    } catch (error) {
-        window.location.replace('/Pokemon/pages/hamster.html');
-        return false;
     }
+  return null;
 }
 
 async function load_options_from_JSON() {
 	const form = document.querySelector('form');
 	if (!form) return;
 	
+    form.action = getCookie('url');
 	const url = form.action.replace('submit', 'options');
-	const response = await fetch(url, {
-		headers: { "ngrok-skip-browser-warning": "true" }
-	});
+    try {
+	    const response = await fetch(url, {
+		    headers: { "ngrok-skip-browser-warning": "true" }
+	    });
 
-    const data = await response.json();
-    defectConfig = data;
+        const data = await response.json();
+        defectConfig = data;
+    } catch {
 
-    const defectSelect = document.getElementById("defect");
-    defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
+        window.location.replace('/Pokemon/pages/hamster.html')
+    } finally {
+        const defectSelect = document.getElementById("defect");
+        defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
 
-    for (const key in data) {
-		const option = document.createElement("option");
-		option.value = key;
-		option.textContent = data[key]['title'];
-		defectSelect.appendChild(option);
+        for (const key in data) {
+		    const option = document.createElement("option");
+		    option.value = key;
+		    option.textContent = data[key]['title'];
+		    defectSelect.appendChild(option);
+        }
+
+        defectSelect.addEventListener("change", updateMarketplaceOptions);
     }
-
-    defectSelect.addEventListener("change", updateMarketplaceOptions);
 }
 
 function updateMarketplaceOptions() {
@@ -66,8 +63,6 @@ function updateMarketplaceOptions() {
     }
   }
 
-async function body(retries=max_retries, timeout=interval) {
-	if (await get_url_from_JSON(retries, timeout)) {
+async function body() {
 		load_options_from_JSON();
-	}
-};
+}
