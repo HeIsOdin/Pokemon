@@ -3,7 +3,7 @@ async function logoAnimation() {
         const wah = document.querySelector('.wheel-and-hamster');
         const logo = document.getElementById('log');
         const ani = document.getElementById('anim');
-        const container = document.getElementById('container');
+        const container = document.querySelector('#container');
 
         if (!wah || !logo || !ani || !container) {
             console.warn('Required elements not found.');
@@ -17,8 +17,8 @@ async function logoAnimation() {
         document.documentElement.style.setProperty('--spoke_offset', `${offset}px`);
         document.documentElement.style.setProperty('--log_width', `calc(100% - ${2 * r}px - ${offset}px)`);
 
-        logo.style.display = 'block';
-        container.style.justifyContent = 'flex-start';
+        logo.style.display = "block";
+        container.style.justifyContent = "flex-start";
         logo.style.animation = 'wheelHamster 5s ease-out forwards alternate';
         ani.style.animation = 'textstroke 10s ease-out forwards alternate';
 
