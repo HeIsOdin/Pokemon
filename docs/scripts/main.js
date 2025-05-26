@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-    if (getCookie('url') && getCookie('state') === "active") body();
+    if (getCookie('url') && getCookie('state') === 'active') body();
     else window.location.replace('/Pokemon/pages/hamster.html');
   });
 
@@ -20,7 +20,7 @@ async function load_options_from_JSON() {
 	const form = document.querySelector('form');
 	if (!form) return;
 	
-    form.action = getCookie('url');
+    form.action = getCookie('url')+'/submit';
 	const url = form.action.replace('submit', 'options');
     try {
 	    const response = await fetch(url, {
@@ -30,7 +30,6 @@ async function load_options_from_JSON() {
         const data = await response.json();
         defectConfig = data;
     } catch {
-
         window.location.replace('/Pokemon/pages/hamster.html')
     } finally {
         const defectSelect = document.getElementById("defect");
@@ -64,5 +63,5 @@ function updateMarketplaceOptions() {
   }
 
 async function body() {
-		load_options_from_JSON();
+	load_options_from_JSON();
 }
