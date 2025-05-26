@@ -28,17 +28,18 @@ function getCookie(name) {
   return null;
 }
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function waitForCookie() {
-    if (getCookie('state') === 'expired') {
-        await setCookie(3);
-        console.clear();
-        setTimeout(waitForCookie, 3000);
-    } else {
-        if (getCookie('url') === setCookie(3)) setTimeout(waitForCookie, 3000);
-        else window.location.replace('/Pokemon/index.html');
-    }
+  while (getCookie('state') === 'expired') {
+    setCookie('state', 'active', 3);
+    await delay(3000);
+  }
+
+  window.location.replace('/Pokemon/index.html');
 }
 
 waitForCookie();
-
 
