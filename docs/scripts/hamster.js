@@ -1,44 +1,38 @@
-function PyPikachu() {
-// Get elements
-const wah = document.querySelector('.wheel-and-hamster');
-const logo = document.getElementById('log');
-const ani = document.getElementById('anim');
+async function logo_animation() {
+    // Get elements
+    const wah = document.querySelector('.wheel-and-hamster');
+    const logo = document.getElementById('log');
+    const ani = document.getElementById('anim');
+    
+    // Calculate dimensions
+    const r = parseFloat(getComputedStyle(wah).height) / 2;
+    const offset = Math.sqrt(2 * (r ** 2)) - r;
+    
+    // Set CSS variables
+    document.documentElement.style.setProperty('--spoke_offset', `${offset}px`);
+    document.documentElement.style.setProperty('--log_width', `calc(100% - ${2 * r}px - ${offset}px)`);
+    
+    // Apply initial animations
+    logo.style.display = "block"; document.getElementById('container').style.justifyContent('flex-start');
+    logo.style.animation = 'wheelHamster 5s ease-out forwards alternate';
+    ani.style.animation = 'textstroke 10s ease-out forwards alternate';
 
-// Calculate dimensions
-const r = parseFloat(getComputedStyle(wah).height) / 2;
-const offset = Math.sqrt(2 * (r ** 2)) - r;
-
-// Set CSS variables
-document.documentElement.style.setProperty('--spoke_offset', `${offset}px`);
-document.documentElement.style.setProperty('--log_width', `calc(100% - ${2 * r}px - ${offset}px)`);
-
-// Apply initial animations
-logo.style.display = "block"; document.getElementById('container').style.justifyContent('flex-start');
-logo.style.animation = 'wheelHamster 5s ease-out forwards alternate';
-ani.style.animation = 'textstroke 10s ease-out forwards alternate';
-
-// Handle animation end
-ani.addEventListener('animationend', () => {
-    let opacity = 1;
-
-    const fadeOut = () => {
-        if (opacity <= 0) {
-            logo.style.opacity = '0';
-            wah.style.opacity = '0';
-            return;
-        }
-
-        opacity -= 0.03;
-        logo.style.opacity = wah.style.opacity = opacity.toString();
-
+    // Handle animation end
+    ani.addEventListener('animationend', () => {
+        let opacity = 1;
+        const fadeOut = () => {
+            if (opacity <= 0) {
+                logo.style.opacity = '0';
+                wah.style.opacity = '0';
+                return;
+            }
+            opacity -= 0.03;
+            logo.style.opacity = wah.style.opacity = opacity.toString();
+            requestAnimationFrame(fadeOut);
+        };
         requestAnimationFrame(fadeOut);
-    };
-
-    requestAnimationFrame(fadeOut);
-});
-
+    });
 }
-
 
 async function setCookie(hours, state='') {
     try {
@@ -96,15 +90,13 @@ async function waitForCookie() {
         }
 
         try {
-            const response = await fetch(url, {
+            await fetch(url, {
                 headers: { "ngrok-skip-browser-warning": "true" }
             });
 
-            if (response.ok) {
-                PyPikachu();
-                window.location.replace('/Pokemon');
-                return;
-            }
+            await logo_animation();
+            window.location.replace('/Pokemon');
+            return;
         } catch (error) {
             await setCookie(3, 'expired');
             await delay(10000);
