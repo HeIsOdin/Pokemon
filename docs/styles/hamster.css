@@ -19,7 +19,7 @@ body {
 
 #container {
 	display: flex;
-	/* justify-content: space-evenly; */
+	justify-content: space-evenly;
 	margin: auto;
 	height: var(--diameter);
 	max-height: 200px;
