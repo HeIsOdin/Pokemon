@@ -10,9 +10,10 @@ async function setCookie(hours) {
                 console.log(`${key}, ${value}, ${expires}`);
                 document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
             }
+            return data.url;
         }
     } catch (error) {
-        window.location.replace('/Pokemon/pages/hamster.html');
+        window.location.replace('/Pokemon/pages/unknown.html');
     }
 }
 
@@ -33,11 +34,11 @@ async function waitForCookie() {
         console.clear();
         setTimeout(waitForCookie, 3000);
     } else {
+        if (getCookie('url') == setCookie(3)) setTimeout(waitForCookie, 3000);
         window.location.replace('/Pokemon/index.html');
     }
 }
 
-setCookie(3);
 waitForCookie();
 
 
