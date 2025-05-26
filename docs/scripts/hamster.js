@@ -10,7 +10,6 @@ async function setCookie(hours, state='') {
                 const expires = new Date(Date.now() + hours * 36e5).toUTCString();
                 document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
             }
-            return data.url;
         }
     } catch (error) {
         window.location.replace('/Pokemon/pages/unknown.html');
@@ -36,15 +35,16 @@ async function waitForCookie() {
     while (true) {
         if (getCookie('state') === 'expired') {
             setCookie(3);
-            await delay(3000);
+            await delay(10000);
         } else {
             try {
                 await fetch(url, {
                     headers: { "ngrok-skip-browser-warning": "true" }
                 });
-                window.location.replace('/Pokemon/index.html');
+                window.location.replace('/Pokemon');
             } catch {
                 setCookie(3, 'expired');
+                await delay(10000);
                 location.reload();
             }
         }
