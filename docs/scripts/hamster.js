@@ -34,7 +34,8 @@ async function waitForCookie() {
         console.clear();
         setTimeout(waitForCookie, 3000);
     } else {
-        if (getCookie('url') == setCookie(3)) setTimeout(waitForCookie, 3000);
+        console.log(getCookie('url')); console.log(setCookie(3));
+        if (getCookie('url') === setCookie(3)) setTimeout(waitForCookie, 3000);
         window.location.replace('/Pokemon/index.html');
     }
 }
