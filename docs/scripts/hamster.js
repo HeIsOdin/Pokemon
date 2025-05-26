@@ -100,7 +100,7 @@ async function waitForCookie() {
             await fetch(url, {
                 headers: { "ngrok-skip-browser-warning": "true" }
             });
-            await logo_animation();
+            await logoAnimation();
             window.location.replace('/Pokemon');
             return;
         } catch (error) {
