@@ -1,4 +1,4 @@
-async function setCookie(hours) {
+async function setCookie(hours, state='') {
     try {
         const response = await fetch('/Pokemon/env.json');
         /** @type {{ url: string, state: string }} */
@@ -6,8 +6,8 @@ async function setCookie(hours) {
 
         if (data) {
             for (const [key, value] of Object.entries(data)) {
+                if (key === 'state' && state !== '') value = state;
                 const expires = new Date(Date.now() + hours * 36e5).toUTCString();
-                console.log(`${key}, ${value}, ${expires}`);
                 document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
             }
             return data.url;
@@ -33,12 +33,23 @@ function delay(ms) {
 }
 
 async function waitForCookie() {
-  while (getCookie('state') === 'expired') {
-    setCookie('state', 'active', 3);
-    await delay(3000);
-  }
-
-  window.location.replace('/Pokemon/index.html');
+    while (true) {
+        if (getCookie('state') === 'expired') {
+            setCookie(3);
+            await delay(3000);
+        } else {
+            try {
+                await fetch(url, {
+                    headers: { "ngrok-skip-browser-warning": "true" }
+                });
+                window.location.replace('/Pokemon/index.html');
+            } catch {
+                setCookie(3, 'expired');
+                location.reload();
+            }
+        }
+    }
+    
 }
 
 waitForCookie();
