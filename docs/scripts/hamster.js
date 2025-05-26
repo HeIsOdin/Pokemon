@@ -32,23 +32,52 @@ function delay(ms) {
 }
 
 async function waitForCookie() {
-    while (true) {
-        if (getCookie('state') === 'expired') {
-            setCookie(3);
+    let retries = 0;
+    const maxRetries = 10;
+
+    while (retries < maxRetries) {
+        const state = getCookie('state');
+        const url = getCookie('url');
+
+        if (!url) {
+            console.warn('No URL cookie set. Waiting...');
             await delay(10000);
+            retries++;
             continue;
         }
+
+        if (state === 'expired') {
+            console.log('Refreshing cookies...');
+            await setCookie(3);
+            await delay(10000);
+            retries++;
+            continue;
+        }
+
         try {
-            await fetch(getCookie('url'), {
+            const response = await fetch(url, {
                 headers: { "ngrok-skip-browser-warning": "true" }
             });
-            window.location.replace('/Pokemon');
-        } catch {
-            setCookie(3, 'expired');
+
+            if (response.ok) {
+                console.log('Server check successful, redirecting...');
+                window.location.replace('/Pokemon');
+                return;
+            } else {
+                throw new Error('Server responded with error');
+            }
+        } catch (error) {
+            console.warn('Fetch failed, marking state expired.');
+            await setCookie(3, 'expired');
             await delay(10000);
+            retries++;
         }
     }
+
+    console.error('Max retries reached. Redirecting to error page.');
+    window.location.replace('/Pokemon/pages/server-down.html');
 }
 
 waitForCookie();
+
 
