@@ -93,11 +93,12 @@ async function waitForCookie() {
             await fetch(url, {
                 headers: { "ngrok-skip-browser-warning": "true" }
             });
-
+            console.log('passed');
             await logo_animation();
             window.location.replace('/Pokemon');
             return;
         } catch (error) {
+            console.log(error)
             await setCookie(3, 'expired');
             await delay(10000);
             retries++;
