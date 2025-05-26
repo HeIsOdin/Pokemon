@@ -27,18 +27,17 @@ async function load_options_from_JSON() {
 		    headers: { "ngrok-skip-browser-warning": "true" }
 	    });
 
-        const data = await response.json();
-        defectConfig = data;
+        defectConfig = await response.json();
     } catch {
         window.location.replace('/Pokemon/pages/hamster.html')
     } finally {
         const defectSelect = document.getElementById("defect");
         defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
 
-        for (const key in data) {
+        for (const key in defectConfig) {
 		    const option = document.createElement("option");
 		    option.value = key;
-		    option.textContent = data[key]['title'];
+		    option.textContent = defectConfig[key]['title'];
 		    defectSelect.appendChild(option);
         }
 
