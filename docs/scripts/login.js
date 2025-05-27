@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
-		if (getCookie('url') && getCookie('state') === 'active') body();
-		else window.location.replace('/Pokemon/pages/hamster.html');
+		if (getCookie('url') && getCookie('state') === 'active') load_url_into_form();
+		else callHamster();
 	});
 
 function getCookie(name) {
@@ -24,8 +24,6 @@ function callHamster() {
     // Redirect to the internal page
     window.location.replace('/Pokemon/pages/hamster.html');
 }
-
-
 
 async function load_url_into_form() {
 	const form = document.querySelector('form');
