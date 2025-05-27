@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     if (getCookie('url') && getCookie('state') === 'active') body();
     else window.location.replace('/Pokemon/pages/hamster.html');
-  });
+});
 
 let defectConfig = {};
 
@@ -14,6 +14,17 @@ function getCookie(name) {
         }
     }
   return null;
+}
+
+function callHamster() {
+    const currentUrl = window.location.href;
+
+    // Set the cookie
+	const expires = new Date(Date.now() + 6e5).toUTCString();
+    document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
+
+    // Redirect to the internal page
+    window.location.replace('/Pokemon/pages/hamster.html');
 }
 
 async function load_options_from_JSON() {
@@ -29,7 +40,7 @@ async function load_options_from_JSON() {
 
         defectConfig = await response.json();
     } catch {
-        window.location.replace('/Pokemon/pages/hamster.html')
+		callHamster();
     } finally {
         const defectSelect = document.getElementById("defect");
         defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';

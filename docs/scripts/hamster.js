@@ -40,7 +40,6 @@ async function logoAnimation() {
     });
 }
 
-
 async function setCookie(hours, state='') {
     try {
         const response = await fetch('/Pokemon/env.json');
@@ -101,7 +100,7 @@ async function waitForCookie() {
                 headers: { "ngrok-skip-browser-warning": "true" }
             });
             await logoAnimation();
-            window.location.replace('/Pokemon');
+            window.location.replace(getCookie('caller'));
             return;
         } catch (error) {
             console.log(error)
@@ -110,7 +109,7 @@ async function waitForCookie() {
             retries++;
         }
     }
-    window.location.replace('/Pokemon/pages/server-down.html');
+    window.location.replace('/Pokemon/pages/unknown.html');
 }
 
 waitForCookie();
