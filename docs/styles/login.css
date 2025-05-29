@@ -49,7 +49,7 @@ legend {
     border-radius: 22px;
     transition: all 0.3s;
     width: 393px;
-    height: 90vh;
+    height: calc(var(--vh, 1vh) * 90);;
     margin: auto;
 }
 
