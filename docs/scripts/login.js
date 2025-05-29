@@ -39,15 +39,3 @@ async function load_url_into_form() {
         callHamster();
     }
 }
-
-// In a <script> tag or external file
-function setViewportHeight() {
-  const vh = window.innerHeight * 0.01;
-  document.documentElement.style.setProperty('--vh', `${vh}px`);
-}
-
-// Set on load
-setViewportHeight();
-
-// Update on resize (orientation change, soft keyboard, etc.)
-window.addEventListener('resize', setViewportHeight);
