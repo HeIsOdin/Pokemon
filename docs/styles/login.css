@@ -5,7 +5,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-	min-height: 100vh;
+	height: 100vh;
 }
 
 .form {
@@ -50,6 +50,7 @@ legend {
     transition: all 0.3s;
     width: 393px;
     height: 90vh;
+    margin: auto;
 }
 
 .card2 {
