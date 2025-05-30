@@ -133,6 +133,26 @@ legend {
 	display: flex;
 }
 
+.toggle-password {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.eye-icon, .eye-off {
+	height: 1.3em;
+    width: 1.3em;
+    fill: none;
+	stroke: #ffe0a6;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.eye-off {
+	display: none;
+}
+
 .flex-row > div > #label {
     font-size: 14px;
     color: #f1f1f1;
