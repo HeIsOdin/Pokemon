@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-		if (getCookie('url') && getCookie('state') === 'active') load_url_into_form();
+		if (getCookie('url') && getCookie('state') === 'active') body();
 		else callHamster();
 	});
 
@@ -58,6 +58,24 @@ function hide_and_show(class_of_caller) {
     toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
 }
 
+function confirmation() {
+	let pwd = document.querySelector('#password').value;
+	let c_pwd = document.querySelector('#confirm-password').value;
+	let err = document.querySelector("#error");
+	let submitButton = document.querySelector('.button-submit')
+	
+	if (pwd !== c_pwd) {
+		err.style.display = "block";
+		submitButton.disabled = "true";
+		err.innerHTML = "The passwords do not match!";
+	} else {
+		err.style.display = "none";
+		submitButton.disabled = "false";
+		}
+}
+
+function body() {
+load_url_into_form();
 const form = document.querySelector('form');
 const errorDiv = document.querySelector('#error');
 
@@ -88,3 +106,4 @@ form.addEventListener('submit', function (e) {
 		errorDiv.textContent = error.message;
     });
 });
+}
