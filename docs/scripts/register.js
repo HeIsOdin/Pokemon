@@ -58,7 +58,7 @@ function hide_and_show(class_of_caller) {
     toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
 }
 
-const form = document.querySelector('.form');
+const form = document.querySelector('form');
 const errorDiv = document.querySelector('#error');
 
 form.addEventListener('submit', function (e) {
