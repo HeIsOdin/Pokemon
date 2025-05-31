@@ -156,6 +156,11 @@ legend {
 	display: none;
 }
 
+#error {
+    display: none;
+    font-style: italic;
+}
+
 .flex-row > div > #label {
     font-size: 14px;
     color: #f1f1f1;
