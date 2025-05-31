@@ -26,7 +26,7 @@ async function load_url_into_form() {
 	const form = document.querySelector('form');
 	if (!form) return;
 	
-	url = getCookie('url');
+	const url = getCookie('url');
 	try {
 	    await fetch(url, {
 		    headers: { "ngrok-skip-browser-warning": "true" }

@@ -73,5 +73,6 @@ function updateMarketplaceOptions() {
   }
 
 async function body() {
+    document.cookie = "caller=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 	load_options_from_JSON();
 }
