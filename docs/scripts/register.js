@@ -66,11 +66,11 @@ function confirmation() {
 	
 	if (pwd !== c_pwd) {
 		err.style.display = "block";
-		submitButton.disabled = "true";
+		submitButton.disabled = true;
 		err.innerHTML = "The passwords do not match!";
 	} else {
 		err.style.display = "none";
-		submitButton.disabled = "false";
+		submitButton.disabled = false;
 		}
 }
 

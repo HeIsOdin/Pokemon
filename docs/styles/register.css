@@ -159,6 +159,7 @@ legend {
 #error {
     display: none;
     font-style: italic;
+    color: end;
 }
 
 .flex-row > div > #label {
