@@ -94,7 +94,7 @@ function submit_form() {
     	.then(data => {
 			if (data.success) {
 				const url = getCookie('callerII') || '/Pokemon';
-				errorDiv.textContent = data.message
+				window.location.replace(url)
 			} else {
 				errorDiv.style.display = "block";
 				errorDiv.textContent = data.message || 'There was an error.';
