@@ -160,7 +160,8 @@ legend {
     display: none;
     font-style: italic;
     color: red;
-    margin-top: -20px;
+    margin-top: -10px;
+    font-size: 5px;
 }
 
 .flex-row > div > #label {
