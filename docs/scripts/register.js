@@ -1,38 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-		if (getCookie('url') && getCookie('state') === 'active') {
-			load_url_into_form();
-const form = document.querySelector('form');
-const errorDiv = document.querySelector('#error');
-
-form.addEventListener('submit', function (e) {
-	e.preventDefault();
-	errorDiv.textContent = '';
-	
-	const formData = new FormData(form);
-	
-	fetch(form.action, {
-		method: 'POST',
-		body: formData
-	})
-
-    .then(response => response.json())
-
-    .then(data => {
-		if (data.success) {
-			const url = getCookie('callerII') || '/Pokemon';
-			window.location.replace(url);
-		} else {
-			errorDiv.style.display = "block";
-			errorDiv.textContent = data.message || 'There was an error.';
-		}
-	})
-    .catch(error => {
-		errorDiv.style.display = "block";
-		errorDiv.textContent = error.message;
-    });
-});
-
-		}
+		if (getCookie('url') && getCookie('state') === 'active') load_url_into_form();
 		else callHamster();
 	});
 
@@ -105,4 +72,37 @@ function confirmation() {
 		err.style.display = "none";
 		submitButton.disabled = "false";
 		}
+}
+
+function submit_form() {
+	const form = document.querySelector('form');
+	const errorDiv = document.querySelector('#error');
+
+	form.addEventListener('submit', function (e) {
+		e.preventDefault();
+		errorDiv.textContent = '';
+	
+		const formData = new FormData(form);
+	
+		fetch(form.action, {
+			method: 'POST',
+			body: formData
+		})
+
+    	.then(response => response.json())
+
+    	.then(data => {
+			if (data.success) {
+				const url = getCookie('callerII') || '/Pokemon';
+				window.location.replace(url);
+			} else {
+				errorDiv.style.display = "block";
+				errorDiv.textContent = data.message || 'There was an error.';
+			}
+		})
+    	.catch(error => {
+			errorDiv.style.display = "block";
+			errorDiv.textContent = error.message;
+    	});
+	});
 }
