@@ -39,6 +39,7 @@ async function load_options_from_JSON() {
             credentials: "include"
 	    });
         defectConfig = await response.json();
+        console.log(defectConfig)
 
         if ('redirect' in defectConfig) callHamster(defectConfig['redirect']); 
     } catch {
@@ -72,7 +73,7 @@ function updateMarketplaceOptions() {
         marketplaceSelect.appendChild(option);
       });
     }
-  }
+}
 
 async function body() {
     document.cookie = "caller=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
