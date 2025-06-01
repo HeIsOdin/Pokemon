@@ -16,7 +16,7 @@ function getCookie(name) {
   return null;
 }
 
-function callHamster() {
+function callHamster(url) {
     const currentUrl = window.location.href;
 
     // Set the cookie
@@ -24,7 +24,7 @@ function callHamster() {
     document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
 
     // Redirect to the internal page
-    //window.location.replace('/Pokemon/pages/hamster.html');
+    window.location.replace('/Pokemon/pages/' + url);
 }
 
 async function load_options_from_JSON() {
@@ -35,21 +35,13 @@ async function load_options_from_JSON() {
 	const url = form.action.replace('submit', 'options');
     try {
 	    const response = await fetch(url, {
-		    headers: { "ngrok-skip-browser-warning": "true" },
-	        credentials: "include"
-        });
+		    headers: { "ngrok-skip-browser-warning": "true" }
+	    });
+        defectConfig = await response.json();
 
-        if (response.redirected) {
-            window.location.href = response.url;
-            return;
-        }
-
+        if ('redirect' in defectConfig) callHamster(defectConfig['redirect']); 
     } catch {
-        if (!response.ok) {
-            callHamster();
-            return;
-        }
-
+		callHamster('hamster.html');
     } finally {
         const defectSelect = document.getElementById("defect");
         defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
