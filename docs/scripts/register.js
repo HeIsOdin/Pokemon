@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", function () {
-		if (getCookie('url') && getCookie('state') === 'active') {
-			load_url_into_form();
-			submit_form();
-		} else callHamster();
-	});
+	if (getCookie('url') && getCookie('state') === 'active') {
+		load_url_into_form();
+		submit_form();
+	} else callHamster();
+});
 
 function getCookie(name) {
 		const cookies = document.cookie.split('; ');
