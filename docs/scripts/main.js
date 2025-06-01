@@ -24,7 +24,7 @@ function callHamster(url) {
     document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
 
     // Redirect to the internal page
-    window.location.replace('/Pokemon/pages/' + url);
+    //window.location.replace('/Pokemon/pages/' + url);
 }
 
 async function load_options_from_JSON() {
@@ -35,7 +35,8 @@ async function load_options_from_JSON() {
 	const url = form.action.replace('submit', 'options');
     try {
 	    const response = await fetch(url, {
-		    headers: { "ngrok-skip-browser-warning": "true" }
+		    headers: { "ngrok-skip-browser-warning": "true" },
+            credentials: "include"
 	    });
         defectConfig = await response.json();
 
