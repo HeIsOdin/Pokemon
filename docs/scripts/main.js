@@ -35,12 +35,21 @@ async function load_options_from_JSON() {
 	const url = form.action.replace('submit', 'options');
     try {
 	    const response = await fetch(url, {
-		    headers: { "ngrok-skip-browser-warning": "true" }
-	    });
+		    headers: { "ngrok-skip-browser-warning": "true" },
+	        credentials: "include"
+        });
 
-        defectConfig = await response.json();
+        if (response.redirected) {
+            window.location.href = response.url;
+            return;
+        }
+
     } catch {
-		callHamster();
+        if (!response.ok) {
+            callHamster();
+            return;
+        }
+
     } finally {
         const defectSelect = document.getElementById("defect");
         defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
