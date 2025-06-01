@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", function () {
-		if (getCookie('url') && getCookie('state') === 'active') load_url_into_form();
-		else callHamster();
+		if (getCookie('url') && getCookie('state') === 'active') {
+			load_url_into_form();
+			submit_form();
+		} else callHamster();
 	});
 
 function getCookie(name) {
@@ -14,11 +16,11 @@ function getCookie(name) {
 	return null;
 }
 
-function callHamster() {
+function callHamster(url='hamster.html') {
     const currentUrl = window.location.href;
     const expires = new Date(Date.now() + 6e5).toUTCString();
     document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
-    window.location.replace('/Pokemon/pages/hamster.html');
+    window.location.replace('/Pokemon/pages/' + url);
 }
 
 async function load_url_into_form() {
@@ -29,7 +31,8 @@ async function load_url_into_form() {
 	const url = getCookie('url');
 	try {
 	    await fetch(url, {
-		    headers: { "ngrok-skip-browser-warning": "true" }
+		    headers: { "ngrok-skip-browser-warning": "true" },
+			credentials: "include"
 	    });
 		form.action = url + '/register'
     } catch {
@@ -47,13 +50,13 @@ function hide_and_show(class_of_caller) {
 	const svg_show = better_class + ' .eye-icon'; const svg_hide = better_class + ' .eye-off';
 	switch (isHidden) {
 		case true:
-		document.querySelector(svg_show).style.display = "none";
-		document.querySelector(svg_hide).style.display = "block";
-		break;
+			document.querySelector(svg_show).style.display = "none";
+			document.querySelector(svg_hide).style.display = "block";
+			break;
 		case false:
-		document.querySelector(svg_hide).style.display = "none";
-		document.querySelector(svg_show).style.display = "block";
-		break;
+			document.querySelector(svg_hide).style.display = "none";
+			document.querySelector(svg_show).style.display = "block";
+			break;
 	}
     toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
 }
