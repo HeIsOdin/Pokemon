@@ -164,6 +164,15 @@ legend {
     font-size: 10px;
 }
 
+.span {
+    font-size: 14px;
+    margin-left: 5px;
+    color: #ffe0a6;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+}
+
 .flex-row > div > #label {
     font-size: 14px;
     color: #f1f1f1;
