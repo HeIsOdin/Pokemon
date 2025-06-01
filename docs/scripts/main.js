@@ -24,7 +24,7 @@ function callHamster(url) {
     document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
 
     // Redirect to the internal page
-    //window.location.replace('/Pokemon/pages/' + url);
+    window.location.replace('/Pokemon/pages/' + url);
 }
 
 async function load_options_from_JSON() {
