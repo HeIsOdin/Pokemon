@@ -7,7 +7,9 @@ matplotlib
 scikit-learn
 kaggle
 flask
-flask_cors
+flask-cors
+flask-session
+flask-login
 gitpython
 psycopg2-binary
 bcrypt
