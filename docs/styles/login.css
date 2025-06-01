@@ -153,6 +153,14 @@ legend {
 	display: none;
 }
 
+#error {
+    display: none;
+    font-style: italic;
+    color: red;
+    margin-top: -10px;
+    font-size: 10px;
+}
+
 .flex-row > div > #label {
     font-size: 14px;
     color: #f1f1f1;

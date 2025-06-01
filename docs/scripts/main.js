@@ -22,7 +22,6 @@ function callHamster(url='hamster.html') {
 	const expires = new Date(Date.now() + 6e5).toUTCString();
     document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
 
-    console.log(url);
     window.location.replace('/Pokemon/pages/' + url);
 }
 
@@ -38,7 +37,6 @@ async function load_options_from_JSON() {
             credentials: "include"
 	    });
         defectConfig = await response.json();
-        console.log(defectConfig)
 
         if ('redirect' in defectConfig) callHamster(defectConfig['redirect']); 
     } catch {
