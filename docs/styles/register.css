@@ -23,7 +23,7 @@ body {
 fieldset {
 	display: flex;
 	flex-direction: column;
-	gap: 15px;
+	gap: 10px;
 	background-color: #171717;
 	border-radius: 25px;
 	border: none;
