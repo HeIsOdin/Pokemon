@@ -6,20 +6,20 @@ document.addEventListener("DOMContentLoaded", function () {
 function getCookie(name) {
 		const cookies = document.cookie.split('; ');
 		for (let cookie of cookies) {
-				let [key, val] = cookie.split('=');
-				if (key === name) {
-						if (val !== "") return decodeURIComponent(val);
-				}
+			let [key, val] = cookie.split('=');
+			if (key === name) {
+				if (val !== "") return decodeURIComponent(val);
+			}
 		}
 	return null;
 }
 
-function callHamster() {
+function callHamster(url='hamster.html') {
     const currentUrl = window.location.href;
     const expires = new Date(Date.now() + 6e5).toUTCString();
     document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
 
-    window.location.replace('/Pokemon/pages/hamster.html');
+    window.location.replace('/Pokemon/pages/' + url);
 }
 
 async function load_url_into_form() {
@@ -29,7 +29,10 @@ async function load_url_into_form() {
 	const url = getCookie('url');
 	try {
 	    await fetch(url, {
-		    headers: { "ngrok-skip-browser-warning": "true" }
+		    headers: {
+				"ngrok-skip-browser-warning": "true"
+			},
+			credentials: "include"
 	    });
 		form.action = url + '/login'
     } catch {

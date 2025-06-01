@@ -16,14 +16,13 @@ function getCookie(name) {
   return null;
 }
 
-function callHamster(url) {
+function callHamster(url='hamster.html') {
     const currentUrl = window.location.href;
 
-    // Set the cookie
 	const expires = new Date(Date.now() + 6e5).toUTCString();
     document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
 
-    // Redirect to the internal page
+    console.log(url);
     window.location.replace('/Pokemon/pages/' + url);
 }
 
@@ -43,7 +42,7 @@ async function load_options_from_JSON() {
 
         if ('redirect' in defectConfig) callHamster(defectConfig['redirect']); 
     } catch {
-		callHamster('hamster.html');
+		callHamster();
     } finally {
         const defectSelect = document.getElementById("defect");
         defectSelect.innerHTML = '<option value="">-- Choose a defect --</option>';
@@ -76,6 +75,5 @@ function updateMarketplaceOptions() {
 }
 
 async function body() {
-    document.cookie = "caller=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 	load_options_from_JSON();
 }
