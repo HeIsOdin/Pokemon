@@ -32,7 +32,8 @@ async function load_url_into_form() {
 	try {
 	    await fetch(url, {
 		    headers: {
-				"ngrok-skip-browser-warning": "true"
+				"ngrok-skip-browser-warning": "true",
+				"Content-Type": "application/json"
 			},
 			credentials: "include"
 	    });
