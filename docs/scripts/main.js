@@ -33,7 +33,10 @@ async function load_options_from_JSON() {
 	const url = form.action.replace('submit', 'options');
     try {
 	    const response = await fetch(url, {
-		    headers: { "ngrok-skip-browser-warning": "true" },
+		    headers: {
+                "ngrok-skip-browser-warning": "true",
+                "Content-Type": "application/json"
+            },
             credentials: "include"
 	    });
         defectConfig = await response.json();
