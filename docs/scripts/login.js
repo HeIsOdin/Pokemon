@@ -78,14 +78,8 @@ function submit_form() {
 	
 		const formData = new FormData(form);
 	
-		fetch(form.action, {
-			method: 'POST',
-			body: formData,
-			credentials: "include"
-		})
-
-    	.then(response => response.json())
-
+		fetch(form.action, {method: 'POST', body: formData, credentials: "include"})
+		.then(response => response.json())
     	.then(data => {
 			if (data.success) {
 				const url = getCookie('callerII') || '/Pokemon';
@@ -95,6 +89,7 @@ function submit_form() {
 				errorDiv.textContent = data.message || 'There was an error.';
 			}
 		})
+		
     	.catch(error => {
 			errorDiv.style.display = "block";
 			errorDiv.textContent = error.message;

@@ -2,7 +2,7 @@
 *.py linguist-language=Python
 docs/index.html linguist-detectable=true
 docs/index.html linguist-documentation=false
-docs/styles.css linguist-detectable=true
-docs/styles.css linguist-documentation=false
-docs/script.js linguist-detectable=true
-docs/script.js linguist-documentation=false
+docs/styles* linguist-detectable=true
+docs/styles* linguist-documentation=false
+docs/scripts* linguist-detectable=true
+docs/scripts* linguist-documentation=false
