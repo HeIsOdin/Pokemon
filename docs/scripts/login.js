@@ -79,9 +79,6 @@ function submit_form() {
 		const formData = new FormData(form);
 	
 		fetch(form.action, {
-			headers: {
-				"Content-Type": "application/json"
-			},
 			method: 'POST',
 			body: formData,
 			credentials: "include"
