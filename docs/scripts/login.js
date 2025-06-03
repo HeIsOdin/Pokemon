@@ -79,12 +79,11 @@ function submit_form() {
 		const formData = new FormData(form);
 	
 		fetch(form.action, {
-			method: 'POST',
-			body: formData,
 			headers: {
-				"ngrok-skip-browser-warning": "true",
 				"Content-Type": "application/json"
 			},
+			method: 'POST',
+			body: formData,
 			credentials: "include"
 		})
 
