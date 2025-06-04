@@ -1,38 +1,168 @@
-<!DOCTYPE html>
-<html lang="en">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <head>
-        <title>PyPikachu</title>
-        <link rel="icon" href="/Pokemon/media/favicon.jpg">
-        <link rel="stylesheet" href="/Pokemon/styles/main.css">
-    </head>
-    <script src="/Pokemon/scripts/main.js"></script>
-    <body>
-        <h2>PokéPrint Alert Configuration 🧠🎴</h2>
-        <form method="POST" action="https://0d5d-138-247-96-33.ngrok-free.app/submit">
-            <label for="defect">Select Defect Type:</label>
-            <select name="defect" id="defect" required>
-                <option value="">-- Choose a defect --</option>
-            </select>
-            
-            <label for="price">Max Price Threshold ($):</label>
-            <input type="number" name="price" id="price" required min="0" step="1" value="50.00">
-            
-            <label for="notify">Notification Method:</label>
-            <select name="notify" id="notify">
-                <option value="email">Email</option>
-                <option value="discord">Discord</option>
-                <option value="none">No Notification (log only)</option>
-            </select>
-            
-            <label for="contact">Contact Info (Email or Discord ID):</label>
-            <input type="text" name="contact" id="contact" required>
-            
-            <label for="marketplace">Select Marketplace:</label>
-            <select name="marketplace" id="marketplace" required>
-                <option value="">-- Choose a marketplace --</option>
-            </select>
-            <input type="submit" value="Submit Search Terms">
-        </form>
-    </body>
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>PyPikachu</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="/Pokemon/main.css" />
+	</head>
+	<body class="is-preload">
+			<div id="wrapper">
+					<header id="header">
+						<div class="logo">
+							<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="50px" height="50px" viewBox="0 0 720 720">
+								<g>
+									<path fill="#FFF" d="M229.582,261.81c-39.2-2.616-40.686,60.352-3.228,60.717C267.039,323.816,268.64,261.543,229.582,261.81z M237.761,292.299c-7.664-0.021-11.857-4.543-11.764-12.685c0.08-6.995,5.331-12.184,12.297-12.151 c7.229,0.034,11.776,4.897,11.661,12.472C249.834,287.803,245.379,292.32,237.761,292.299z M319.492,316.21 c0.54-3.975,15.523-4.38,14.739,0.496C333.984,323.157,318.36,322.701,319.492,316.21z M418.002,321.191 c40.845,1.419,39.569-60.897-1.108-60.222C379.491,261.869,381.12,321.413,418.002,321.191z M409.658,267.592 c7.51,0.341,11.413,4.947,11.239,13.263c-0.161,7.693-4.598,11.86-12.639,11.87c-6.575,0.008-11.452-5.538-11.329-12.884 C397.047,272.746,402.73,267.277,409.658,267.592z M711.676,129.08c-19.101,3.188-37.729,8.282-56.178,14.068 c-57.5,18.034-112.343,42.481-166.377,68.893c-3.954,1.933-8.372,6.263-11.892,4.873c-3.444-1.359-5.13-6.961-7.814-10.531 c-1.796-2.388-1.824-3.62,1.18-5.072c6.761-3.267,13.312-6.966,19.953-10.481c45.924-24.309,87.021-54.646,119.206-95.981 c13.917-17.874,25.413-37.25,34.126-58.19c3.059-7.353,2.081-8.759-5.783-9.525c-11.966-1.165-23.661,1.169-35.052,4.135 c-43.156,11.238-82.263,30.961-117.623,58.039c-24.717,18.928-46.903,40.542-66.41,64.823c-2.584,3.216-4.557,4.219-8.304,1.976 c-3.502-2.097-7.419-3.523-11.207-5.115c-33.729-14.179-69.2-14.29-104.721-12.024c-24.243,1.546-46.941,9.304-67.847,21.846 c-3.513,2.108-5.352,2.219-7.703-1.914C181.372,92.333,126.872,44.72,55.739,16.275c-15.005-6-30.407-10.711-46.713-11.395 c-6.275-0.263-7.61,1.679-6.269,7.874c1.452,6.704,4.222,12.921,7.256,19.004c16.528,33.136,38.599,62.324,63.678,89.388 c30.416,32.823,64.519,61.008,103.751,82.746c3.012,1.669,1.385,2.903,0.319,4.433c-9.531,13.681-14.034,28.731-13.293,45.508 c0.498,11.274-0.159,22.596,0.249,33.877c0.315,8.721-0.942,17.017-3.553,25.316c-3.326,10.571-6.254,21.278-9,32.016 c-2.5,9.776-3.345,20.302,0.237,29.39c6.096,15.468,15.418,29.372,27.675,40.985c1.863,1.765,3.06,3.548,2.885,6.467 c-1.362,22.792-6.167,44.62-17.258,64.815c-8.976,16.344-19.528,31.692-29.887,47.147c-10.465,15.612-16.275,32.535-16.43,51.379 c-0.015,1.783,0.663,3.88-1.105,5.559c-4.615-3.004-9.077-5.98-13.61-8.842c-7.025-4.434-22.306-3.699-28.179,1.944 c-5.819,5.59-8.83,12.396-5.982,20.784c1.624,4.782,3.737,9.292,6.456,13.514c5.984,9.293,12.689,18.042,19.621,26.659 c13.96,17.354,28.989,33.682,45.225,48.914c5.773,5.416,11.854,10.363,19.241,13.5c10.391,4.413,17.567,2.825,24.952-5.673 c1.142-1.314,1.937-3.045,4.268-2.437c13.112,3.418,25.952,1.117,38.73-2.004c2.814-0.688,4.804-0.976,4.775,3.1 c-0.056,7.956,0.514,8.355,8.254,6.379c3.811-0.973,7.089-1.46,10.016,2.162c1.98,2.45,4.745,2.222,7.105,0.052 c1.316-1.211,2.674-2.425,3.746-3.84c1.573-2.077,2.688-1.898,4.636-0.206c6.039,5.248,7.202,5.051,11.054-1.88 c1.484-2.67,2.792-3.993,5.656-1.917c3.375,2.445,5.927,1.815,7.571-2.135c0.792-1.902,1.976-3.495,4.336-3.371 c4.716,0.248,6.296-2.193,6.063-6.584c-0.098-1.854-0.35-4.052,2.749-4.172c12.897-0.5,25.79-1.145,38.702-0.702 c2.85,0.098,3.98,1.111,2.035,3.989c-2.279,3.373-0.83,5.736,2.64,7.086c3.798,1.478,6.838,3.726,8.862,7.386 c0.652,1.18,2.106,2.828,3.093,2.763c6.381-0.425,11.963,1.641,17.582,4.305c1.341,0.636,4.693-1.88,5.407-1.186 c4.78,4.651,10.019,3.553,15.989,3.617c8.106,0.086,8.09,1.502,9.517-6.83c0.151-0.881,0.182-1.81,0.49-2.633 c1.337-3.574,2.9-5.655,7.455-3.381c8.355,4.171,17.173,7.202,26.73,7.188c1.472-0.002,2.963,0.222,3.824,1.538 c6.347,9.7,15.24,7.887,23.948,4.87c9.882-3.424,18.562-9.254,26.928-15.436c26.192-19.353,47.685-43.323,67.171-69.174 c5.137-6.816,10.573-13.627,12.633-22.264c0.688-2.882-3.372-14.153-5.84-14.397c-6.412-0.635-12.604-4.013-19.389-1.078 c-7.753,3.354-14.796,7.867-23.143,13.162c5.084-18.895-0.128-34.626-8.233-49.845c-5.128-9.628-10.022-19.38-15.203-28.978 c-1.415-2.621-1.354-3.673,1.727-4.886c10.48-4.126,20.845-8.556,31.172-13.058c7.55-3.291,7.557-3.474,2.527-9.772 c-5.813-7.279-11.671-14.525-17.676-21.645c-2.463-2.92-2.258-4.21,1.467-5.82c29.376-12.699,58.67-25.588,87.961-38.485 c6.679-2.941,6.675-3.1,1.819-8.645c-22.666-25.884-45.359-51.744-68.046-77.61c-6.296-7.178-6.31-7.206,2.852-9.674 c43.697-11.772,87.379-23.604,131.131-35.171c4.83-1.277,7.16-3.767,8.452-8.32c14.608-51.504,23.542-104.014,28.026-157.314 C718.067,128.445,717.555,128.098,711.676,129.08z M159.216,356.732c0.413-11.773,3.474-15.841,17.065-18.179 c16.295-2.802,33.606,14.956,37.625,28.541c6.639,22.437-4.352,39.112-22.985,43.804 C176.855,414.44,158.633,373.344,159.216,356.732z M522.081,607.692c-7.232,6.698-14.522,13.333-21.706,20.082 c-1.347,1.265-3.138,2.359-3.424,5.182c19.143-11.317,35.172-26.451,54.856-36.935c2.187-1.241,5.076-4.013,7.094-1.918 c3.737,4.186-16.811,25.235-18.267,30.97c9.187-8.4,18.187-16.384,23.115-28.067c0.909-2.174,2.286-2.744,4.139-2.332 c8.715,6.358-24.554,35.599-26.27,44.431c12.916-10.819,22.34-23.299,32.448-36.041c-0.528,21.653-140.956,163.187-120.143,81.04 c-10.78,8.577-2.655,23.42-22.684,15.68c-14.489-4.522-14.785-5.024-6.436-17.523c24.25-38.902,52.13-82.249,52.323-129.316 c-3.065,2.401-3.21,5.781-3.968,8.734c-12.169,49.316-36.496,94.348-65.475,135.538c-1.903,7.647-7.404,9.61-14.198,10.57 c-5.547,0.979-6.682-8.092-12.317-3.368c-6.548,4.798-8.17-5.632-17.196-2.627c-1.646,0.279-3.206,0.156-4.087-1.69 c-1.609-3.369-4.581-5.511-7.46-7.594c-6.267-3.654,3.641-7.944,1.566-16.099c-8.33-59.84,1.817-118.534,16.957-176.126 c-27.184,44.012-29.084,121.511-21.333,172.342c0.849,4.639-0.757,5.845-5.187,5.786c-11.648-0.155-23.31-0.154-34.948,0.274 c-4.573,0.168-5.352-1.411-4.887-5.464c4.895-56.164,8.674-117.255-14.326-169.832c11.375,58.552,14.783,117.21,8.235,176.723 c0.97,11.822-4.029,10.899-10.936,16.612c-0.265,0.271-1.146,0.314-1.484,0.086c-8.829-6.771-10.23,10.139-15.917,4.756 c-7.218-8.171-12.285,9.765-19.727,1c-2.144-2.343-5.054-0.541-7.59,0.189c-7.974,2.782-2.834-7.698-11.911-15.438 c-26.691-32.69-49.522-70.165-57.701-112.046c-0.363-2.002-0.326-4.364-2.833-5.512c-2.416,2.911-1.306,6.133-0.959,9.23 c4.874,43.936,31.297,80.273,58.377,113.416c-6.02,1.586-39.013,8.364-37.282-1.673c-0.779-6.397,1.709-12.571-2.536-18.339 c-3.856,61.241-42.025,19.052-64.519-5.184c-17.324-20.592-42.928-42.437-48.986-69.231c7.24,10.894,13.903,22.207,25.225,29.533 c-2.54-10.75-29.262-32.077-17.709-41.342c2.077-0.399,2.85,1.105,3.497,2.62c6.559,13.395,16.081,29.617,28.651,37.592 c0.78-2.597-1.265-3.989-2.393-5.521c-6.679-9.081-14.163-17.624-18.98-27.939c-6.149-8.51-0.341-13.665,7.97-7.733 c16.911,8.999,29.445,22.079,45.115,33.278c-0.882-11.182-21.147-17.255-21.142-27.298c2.443-61.681,59.064-92.037,63.772-167.106 c22.091,15.932,44.671,30.587,70.352,39.761c-23.11-14.786-47.035-28.297-68.044-47.26c27.239-9.176,41.944-35.827,22.681-63.78 c-11.796-18.605-30.871-24.404-51.249-16.566c-1.369-0.933-0.36-2.665-0.1-3.997c5.916-26.342,9.741-53.436,8.454-80.469 c-1.828-26.577,13.593-44.292,27.813-64.742c-9.731,3.406-12.646,17.659-23.223,10.813c-32.773-20.298-62.693-44.055-88.96-72.369 c-21.006-26.48-23.861-62.65-27.136-95.138c-0.23-7.092,0.304-7.264,6.68-4.31c65.784,29.421,112.782,80.336,152.372,138.983 c1.955,2.172,3.716,3.141,6.904,1.321c41.151-25.07,91.04-25.972,137.673-20.538c18.095,3.099,35.289,9.284,52.354,15.853 c2.657,1.023,3.558,1.248,6.104-2.476c40.405-51.378,95.79-92.672,158.05-114.176c3.412-1.179,4.499-0.63,4.053,3.13 c-13.346,84.86-10.968,88.957-85.597,133.061c-9.055,5.435-18.43,10.337-27.498,15.753c-7.008,4.927-8.961-2.62-15.115-6.413 c37.553,55.891,18.902,91.28,35.064,151.337c-54.788-25.689-94.661,79.842-23.329,75.213 c-23.71,25.579-54.435,38.024-83.767,53.588c28.918-5.138,55.923-22.448,79.36-40.44c2.974-2.714,4.6-1.814,5.323,1.86 c4.493,30.583,15.555,59.194,29.753,86.429C508.044,541.791,535.402,583.11,522.081,607.692z M448.718,410.651 c-29.396-11.199-9.883-56.079,14.24-66.046c12.161-5.025,30.165,2.054,28.514,16.435 C488.643,385.68,477.756,421.714,448.718,410.651z M521.56,423.279c-14.887,8.724-28.73,16.776-42.497,24.955 c-2.601,1.545-3.272,0.718-3.808-1.865c-1.491-7.178-2.59-14.404-3.317-21.693c-0.187-1.879,0.309-3.479,1.521-4.954 c4.192-5.103,8.421-10.18,12.438-15.419c1.618-2.11,2.925-1.247,4.51-0.267C500.412,410.228,510.428,416.405,521.56,423.279z M536.06,498.361c4.517,5.781-26.14,15.001-30.175,17.514c-4.253,1.842-8.061-7.956-10.398-12.973 c-1.503-3.228-4.083-6.551,2.745-8.717c4.442-1.409,0.531-5.895,0.683-9.447c8.089,2.616,8.976,1.823,8.31-7.552 C517.909,483.108,527.908,487.927,536.06,498.361z M685.357,286.221c-1.348,5.234-3.97,7.982-9.401,9.463 c-43.687,11.913-87.292,24.126-130.906,36.307c-11.743,3.28-11.841,3.479-4.035,12.742c21.012,24.934,42.165,49.748,63.205,74.659 c5.151,6.099,5.095,6.285-1.947,9.627c-25.876,12.281-51.789,24.483-77.679,36.736c-14.232,6.057-6.915,4.521-6.343,12.889 c-8.228-4.168-20.334-14.831-14.533,2.602c-3.671,1.18-6.388-4.114-9.566-1.928c-1.298,1.339-0.379,3.488,0.213,5.076 c1.013,2.719,4.238,5.548-0.448,7.096c-4.422,1.461-4.67-3.075-5.619-5.537c-3.151-8.176-5.743-16.567-8.835-24.769 c-1.389-3.686-0.558-5.938,2.725-8.01c52.051-37.234,59.86-19.754,11.979-53.987c-1.797-1.256-3.564-2.13-2.077-5.021 c8.724-16.955,9.405-35.042,4.782-52.9c-10.762-37.616-3.129-78.296-15.965-114.755c-4.409-12.524,230.905-112.878,230.005-82.923 C709.459,191.941,697.944,239.48,685.357,286.221z M382.234,353.362c-2.596,7.961-14.74,14.92-22.919,13.51 c-10.404-1.794-19.516-6.84-28.744-11.506c-2.918-1.476-4.985-1.459-7.753,0.284c-15.032,10.286-43.071,17.29-52.347-3.148 c34.353,22.211,43.514-16.078,73.786,3.377c10.049,5.597,25.027,7.505,34.153-1.117 C379.593,353.792,380.44,353.168,382.234,353.362z"/>
+								</g>
+							</svg>
+						</div>
+						<div class="content">
+							<div class="inner">
+								<h1>PyPikachu</h1>
+								<p><i>If you're a real man, you know when you have to admit defeat. Time to face facts. You can lose today and win tomorrow.</i></p>
+							</div>
+						</div>
+						<nav>
+							<ul>
+								<li><a href="#intro">Intro</a></li>
+								<li><a href="#new">New Task</a></li>
+								<li><a href="#history">History</a></li>
+								<li><a href="#settings">Settings</a></li>
+							</ul>
+						</nav>
+					</header>
+
+					<div id="main">
+						
+						<article id="intro">
+							<h2 class="major">Intro</h2>
+							<span class="image main"><img src="/Pokemon/media/pic01.jpg" alt="" /></span>
+							<p>Welcome to <strong>PyPikachu</strong> — a lightweight AI-driven platform designed to identify rare and often overlooked printing errors on Pokémon cards. Our toolset uses real listings from marketplaces like eBay, then applies image processing and machine learning to highlight defects that even sellers might miss. Whether you're a collector, reseller, or hobbyist, this platform helps you catch potential hidden gems.By the way, check out my <a href="https://github.com/heisodin/Pokemon">GitHub</a>.</p>
+							<p>The project currently supports multiple well-known errors (like the iconic Wartortle Evolution Box defect) and is designed to expand over time. Through a simple web interface, users can submit search criteria, monitor listings, and even be notified when cards matching their criteria appear online — all powered by a backend that fuses Flask, Ngrok, and real-time card analysis.</p>
+						</article>
+
+						<article id="new">
+							<h2 class="major">New Task</h2>
+							<span class="image main"><img src="/Pokemon/media/pic02.jpg" alt="" /></span>
+							<p>Use this page to create a task that monitors online marketplaces for specific Pokémon card defects. Simply choose a known error type (like the Wartortle Evolution Box Error), set your price threshold, and select your preferred marketplace.</p>
+							<p>Once submitted, your task will periodically scan for matching listings in the background. If any card meets your criteria, you'll receive a notification through your selected contact method. It's a powerful way to spot undervalued or mislisted error cards — all without constantly browsing yourself.</p>
+							<p><a href="https://heisodin.github.io/Pokemon" class="button primary"><span class="fa fa-plus"></span> Create</a></a></p>
+						</article>
+						
+						<article id="history">
+							<h2 class="major">Your Task History</h2>
+							<span class="image main"><img src="/Pokemon/media/pic03.jpg" alt="Task history visual" />
+							<p>Here you can view all your previously submitted search tasks. Each task tracks specific Pokémon card defects you're interested in, along with price thresholds and marketplace preferences.</p>
+							<p>Use this page to monitor which tasks are active, what terms are being searched, and whether any matches have been found. Tasks are processed in the background and can notify you via your preferred contact method.</p>
+							<div id="task-history-container">
+								<table>
+									<thead>
+										<tr>
+											<th>Name</th>
+											<th>Description</th>
+											<th>Price</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr>
+											<td>Item One</td>
+											<td>Ante turpis integer aliquet porttitor.</td>
+											<td>29.99</td>
+										</tr>
+										<tr>
+											<td>Item Two</td>
+											<td>Vis ac commodo adipiscing arcu aliquet.</td>
+											<td>19.99</td>
+										</tr>
+										<tr>
+											<td>Item Three</td>
+											<td> Morbi faucibus arcu accumsan lorem.</td>
+											<td>29.99</td>
+										</tr>
+											<tr>
+												<td>Item Four</td>
+												<td>Vitae integer tempus condimentum.</td>
+												<td>19.99</td>
+											</tr>
+											<tr>
+												<td>Item Five</td>
+												<td>Ante turpis integer aliquet porttitor.</td>
+												<td>29.99</td>
+											</tr>
+									</tbody>
+									<tfoot>
+										<tr>
+											<td colspan="2"></td>
+											<td>100.00</td>
+										</tr>
+									</tfoot>
+								</table>
+							</div>
+						</article>
+
+						<article id="settings">
+							<h2 class="major">Profile & Settings</h2>
+							<section>
+								<form method="post" action="/settings">
+									<h3 class="major">Profile</h3>
+									<div class="fields">
+										<div class="field half">
+											<label for="demo-name">Username</label>
+											<input type="text" name="demo-name" id="demo-name" value="Jane Doe" />
+										</div>
+										<div class="field half">
+											<label for="demo-email">Email</label>
+											<input type="email" name="demo-email" id="demo-email" value="jane@untitled.tld" />
+										</div>
+										<div class="field half">
+											<label for="demo-password">Password</label>
+											<input type="password" name="demo-password" id="demo-password" value="postoffice" />
+										</div>
+										<div class="field half">
+											<label for="demo-discord">Discord</label>
+											<input type="text" name="demo-discord" id="demo-discord" value="heisodin" />
+										</div>
+									</div>
+									<h3 class="major">Settings</h3>
+									<div class="fields">
+										<div class="field half">
+											<input type="radio" id="light-theme" name="theme" checked>
+											<label for="light-theme">Light theme</label>
+										</div>
+										<div class="field half">
+											<input type="radio" id="dark-theme" name="theme">
+											<label for="dark-theme">Dark theme</label>
+										</div>
+									</div>
+									<h3 class="major">Contact</h3>
+									<div class="fields">
+										<div class="field">
+											<label for="demo-message">Message</label>
+											<textarea name="demo-message" id="demo-message" placeholder="Enter your message" rows="6"></textarea>
+										</div>
+										<div class="field">
+											<ul class="actions">
+												<li><input type="submit" value="Send Message" class="primary" /></li>
+												<li><input type="reset" value="Reset" /></li>
+											</ul>
+										</div>
+									</div>
+								</form>
+							</section>
+						</article>
+					</div>
+
+					<footer id="footer">
+						<p class="copyright">&copy; PyPikachu: <a href="https://dsu.edu/index.html">Dakota State University</a>.</p>
+					</footer>
+				</div>
+
+			<div id="bg"></div>
+
+			<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-..." crossorigin="anonymous"></script>
+			<script src="/Pokemon/scripts/browser.min.js"></script>
+			<script src="/Pokemon/scripts/breakpoints.min.js"></script>
+			<script src="/Pokemon/scripts/util.js"></script>
+			<script src="/Pokemon/scripts/main.js"></script>
+	</body>
 </html>
