@@ -472,7 +472,8 @@ async function body() {
 			});
 		}
 
-  		const inputs = form.querySelectorAll("input[type='text']") + form.querySelectorAll("input[type='text']");
+  		const inputs = form.querySelectorAll("input[type='text'], input[type='email']");
+
 		inputs.forEach(input => {
 			const key = input.id;
 			if (data.hasOwnProperty(key)) input.value = data[key];
