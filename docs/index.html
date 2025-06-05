@@ -4,6 +4,7 @@
 		<title>PyPikachu</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+        <link rel="icon" href="/Pokemon/media/favicon.jpg">
 		<link rel="stylesheet" href="/Pokemon/styles/main.css" />
 	</head>
 	<body class="is-preload">
@@ -58,75 +59,47 @@
 								<table>
 									<thead>
 										<tr>
-											<th>Name</th>
-											<th>Description</th>
-											<th>Price</th>
+											<th>Defect</th>
+											<th>Price Threshold</th>
+											<th>Creation Date</th>
+											<th>State</th>
 										</tr>
 									</thead>
 									<tbody>
-										<tr>
-											<td>Item One</td>
-											<td>Ante turpis integer aliquet porttitor.</td>
-											<td>29.99</td>
-										</tr>
-										<tr>
-											<td>Item Two</td>
-											<td>Vis ac commodo adipiscing arcu aliquet.</td>
-											<td>19.99</td>
-										</tr>
-										<tr>
-											<td>Item Three</td>
-											<td> Morbi faucibus arcu accumsan lorem.</td>
-											<td>29.99</td>
-										</tr>
-											<tr>
-												<td>Item Four</td>
-												<td>Vitae integer tempus condimentum.</td>
-												<td>19.99</td>
-											</tr>
-											<tr>
-												<td>Item Five</td>
-												<td>Ante turpis integer aliquet porttitor.</td>
-												<td>29.99</td>
-											</tr>
+										
 									</tbody>
-									<tfoot>
-										<tr>
-											<td colspan="2"></td>
-											<td>100.00</td>
-										</tr>
-									</tfoot>
 								</table>
 							</div>
+							<p><a href="https://heisodin.github.io/Pokemon/pages/tasks.html" class="button primary"><span class="fa fa-history"></span> History</a></a></p>
 						</article>
 
 						<article id="settings">
 							<h2 class="major">Profile & Settings</h2>
 							<section>
-								<form method="post" action="/settings">
+								<form method="post" action="">
 									<h3 class="major">Profile</h3>
 									<div class="fields">
 										<div class="field half">
-											<label for="demo-name">Username</label>
-											<input type="text" name="demo-name" id="demo-name" value="Jane Doe" autocomplete="on"/>
+											<label for="name">Username</label>
+											<input type="text" name="name" id="name" value="" autocomplete="on"/>
 										</div>
 										<div class="field half">
-											<label for="demo-email">Email</label>
-											<input type="email" name="demo-email" id="demo-email" value="jane@untitled.tld" autocomplete="on"/>
+											<label for="email">Email</label>
+											<input type="email" name="email" id="email" value="" autocomplete="on"/>
 										</div>
 										<div class="field half">
-											<label for="demo-password">Password</label>
-											<input type="password" name="demo-password" id="demo-password" value="postoffice" autocomplete="on"/>
+											<label for="password">Password</label>
+											<input type="password" name="password" id="password" value="" autocomplete="on"/>
 										</div>
 										<div class="field half">
-											<label for="demo-discord">Discord</label>
-											<input type="text" name="demo-discord" id="demo-discord" value="heisodin" autocomplete="on"/>
+											<label for="discord">Discord</label>
+											<input type="text" name="discord" id="discord" value="" autocomplete="on"/>
 										</div>
 									</div>
 									<h3 class="major">Settings</h3>
 									<div class="fields">
 										<div class="field half">
-											<input type="radio" id="light-theme" name="theme" checked>
+											<input type="radio" id="light-theme" name="theme">
 											<label for="light-theme">Light theme</label>
 										</div>
 										<div class="field half">
@@ -142,7 +115,7 @@
 										</div>
 										<div class="field">
 											<ul class="actions">
-												<li><input type="submit" value="Send Message" class="primary" /></li>
+												<li><input type="submit" value="Save Changes" class="primary" /></li>
 												<li><input type="reset" value="Reset" /></li>
 											</ul>
 										</div>
