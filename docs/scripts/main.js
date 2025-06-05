@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
     if (getCookie('url') && getCookie('state') === 'active') body();
-    else callHamster();
+    //else callHamster();
 });
 
 (function($) {
@@ -441,7 +441,7 @@ async function body() {
 
         if ('redirect' in defectConfig) callHamster(defectConfig['redirect']); 
     } catch {
-		callHamster();
+		//callHamster();
     } finally {
 		const table = document.querySelector("table");
   		const thead = table.querySelector("thead");
