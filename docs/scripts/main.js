@@ -426,7 +426,6 @@ async function body() {
 	
 	form.action = getCookie('url')+'/update';
 	const url = form.action.replace('update', 'user-info');
-	let data_and_info;
     try {
 	    const response = await fetch(url, {
 		    headers: {
