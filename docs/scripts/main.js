@@ -438,7 +438,7 @@ async function body() {
         data_and_info = await response.json();
 		if ('redirect' in data_and_info) callHamster(data_and_info['redirect']);
     } catch {
-		//callHamster();
+		callHamster();
     } finally {
 		let info = data_and_info['info'];
 		let data = data_and_info['data'];
@@ -489,8 +489,7 @@ async function body() {
 	
 		fetch(form.action, {
 			headers: {
-                "ngrok-skip-browser-warning": "true",
-                "Content-Type": "application/json"
+                "ngrok-skip-browser-warning": "true"
             },
             credentials: "include",
 			method: 'POST',
