@@ -424,8 +424,8 @@ async function body() {
 	const form = document.querySelector('form')
 	if (!form) return
 	
-	form.action = getCookie('url')+'/settings';
-	const url = form.action.replace('settings', 'user-info');
+	form.action = getCookie('url')+'/update';
+	const url = form.action.replace('update', 'user-info');
 	let data_and_info;
     try {
 	    const response = await fetch(url, {
@@ -479,4 +479,39 @@ async function body() {
 			if (data.hasOwnProperty(key)) input.value = data[key];
 		});
 	}
+
+	const errorDiv = document.querySelector('#error');
+
+	form.addEventListener('submit', function (e) {
+		e.preventDefault();
+		errorDiv.textContent = '';
+	
+		const formData = new FormData(form);
+	
+		fetch(form.action, {
+			headers: {
+                "ngrok-skip-browser-warning": "true",
+                "Content-Type": "application/json"
+            },
+            credentials: "include",
+			method: 'POST',
+			body: formData
+		})
+
+    	.then(response => response.json())
+
+    	.then(data => {
+			if (data.success) {
+				const url = getCookie('callerII') || '/Pokemon';
+				window.location.replace(url)
+			} else {
+				errorDiv.style.display = "block";
+				errorDiv.textContent = data.message || 'There was an error.';
+			}
+		})
+    	.catch(error => {
+			errorDiv.style.display = "block";
+			errorDiv.textContent = error.message;
+    	});
+	});
 }
