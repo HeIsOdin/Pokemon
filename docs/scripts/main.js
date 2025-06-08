@@ -419,7 +419,7 @@ function callHamster(url='hamster.html') {
     window.location.replace('/Pokemon/pages/' + url);
 }
 
-let info, data;
+let data_and_info;
 async function body() {
 	const form = document.querySelector('form')
 	if (!form) return
@@ -436,13 +436,12 @@ async function body() {
             credentials: "include"
 	    });
         data_and_info = await response.json();
-		info = data_and_info['info'];
-		data =data_and_info['data'];
-
-        if ('redirect' in defectConfig) callHamster(defectConfig['redirect']); 
+		if ('redirect' in data_and_info) callHamster(data_and_info['redirect']);
     } catch {
 		//callHamster();
     } finally {
+		let info = data_and_info['info'];
+		let data = data_and_info['data'];
 		const table = document.querySelector("table");
   		const thead = table.querySelector("thead");
   		const tbody = table.querySelector("tbody");
