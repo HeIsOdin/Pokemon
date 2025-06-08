@@ -500,7 +500,7 @@ async function body() {
 
     	.then(data => {
 			if (data.success) {
-				const url = getCookie('callerII') || '/Pokemon';
+				const url = getCookie('caller') || '/Pokemon';
 				window.location.replace(url)
 			} else {
 				errorDiv.style.display = "block";
