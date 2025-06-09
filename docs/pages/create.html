@@ -9,7 +9,7 @@
     <script src="/Pokemon/scripts/create.js"></script>
     <body>
         <h2>PokéPrint Alert Configuration 🧠🎴</h2>
-        <form method="POST" action="https://0d5d-138-247-96-33.ngrok-free.app/submit">
+        <form method="POST" action="">
             <label for="defect">Select Defect Type:</label>
             <select name="defect" id="defect" required>
                 <option value="">-- Choose a defect --</option>
@@ -17,17 +17,7 @@
             
             <label for="price">Max Price Threshold ($):</label>
             <input type="number" name="price" id="price" required min="0" step="1" value="50.00">
-            
-            <label for="notify">Notification Method:</label>
-            <select name="notify" id="notify">
-                <option value="email">Email</option>
-                <option value="discord">Discord</option>
-                <option value="none">No Notification (log only)</option>
-            </select>
-            
-            <label for="contact">Contact Info (Email or Discord ID):</label>
-            <input type="text" name="contact" id="contact" required>
-            
+         
             <label for="marketplace">Select Marketplace:</label>
             <select name="marketplace" id="marketplace" required>
                 <option value="">-- Choose a marketplace --</option>

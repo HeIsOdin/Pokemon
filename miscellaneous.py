@@ -175,5 +175,5 @@ def pass_arguments_to_main() -> argparse.Namespace:
     parser.add_argument("--kaggle_download", action='store_true', help="Download Kaggle dataset")
     return parser.parse_args()
 
-def hash_function(defect: str, price: int) -> str:
+def hash_function(defect: str, price: float) -> str:
     return "deadbeef"
