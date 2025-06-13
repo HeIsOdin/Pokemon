@@ -87,7 +87,7 @@ def load_file_from_bytearray(file: bytearray, save_path: str):
     Returns:
     - tuple: (image matrix, save path string)
     """
-    image_bytes = np.asarray(file, dtype=np.uint8)
+    image_bytes = np.frombuffer(file, dtype=np.uint8)
     img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
     if img is None:
         miscellaneous.print_with_color("Could not load image as bytes", 1)
@@ -112,7 +112,7 @@ def detect_edges(img: cv2.typing.MatLike, save_path: str) -> cv2.typing.MatLike:
         cv2.imwrite(os.path.join(save_path, "2_edges.jpg"), edges)
     return edges
 
-def detect_contours(edges: cv2.typing.MatLike):
+def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.typing.MatLike:
     """
     Detect the largest external contour in an edge image.
 
@@ -122,11 +122,53 @@ def detect_contours(edges: cv2.typing.MatLike):
     Returns:
     - np.ndarray: Approximated polygon contour points.
     """
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    card_contour = max(contours, key=cv2.contourArea)
-    peri = cv2.arcLength(card_contour, True)
-    approx = cv2.approxPolyDP(card_contour, 0.02 * peri, True)
-    return approx
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    # Define HSV range for yellow (may need tuning)
+    lower_yellow = np.array([20, 80, 80])
+    upper_yellow = np.array([40, 255, 255])
+
+    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+
+    # Morphological cleanup
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+    mask = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=1)
+
+    # Find contours
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        raise ValueError("No yellow border detected.")
+
+    # Choose the largest yellow region
+    border_contour = max(contours, key=cv2.contourArea)
+    peri = cv2.arcLength(border_contour, True)
+    approx = cv2.approxPolyDP(border_contour, 0.02 * peri, True)
+
+    # Use fallback box if not exactly 4 points
+    if len(approx) == 4:
+        return approx
+    else:
+        edges = detect_edges(img, '')
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:
+            card_contour = max(contours, key=cv2.contourArea)
+            peri = cv2.arcLength(card_contour, True)
+            for eps in [0.02, 0.015, 0.01, 0.005]:
+                approx = cv2.approxPolyDP(card_contour, eps * peri, True)
+                if len(approx) == 4:
+                    return approx
+            hull = cv2.convexHull(card_contour)
+            approx = cv2.approxPolyDP(hull, 0.02 * cv2.arcLength(hull, True), True)
+            if len(approx) == 4:
+                miscellaneous.print_with_color("[3] Using convex hull fallback", 3)
+                return approx
+            else:
+                rect = cv2.minAreaRect(card_contour)
+                box = cv2.boxPoints(rect)
+                box = np.int32(box)
+                return np.array(box, dtype=np.int32)
+        return approx
+
 
 def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path: str, CARD_DIM: tuple[int, int]):
     """
