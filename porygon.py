@@ -19,7 +19,7 @@ Dependencies:
 - miscellaneous (custom helper functions)
 
 This module is intended to be called from the main execution pipeline and
-provides essential ML components for the PokéPrint Inspector project.
+provides essential ML components for the PyPikachu project.
 """
 
 import cv2
@@ -251,7 +251,7 @@ def evaluate_model(model: models.Sequential, X_test: np.ndarray, y_test: np.ndar
     test_loss, test_acc = model.evaluate(X_test, y_test)
     miscellaneous.print_with_color(f"Test accuracy: {test_acc:.4f}, Loss: {test_loss:.4f}", 4)
 
-def predict_and_visualize(model: models.Sequential, X_test: np.ndarray, y_test: np.ndarray, USE_RGB: bool = True, sample_idx: int = 1) -> None:
+def predict_and_visualize(model: models.Sequential, images: np.ndarray, labels: np.ndarray = np.array([]), USE_RGB: bool = True, sample_idx: int = 0, verbose: bool = False, testing: bool = False):
     """
     Predict and visualize a single test image.
 
@@ -263,20 +263,51 @@ def predict_and_visualize(model: models.Sequential, X_test: np.ndarray, y_test: 
         - sample_idx (int): Index of the sample to visualize.
     """
     miscellaneous.print_with_color("Preparing to make predictions", 4)
-    img = X_test[sample_idx]
-    true_label = y_test[sample_idx]
+    size = images.shape[0]
     channels = 3 if USE_RGB else 1
-    img_reshaped = img.reshape(1, 128, 128, channels)
-    pred_probs = model.predict(img_reshaped, batch_size=1)
-    predicted_class = np.argmax(pred_probs)
+    img_reshaped = images[sample_idx].reshape(-1, 128, 128, channels) if testing else images.reshape(-1, 128, 128, channels)
+    pred_probs = model.predict(img_reshaped, batch_size=size)
+    predicted_classes = np.argmax(pred_probs, axis=1)
+    predicted_class = predicted_classes[sample_idx]
 
-    miscellaneous.print_with_color(f"True label: {true_label}, Predicted: {predicted_class}", 4)
-    miscellaneous.print_with_color(f"Probabilities: {pred_probs}", 4)
+    if verbose:
+        cv2.imshow("Pokemon", images[sample_idx])
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        miscellaneous.print_with_color(f"Probabilities: {pred_probs}", 4)
 
-    cv2.imshow("Pokemon", img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    if predicted_class == true_label:
-        miscellaneous.print_with_color("The model was right! 🥳", 2)
-    else:
-        miscellaneous.print_with_color("Oh no! The model was wrong! 🥺", 1)
+    if testing:
+        true_label = labels[sample_idx]
+        if predicted_class == true_label:
+            miscellaneous.print_with_color("The model was right! 🥳", 2)
+        else:
+            miscellaneous.print_with_color("Oh no! The model was wrong! 🥺", 1)
+        miscellaneous.print_with_color(f"True label: {true_label}, Predicted: {predicted_class}", 4)
+    return predicted_classes
+
+def main(defect: str, use_local_storage: bool, use_rgb: bool, kaggle_download: bool, verbose: bool = False):
+    author, dataset_name, input_shape, num_classes, TRAINING_DIR  = miscellaneous.parse_JSON_as_arguments(
+        'config.json',
+        defect,
+        ["input_shape", "dataset", "num_classes", "training_dir"])
+    
+    miscellaneous.clear_terminal()
+
+    directoryCheck = miscellaneous.directory_check(TRAINING_DIR)
+    attempts = 3
+    while not directoryCheck:
+        if attempts < 0:
+            exit()
+        TRAINING_DIR = get_dataset(TRAINING_DIR, author, dataset_name, kaggle_download, use_local_storage)
+        attempts -= 1
+        directoryCheck = miscellaneous.directory_check(TRAINING_DIR)
+
+    images, labels, filenames = load_dataset_from_directory(TRAINING_DIR, input_shape, use_rgb)
+    if verbose: display_sample(images, labels, filenames)
+    new_images, new_labels = convert_and_reshape(images, labels)
+    training_images, testing_images, training_labels, testing_labels = split_dataset(new_images, new_labels)
+    AI = build_model(num_classes, use_rgb)
+    train_model(AI, training_images, training_labels)
+    evaluate_model(AI, testing_images, testing_labels)
+    predict_and_visualize(AI, testing_images, testing_labels, use_rgb, verbose)
+    return AI
