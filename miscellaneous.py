@@ -132,7 +132,7 @@ def extract_zipfile(TRAINING_DIR: str) -> str:
         print_with_color("Dataset Extracted Successfully.", 2)
     return extract_to
 
-def parse_JSON_as_arguments(file: str, defect: str, arg_template: list) -> list:
+def parse_JSON_as_arguments(file: str, defect: str, arg_template: list) -> dict:
     """
     Parse a JSON configuration file and extract arguments for a given defect.
     
@@ -142,23 +142,19 @@ def parse_JSON_as_arguments(file: str, defect: str, arg_template: list) -> list:
         - arg_template (list): List of keys to extract.
     
     Returns:
-    - list: List of argument values.
+    - dict: Dictionary containing argument values.
     """
     with open(file, 'r') as fp:
         configs: dict = json.load(fp)[defect]
         print(configs)
     
-    args = []
+    args = {}
     for key, value in configs.items():
         if key in arg_template:
             if isinstance(value, list):
-                args.append(tuple(value))
-            elif key == 'dataset':
-                author, name = str(value).split("/")
-                args.append(author)
-                args.append(name)
+                args[key] = tuple(value)
             else:
-                args.append(value)
+                args[key] = value
     return args
 
 def pass_arguments_to_main() -> argparse.Namespace:
@@ -168,10 +164,11 @@ def pass_arguments_to_main() -> argparse.Namespace:
     Returns:
     - argparse.Namespace: Parsed argument object.
     """
-    parser = argparse.ArgumentParser(description="Train the PokéPrint model")
+    parser = argparse.ArgumentParser(description="The core of PyPikachu model")
     parser.add_argument("--defect", type=str, help="Name of the Pokemon Card Defect", required=True)
-    parser.add_argument("--use_local_storage", action='store_true', help="Use local image download instead of bytearray")
-    parser.add_argument("--use_rgb", action='store_true', help="Use RGB instead of grayscale")
+    parser.add_argument("--price", type=float, help="Maximum price you are willing to pay", required=True)
+    parser.add_argument("--use_local_storage", action='store_true', help="Use permanent local storage?")
+    parser.add_argument("--use_rgb", action='store_true', help="Use RGB instead of grayscale?")
     parser.add_argument("--kaggle_download", action='store_true', help="Download Kaggle dataset")
     return parser.parse_args()
 
