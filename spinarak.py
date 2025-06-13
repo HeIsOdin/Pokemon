@@ -49,7 +49,7 @@ def get_ebay_token(client_id: str, client_secret: str) -> str:
     
     return response.json()['access_token']
 
-def search_pokemon_cards(access_token: str, query: str = "Evolution Box error Wartortle", limit: int = 30) -> dict:
+def search_pokemon_cards(access_token: str, query: str = "Wartortle Pokemon Card", limit: int = 30, price: float = 50) -> dict:
     """
     Search eBay listings for Pokémon cards using the Browse API.
 
@@ -69,7 +69,7 @@ def search_pokemon_cards(access_token: str, query: str = "Evolution Box error Wa
     params = {
         'q': query,
         'limit': str(limit),
-        'filter': 'conditionIds:{1000|3000|4000}',  # New, Used, etc.
+        'filter': f'conditionIds:{1000|3000|4000},price:[{0}..{price}]',  # New, Used, etc.
         'category_ids': '183454'  # Collectible Card Games category
     }
     response = requests.get(search_url, headers=headers, params=params)
