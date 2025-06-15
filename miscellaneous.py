@@ -27,6 +27,7 @@ import zipfile
 import json
 import argparse
 import dotenv
+import psycopg2
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -68,6 +69,7 @@ def enviromentals(*vars: str) -> tuple:
     - tuple (number of arguments passed): values of environmental variables
     """
     dotenv.load_dotenv()
+
     values = []
     for var in vars:
         value = os.getenv(var)
@@ -174,3 +176,40 @@ def pass_arguments_to_main() -> argparse.Namespace:
 
 def hash_function(defect: str, price: float) -> str:
     return "deadbeef"
+
+def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: dict = {}, limit: int = -1,):
+    DATABASE, USER, PASSWORD, HOST, PORT = enviromentals(
+    'POSTGRESQL_DBNAME',
+    'POSTGRESQL_USER',
+    'POSTGRESQL_PASSWD',
+    'POSTGRESQL_HOST',
+    'POSTGRESQL_PORT',
+    )
+
+    with psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT) as conn:
+        with conn.cursor() as cursor:
+
+            columns = ', '.join(template); sql = sql.replace('columns', columns)
+            values = ', '.join(['%s' for _ in template]); sql = sql.replace('values', values)
+            table_name = ', '.join(table); sql = sql.replace('tables', table_name)
+
+            data = []
+            for key in template and pairs:
+                key = key.strip(' = %s')
+                if key in pairs.keys():
+                    data.append(pairs.get(key, None))
+
+            cursor.execute(sql, tuple(data))
+            
+            if sql.strip().lower().startswith("select"):
+                results = []
+                rows = cursor.fetchall() if limit == -1 else [cursor.fetchone()] if limit == 1 else cursor.fetchmany(limit)
+                if rows:
+                    for row in rows:
+                        if row and len(row) == len(template):
+                            result = {}
+                            for key, value in zip(template, row):
+                                result[key.strip(' = %s')] = value
+                            results.append(result)
+                return results
+            return conn.commit()

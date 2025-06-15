@@ -133,7 +133,10 @@ def submit_task(details: dict):
         conn.close()
         return message
 
-def sanitizer(mail: str, discord: str, updating: bool = False, user: str = "", pwd: str = "", name: str = "Pikachu"):
+def sanitizer(details: dict, updating: bool = False):
+    name = details.get('name', 'Pikachu'); mail=details.get("email", ''); discord=details.get('discord', '')
+    user = details.get('username', ''); pwd = details.get('password', '')
+    
     if not bool(re.fullmatch(r"\w{1,15}", user)) or not updating:
         return False, "Invalid username. Try again"
     if len(pwd) < 8 or not updating:
@@ -202,31 +205,37 @@ def fetch_options():
 
 @app.route("/login", methods=["POST"])
 def login():
+    import miscellaneous
+    success = False; message = ""
     try:
         username = request.form.get("username", "")
         password = request.form.get("password", "")
         remembrance = request.form.get("remember-me", "") == "on"
 
-        conn = psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT)
-        cursor = conn.cursor()
+        results = miscellaneous.postgresql(
+            'SELECT columns FROM credentials WHERE username = %s',
+            miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+            ('username', 'password'),
+            {'username': username},
+            1
+        )
 
-        cursor.execute("SELECT username, password FROM credentials WHERE username = %s", (username,))
-        result = cursor.fetchone()
+        if results:
+            result = results.pop()
+            if result and bcrypt.checkpw(password.encode(), str(result['password']).encode()):
+                user = User(username)
+                if remembrance: session.permanent = True
+                login_user(user)
+                success, message = True, ""
+            else:
+                message = "The credentials are incorrect"
+        else:
+            message = "We do not have your records"
 
     except Exception as e:
-        success, message = False, e
+        message = str(e)
 
-    else:
-        if result and bcrypt.checkpw(password.encode(), result[1].encode()):
-            user = User(username)
-            if remembrance: session.permanent = True
-            login_user(user)
-            success, message = True, "Login was successful"
-        else: success, message = False, "The credentials are incorrect"
-    
     finally:
-        cursor.close()
-        conn.close()
         return jsonify({
             "success": success,
             "message": message
@@ -243,13 +252,9 @@ def register():
             'email': request.form.get("email", ""),
             'discord': request.form.get("discord", "")
         }
-        goodOrBad, message = sanitizer(
-            user=credentials['username'],
-            pwd=credentials['password'],
-            mail=credentials['email'],
-            discord=credentials['discord'],
-            name=credentials['name']
-        )
+
+        goodOrBad, message = sanitizer(credentials)
+
         if not goodOrBad:
             return jsonify({"success": False, "message": message})
         
@@ -258,31 +263,20 @@ def register():
         salt = bcrypt.gensalt()
         credentials['password'] = (bcrypt.hashpw((credentials['password']).encode(), salt)).decode()
 
-        conn = psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT)
-        cursor = conn.cursor()
-        template = ("username", "password", "email", "discord", "name")
-        sql = f"""
-            INSERT INTO {USERS} ({', '.join(template)})
-            VALUES ({', '.join(['%s' for _ in template])})
-        """
-        data = []
-
-        for key, value in credentials.items():
-            if key in template:
-                data.append(value)
-
-        cursor.execute(sql, tuple(data))
-        conn.commit()
+        miscellaneous.postgresql(
+            "INSERT INTO tables () VALUES (values)",
+            miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+            ("username", "password", "email", "discord", "name"),
+            credentials
+        )
     
     except Exception as e:
         message =  str(e)
 
     else:
-        success = True
+        success, message = True, "You've been registered successfully"
     
     finally:
-        cursor.close()
-        conn.close()
         return jsonify({
             "success": success,
             "message": message
@@ -323,30 +317,21 @@ def logout():
 def send_info():
     username = current_user.id
 
-    conn = psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT)
-    cursor = conn.cursor()
+    data = miscellaneous.postgresql(
+        f"SELECT columns FROM tables WHERE username = '{username}'",
+        miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+        ('name', 'email', 'discord'),
+        limit=1
+    )
 
-    cursor.execute("SELECT name, email, discord FROM credentials WHERE username = %s", (username,))
-    user_row = cursor.fetchone()
-    user_data = {
-        "name": user_row[0],
-        "email": user_row[1],
-        "discord": user_row[2]
-    } if user_row else {}
+    user_data = data.pop() if data else {}
 
-    cursor.execute("SELECT defect, threshold, creation, status, market FROM taskmaster WHERE username = %s", (username,))
-    rows = cursor.fetchall()
-    info_data = []
-    for row in rows:
-        info_data.append({
-            "defect": row[0],
-            "threshold": row[1],
-            "creation": row[2],
-            "status": row[3],
-            "market": row[4]
-        })
-    cursor.close()
-    conn.close()
+    info_data = miscellaneous.postgresql(
+        f"SELECT columns FROM tables WHERE username = '{username}'",
+        miscellaneous.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
+        ('defect', 'threshold', 'creation', 'status', 'market')
+    )
+
     return jsonify({
         "data": user_data,
         "info": info_data
@@ -355,58 +340,38 @@ def send_info():
 @app.route('/update', methods=['POST'])
 @login_required
 def update_info():
+    success, message = False, ""
     try:
         details = {
             'name': request.form.get("name", ""),
             'email': request.form.get("email", ""),
             'discord': request.form.get("discord", "")
         }
-        goodOrBad, message = sanitizer(
-            name=details["name"],
-            mail=details["email"],
-            discord=details['discord'],
-            updating=True,
-        )
+        goodOrBad, message = sanitizer(details, True)
         if not goodOrBad:
             return jsonify({
                 "success": False,
                 "message": message
             })
         
-        conn = psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT)
-        cursor = conn.cursor()
-        template = ("name", "email", "discord")
-        sql = f"""
-            UPDATE {USERS}
-            SET {', '.join([new_template+' = %s' for new_template in template])}
-            WHERE username = %s
-        """
-
-        data = []
-
-        for key, value in details.items():
-            if key in template:
-                data.append(value)
-
-        data.append(current_user.id) # The username is used as the Flask ID here
-
-        cursor.execute(sql, tuple(data))
-        conn.commit()
-    
+        miscellaneous.postgresql(
+            f"UPDATE tables SET columns WHERE username = '{current_user.id}'",
+            miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+            tuple([key+' = %s' for key in ("name", "email", "discord")]),
+            details
+        )
+ 
     except Exception as e:
-        success, message = False, e
+        message = str(e)
 
     else:
-        success, message = True, message
+        success = True
     
     finally:
-        cursor.close()
-        conn.close()
         return jsonify({
             "success": success,
             "message": message
         })
-
 
 if __name__ == "__main__":
     main()
