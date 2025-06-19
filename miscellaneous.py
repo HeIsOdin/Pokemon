@@ -58,6 +58,25 @@ def clear_terminal():
     """
     os.system('cls' if os.name == 'nt' else 'clear')
 
+def load_itemIds_from_file(filename: str = "itemIds") -> list[str]:
+    """
+    Load eBay item IDs from a local file, one per line or space-separated.
+
+    Args:
+        filename (str): Name of the file storing item IDs.
+
+    Returns:
+        list[str]: List of item IDs as strings.
+    """
+    try:
+        with open(filename, 'r') as file:
+            content = file.read()
+        return content.split()
+    except FileNotFoundError:
+        # If file doesn't exist, return an empty list
+        return []
+
+
 def enviromentals(*vars: str) -> tuple:
     """
     Retrieve environment variables.

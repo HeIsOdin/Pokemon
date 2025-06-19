@@ -55,6 +55,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
 
     items = []
 
+    itemIds = miscellaneous.load_itemIds_from_file()
     for query in args.get('query', []):
         miscellaneous.print_with_color(f"Searching for Pokémon card listings '{query}'...", 4)
         results = spinarak.search_pokemon_cards(token, price=threshold, query='')
@@ -62,6 +63,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
         miscellaneous.print_with_color("Downloading listing images...", 4)
 
         for item in results.get('itemSummaries', []):
+            if item.get('itemId', '') in itemIds: continue
             card = {
                 'title': item.get('title', ''),
                 'product_url': item.get('itemWebUrl', ''),
