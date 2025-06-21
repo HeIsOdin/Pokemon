@@ -19,7 +19,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
     )
     author, dataset_name = args.get('dataset', []).split("/")
 
-    #miscellaneous.clear_terminal()
+    miscellaneous.clear_terminal()
 
     if not AI:
         directoryCheck = miscellaneous.directory_check(args.get("training_dir", ""))

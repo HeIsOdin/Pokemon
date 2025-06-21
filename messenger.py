@@ -150,7 +150,6 @@ def send_email(to_email: str, subject: str, body: str):
     msg.set_content("This email requires an HTML viewer.")
     msg.add_alternative(body, subtype='html')
 
-    open('logs/here.log', 'a').write(str(msg))
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(EMAIL, PASSWORD)
         smtp.send_message(msg)
@@ -158,7 +157,6 @@ def send_email(to_email: str, subject: str, body: str):
 schedule.every(3).minutes.do(get_report)
 
 if __name__ == "__main__":
-    #establish_model()  # Ensure model is available before first run
     get_report()
     while True:
         schedule.run_pending()

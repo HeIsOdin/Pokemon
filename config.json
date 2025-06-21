@@ -8,7 +8,7 @@
 			"Wartortle WOTC base",
 			"Wartortle vintage"
 		],
-		"marketplace": ["eBay", "Facebook Marketplace"],
+		"marketplace": ["eBay"],
 		"input_shape": [128, 128],
 		"num_classes": 2,
 		"dimensions": [480, 680],
@@ -16,29 +16,5 @@
 		"input_dir": "imag",
 		"debugging_dir": "adjust",
 		"training_dir": "wartortle-evolution-error"
-	},
-	
-	"dark_dragonite_error": {
-		"title": "Dark Dragonite Error",
-		"dataset": "benjaminadedowole/dark-dragonite-no-holo-error",
-		"queries": [
-			"Dark Dragonite 5/82",
-			"Team Rocket Dark Dragonite error",
-			"Dark Dragonite non-holo 5/82",
-			"Dark Dragonite no holo rare"
-		],
-		"marketplace": ["eBay", "Facebook Marketplace"]
-	},
-	
-	"ninetales_lure_error": {
-		"title": "Ninetales Lure Error",
-		"dataset": "benjaminadedowole/ninetales-lure-error",
-		"queries": [
-			"Ninetales 12/102",
-			"Ninetales base set error",
-			"Ninetales no damage Lure error",
-			"Lure no effect description"
-		],
-		"marketplace": ["eBay", "Facebook Marketplace"]
 	}
 }
