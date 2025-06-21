@@ -2,6 +2,7 @@ import schedule
 import smtplib
 from email.message import EmailMessage
 import miscellaneous
+import datetime
 
 EMAIL, PASSWORD = miscellaneous.enviromentals('EMAIL', 'EMAIL_PASSWORD')
 
@@ -19,17 +20,22 @@ def get_report():
             info = miscellaneous.postgresql(
                 f"SELECT columns FROM tables WHERE username = '{report.get('username', '')}'",
                 miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
-                ('email', 'discord'),
+                ('email', 'discord', 'report_id'),
                 limit=1
             ).pop()
 
             for query in queries:
-                if query.get('title', '') == 'Pokemon TCG S-Chinese Horizons Gem VOL.2 Exclusive CBB2C Eevee card Sylveon':
+                if query.get('truth', '') == True:
                     query.update({'image_url': f"<img src='{query.get('image_url', '')}' alt='pokemon card'/>"})
                     query.update({'product_url': f"<a href='{query.get('product_url', '')}'>Click Me!</a>"})
                     satisfactory.append(query)
-            open('logs/here.log', 'a').write(str(satisfactory))
             send_email(info.get('email', ''), 'PyPikachu', html_template(satisfactory))
+            miscellaneous.postgresql(
+                f"UPDATE tables SET columns WHERE report_id = {info.get('report_id', '')}",
+                miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_REPORTS'),
+                tuple([key+' = %s' for key in ("status", "delivery")]),
+                {'status': 'delivered', 'delivery': datetime.datetime.now(datetime.timezone.utc)}
+            )
     return satisfactory
 
 def html_template(reports: list):
@@ -134,6 +140,8 @@ def html_template(reports: list):
     ))
 
 def send_email(to_email: str, subject: str, body: str):
+    if not to_email or not subject or not body:
+        return
     msg = EmailMessage()
     msg['Subject'] = subject
     msg['From'] = f'PyPikachu <{EMAIL}>'
