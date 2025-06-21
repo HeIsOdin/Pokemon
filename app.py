@@ -134,29 +134,29 @@ def submit_task(details: dict):
         return message
 
 def sanitizer(details: dict, updating: bool = False):
-    name = details.get('name', 'Pikachu'); mail=details.get("email", ''); discord=details.get('discord', '')
+    name = details.get('name', 'Pikachu'); mail = details.get("email", ''); discord = details.get('discord', '')
     user = details.get('username', ''); pwd = details.get('password', '')
     
-    if not bool(re.fullmatch(r"\w{1,15}", user)) or not updating:
-        return False, "Invalid username. Try again"
-    if len(pwd) < 8 or not updating:
+    if updating or not bool(re.fullmatch(r"\w{1,15}", user)):
+        return False, "Invalid username. Try again."
+    if updating or len(pwd) < 8:
         return False, "Password must be at least 8 characters."
-    if not re.search(r"[A-Z]", pwd) or not updating:
+    if updating or not re.search(r"[A-Z]", pwd):
         return False, "Include at least one uppercase letter."
-    if not re.search(r"[a-z]", pwd) or not updating:
+    if updating or not re.search(r"[a-z]", pwd):
         return False, "Include at least one lowercase letter."
-    if not re.search(r"\d", pwd) or not updating:
+    if updating or not re.search(r"\d", pwd):
         return False, "Include at least one digit."
-    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", pwd) or not updating:
+    if updating or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", pwd):
         return False, "Include at least one special character."
-    if pwd.strip() != pwd or not updating:
+    if updating or pwd.strip() != pwd:
         return False, "No leading or trailing whitespace."
-    if not bool(re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", mail)):
-        return False, "Invalid Email. Try again"
-    if not (bool(re.match(r"^[\w]{2,32}#\d{4}$", discord)) or bool(re.match(r"^[a-z0-9_.]{2,32}$", discord))):
-        return False, "Invalid Discord. Try again"
-    if not bool(re.fullmatch(r"[ \w\-.'@]{1,32}", name.strip())):
-        return False, "Invalid display name."
+    if mail and not bool(re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", mail)):
+        return False, "Invalid Email. Try again."
+    if discord and not (bool(re.match(r"^[\w]{2,32}#\d{4}$", discord)) or bool(re.match(r"^[a-z0-9_.]{2,32}$", discord))):
+        return False, "Invalid Discord. Try again."
+    if name and not bool(re.fullmatch(r"[ \w.'@-]{1,32}", name.strip())):
+        return False, "Invalid display name. Try again."
     return True, ""
 
 def main():
@@ -205,7 +205,6 @@ def fetch_options():
 
 @app.route("/login", methods=["POST"])
 def login():
-    import miscellaneous
     success = False; message = ""
     try:
         username = request.form.get("username", "")
@@ -264,14 +263,14 @@ def register():
         credentials['password'] = (bcrypt.hashpw((credentials['password']).encode(), salt)).decode()
 
         miscellaneous.postgresql(
-            "INSERT INTO tables () VALUES (values)",
+            "INSERT INTO tables (columns) VALUES (values)",
             miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
             ("username", "password", "email", "discord", "name"),
             credentials
         )
     
     except Exception as e:
-        message =  str(e)
+        message = str(e)
 
     else:
         success, message = True, "You've been registered successfully"
