@@ -14,12 +14,12 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
             "input_dir",
             "debugging_dir",
             "training_dir",
-            'query'
+            'queries'
         ]
     )
     author, dataset_name = args.get('dataset', []).split("/")
 
-    miscellaneous.clear_terminal()
+    #miscellaneous.clear_terminal()
 
     if not AI:
         directoryCheck = miscellaneous.directory_check(args.get("training_dir", ""))
@@ -55,15 +55,15 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
 
     items = []
 
-    itemIds = miscellaneous.load_itemIds_from_file()
-    for query in args.get('query', []):
+    queries = args.get('queries', [])
+
+    for query in queries:
         miscellaneous.print_with_color(f"Searching for Pokémon card listings '{query}'...", 4)
         results = spinarak.search_pokemon_cards(token, price=threshold, query='')
 
         miscellaneous.print_with_color("Downloading listing images...", 4)
 
         for item in results.get('itemSummaries', []):
-            if item.get('itemId', '') in itemIds: continue
             card = {
                 'title': item.get('title', ''),
                 'product_url': item.get('itemWebUrl', ''),
@@ -74,7 +74,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
                 card['image'] = bytearray(spinarak.download_image(card['image_url'], card['title'], args.get('input_dir', ''), USE_LOCAL_STORAGE))
                 items.append(card)
                 continue
-            miscellaneous.print_with_color(f"No image found for: {card['title']}", 1)
+            miscellaneous.print_with_color(f"No image found for: {card['title']}", 3)
             
 
     miscellaneous.print_with_color("Listed Images have been downloaded! 🥳", 2)

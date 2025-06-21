@@ -21,6 +21,7 @@ for defect detection.
 import requests
 import os
 import miscellaneous
+import time
 
 def get_ebay_token(client_id: str, client_secret: str) -> str:
     """
@@ -49,35 +50,63 @@ def get_ebay_token(client_id: str, client_secret: str) -> str:
     
     return response.json()['access_token']
 
-def search_pokemon_cards(access_token: str, query: str = "Wartortle Pokemon Card", limit: int = 30, price: float = 50) -> dict:
+def search_pokemon_cards(access_token: str, query: str = "Wartortle Pokemon Card", offset: int = 0, price: float = 50, limit: int = 100) -> dict:
     """
-    Search eBay listings for Pokémon cards using the Browse API.
+    Fetches up to `limit` Pokémon card listings from eBay, starting at `offset`, combining paginated results.
 
     Args:
         - access_token (str): OAuth2 bearer token.
         - query (str): Search query string.
-        - limit (int): Number of results to fetch.
+        - offset (int): Index to start fetching from.
+        - price (float): Maximum price filter.
+        - limit (int): Total number of listings to fetch.
 
     Returns:
-    - dict: JSON response from the eBay API.
+    - dict: Combined eBay listings in a single JSON-like structure.
     """
+
     search_url = 'https://api.ebay.com/buy/browse/v1/item_summary/search'
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
     }
-    params = {
-        'q': query,
-        'limit': str(limit),
-        'filter': f'conditionIds:{1000|3000|4000},price:[{0}..{price}]',  # New, Used, etc.
-        'category_ids': '183454'  # Collectible Card Games category
-    }
-    response = requests.get(search_url, headers=headers, params=params)
-    
-    if response.status_code != 200:
-        miscellaneous.print_with_color(f"Search failed: {response.status_code} - {response.text}", 1)
-    
-    return response.json()
+
+    all_items = []
+    page_size = 50
+    total_fetched = 0
+
+    while total_fetched < limit:
+        batch_limit = min(page_size, limit - total_fetched)
+        params = {
+            'q': query,
+            'limit': str(batch_limit),
+            'offset': str(offset + total_fetched),
+            'sort': 'newlyListed',
+            'filter': f'conditionIds:{1000|3000|4000},price:[0..{price}]',
+            'category_ids': '183454'
+        }
+
+        response = requests.get(search_url, headers=headers, params=params)
+
+        if response.status_code != 200:
+            miscellaneous.print_with_color(f"Search failed at offset {offset + total_fetched}: {response.status_code} - {response.text}", 1)
+            break
+
+        data = response.json()
+        items = data.get('itemSummaries', [])
+        if not items:
+            break
+
+        all_items.extend(items)
+        total_fetched += len(items)
+
+        if len(items) < batch_limit:
+            break
+
+        time.sleep(0.25)
+
+    return {'itemSummaries': all_items}
+
 
 def download_image(original_image_url: str, title: str, save_dir: str, save: bool = False) -> bytes:
     """

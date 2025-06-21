@@ -58,25 +58,6 @@ def clear_terminal():
     """
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def load_itemIds_from_file(filename: str = "itemIds") -> list[str]:
-    """
-    Load eBay item IDs from a local file, one per line or space-separated.
-
-    Args:
-        filename (str): Name of the file storing item IDs.
-
-    Returns:
-        list[str]: List of item IDs as strings.
-    """
-    try:
-        with open(filename, 'r') as file:
-            content = file.read()
-        return content.split()
-    except FileNotFoundError:
-        # If file doesn't exist, return an empty list
-        return []
-
-
 def enviromentals(*vars: str) -> tuple:
     """
     Retrieve environment variables.
@@ -193,8 +174,10 @@ def pass_arguments_to_main() -> argparse.Namespace:
     parser.add_argument("--kaggle_download", action='store_true', help="Download Kaggle dataset")
     return parser.parse_args()
 
-def hash_function(defect: str, price: float) -> str:
-    return "deadbeef"
+def hash_function(itemId: str, price: float) -> str:
+    encoded_defect = ''.join([str(ord(char)) for char in itemId])
+    hash = int(round(price)) * int(encoded_defect)
+    return str(hash)
 
 def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: dict = {}, limit: int = -1,):
     DATABASE, USER, PASSWORD, HOST, PORT = enviromentals(
@@ -231,4 +214,5 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
                                 result[key.strip(' = %s')] = value
                             results.append(result)
                 return results
-            return conn.commit()
+            conn.commit()
+            return []

@@ -137,7 +137,7 @@ def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.t
     # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
-        raise ValueError("No yellow border detected.")
+        return np.ndarray([])
 
     # Choose the largest yellow region
     border_contour = max(contours, key=cv2.contourArea)
@@ -201,7 +201,7 @@ def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path
         cv2.imwrite(os.path.join(save_path, "4_aligned.jpg"), aligned)
     return aligned
 
-def roi_extraction(aligned: cv2.typing.MatLike, save_path: str, ROI_BOX: tuple[int, int, int, int]):
+def roi_extraction(aligned: np.ndarray, save_path: str, ROI_BOX: tuple[int, int, int, int]):
     """
     Extract the defined region of interest (ROI) from an aligned image.
 
