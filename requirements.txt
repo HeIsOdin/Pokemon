@@ -14,4 +14,3 @@ gitpython
 psycopg2-binary
 bcrypt
 schedule
-sendgrid
