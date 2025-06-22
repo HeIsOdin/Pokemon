@@ -12,14 +12,14 @@ import git
 import os
 import time
 import psycopg2
-import miscellaneous
+import rotom
 import re
 import bcrypt
 import logging
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=["https://heisodin.github.io"])
-app.secret_key = miscellaneous.enviromentals('FLASK_SECRET_KEY')
+app.secret_key = rotom.enviromentals('FLASK_SECRET_KEY')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(os.getcwd(), 'flask_sessions')
 app.config.update(
@@ -46,7 +46,7 @@ class User(UserMixin):
         self.id = username  # Used by Flask-Login
         self.name = username
 
-FLASK_PORT, NGROK_API, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = miscellaneous.enviromentals(
+FLASK_PORT, NGROK_API, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = rotom.enviromentals(
     'FLASK_PORT',
     'NGROK_API',
     'POSTGRESQL_DBNAME',
@@ -94,7 +94,7 @@ def submit_task(details: dict):
     data = []
     template = ('defect', 'threshold', 'creation', 'status', 'hash', 'market', 'username')
     defect = details.get('defect', ''); price = details.get('threshold', '')
-    details['hash'] = miscellaneous.hash_function(defect, price)
+    details['hash'] = rotom.hash_function(defect, price)
     details['status'] = "submitted"
 
     if price <= 0 or price >= 500:
@@ -211,9 +211,9 @@ def login():
         password = request.form.get("password", "")
         remembrance = request.form.get("remember-me", "") == "on"
 
-        results = miscellaneous.postgresql(
+        results = rotom.postgresql(
             'SELECT columns FROM credentials WHERE username = %s',
-            miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+            rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
             ('username', 'password'),
             {'username': username},
             1
@@ -262,9 +262,9 @@ def register():
         salt = bcrypt.gensalt()
         credentials['password'] = (bcrypt.hashpw((credentials['password']).encode(), salt)).decode()
 
-        miscellaneous.postgresql(
+        rotom.postgresql(
             "INSERT INTO tables (columns) VALUES (values)",
-            miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+            rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
             ("username", "password", "email", "discord", "name"),
             credentials
         )
@@ -316,18 +316,18 @@ def logout():
 def send_info():
     username = current_user.id
 
-    data = miscellaneous.postgresql(
+    data = rotom.postgresql(
         f"SELECT columns FROM tables WHERE username = '{username}'",
-        miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+        rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
         ('name', 'email', 'discord'),
         limit=1
     )
 
     user_data = data.pop() if data else {}
 
-    info_data = miscellaneous.postgresql(
+    info_data = rotom.postgresql(
         f"SELECT columns FROM tables WHERE username = '{username}'",
-        miscellaneous.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
+        rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
         ('defect', 'threshold', 'creation', 'status', 'market')
     )
 
@@ -353,9 +353,9 @@ def update_info():
                 "message": message
             })
         
-        miscellaneous.postgresql(
+        rotom.postgresql(
             f"UPDATE tables SET columns WHERE username = '{current_user.id}'",
-            miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+            rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
             tuple([key+' = %s' for key in ("name", "email", "discord")]),
             details
         )

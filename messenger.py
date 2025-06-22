@@ -1,15 +1,15 @@
 import schedule
 import smtplib
 from email.message import EmailMessage
-import miscellaneous
+import rotom
 import datetime
 
-EMAIL, PASSWORD = miscellaneous.enviromentals('EMAIL', 'EMAIL_PASSWORD')
+EMAIL, PASSWORD = rotom.enviromentals('EMAIL', 'EMAIL_PASSWORD')
 
 def get_report():
-    reports = miscellaneous.postgresql(
+    reports = rotom.postgresql(
         "SELECT columns FROM tables WHERE status = 'ready'",
-        miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_REPORTS'),
+        rotom.enviromentals('POSTGRESQL_TABLE_FOR_REPORTS'),
         ('id', 'body', 'username', 'creation')
     )
     
@@ -17,9 +17,9 @@ def get_report():
         for report in reports:
             satisfactory = []
             queries = report.get('body', [])
-            info = miscellaneous.postgresql(
+            info = rotom.postgresql(
                 f"SELECT columns FROM tables WHERE username = '{report.get('username', '')}'",
-                miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
+                rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
                 ('email', 'discord', 'report_id'),
                 limit=1
             ).pop()
@@ -30,9 +30,9 @@ def get_report():
                     query.update({'product_url': f"<a href='{query.get('product_url', '')}'>Click Me!</a>"})
                     satisfactory.append(query)
             send_email(info.get('email', ''), 'PyPikachu', html_template(satisfactory))
-            miscellaneous.postgresql(
+            rotom.postgresql(
                 f"UPDATE tables SET columns WHERE report_id = {info.get('report_id', '')}",
-                miscellaneous.enviromentals('POSTGRESQL_TABLE_FOR_REPORTS'),
+                rotom.enviromentals('POSTGRESQL_TABLE_FOR_REPORTS'),
                 tuple([key+' = %s' for key in ("status", "delivery")]),
                 {'status': 'delivered', 'delivery': datetime.datetime.now(datetime.timezone.utc)}
             )

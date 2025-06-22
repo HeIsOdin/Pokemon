@@ -1,10 +1,10 @@
 import spinarak
 import smeargle
 import porygon
-import miscellaneous
+import rotom
 
 def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, download_dataset: bool, AI: porygon.models.Sequential | None = None, verbose: bool = False):
-    args = miscellaneous.parse_JSON_as_arguments('config.json', defect,
+    args = rotom.parse_JSON_as_arguments('config.json', defect,
         [
             "input_shape",
             "dataset",
@@ -19,10 +19,10 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
     )
     author, dataset_name = args.get('dataset', []).split("/")
 
-    miscellaneous.clear_terminal()
+    rotom.clear_terminal()
 
     if not AI:
-        directoryCheck = miscellaneous.directory_check(args.get("training_dir", ""))
+        directoryCheck = rotom.directory_check(args.get("training_dir", ""))
         attempts = 3
         while not directoryCheck:
             if attempts < 0:
@@ -36,7 +36,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
                     USE_LOCAL_STORAGE
                 )})
             attempts -= 1
-            directoryCheck = miscellaneous.directory_check(args.get("training_dir", ""))
+            directoryCheck = rotom.directory_check(args.get("training_dir", ""))
 
         images, labels, filenames = porygon.load_dataset_from_directory(args.get("training_dir", ""), args.get('input_shape', ''), USE_RGB)
         if verbose: porygon.display_sample(images, labels, filenames)
@@ -48,9 +48,9 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
         porygon.evaluate_model(AI, testing_images, testing_labels)
         porygon.predict_and_visualize(AI, testing_images, testing_labels, USE_RGB, testing=True)
 
-    CLIENT_ID, CLIENT_SECRET = miscellaneous.enviromentals('EBAY_CLIENT_ID', 'EBAY_CLIENT_SECRET')
+    CLIENT_ID, CLIENT_SECRET = rotom.enviromentals('EBAY_CLIENT_ID', 'EBAY_CLIENT_SECRET')
 
-    miscellaneous.print_with_color("Authenticating with eBay...", 4)
+    rotom.print_with_color("Authenticating with eBay...", 4)
     token = spinarak.get_ebay_token(CLIENT_ID, CLIENT_SECRET)
 
     items = []
@@ -58,10 +58,10 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
     queries = args.get('queries', [])
 
     for query in queries:
-        miscellaneous.print_with_color(f"Searching for Pokémon card listings '{query}'...", 4)
+        rotom.print_with_color(f"Searching for Pokémon card listings '{query}'...", 4)
         results = spinarak.search_pokemon_cards(token, price=threshold, query='')
 
-        miscellaneous.print_with_color("Downloading listing images...", 4)
+        rotom.print_with_color("Downloading listing images...", 4)
 
         for item in results.get('itemSummaries', []):
             card = {
@@ -74,15 +74,15 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
                 card['image'] = bytearray(spinarak.download_image(card['image_url'], card['title'], args.get('input_dir', ''), USE_LOCAL_STORAGE))
                 items.append(card)
                 continue
-            miscellaneous.print_with_color(f"No image found for: {card['title']}", 3)
+            rotom.print_with_color(f"No image found for: {card['title']}", 3)
             
 
-    miscellaneous.print_with_color("Listed Images have been downloaded! 🥳", 2)
-    miscellaneous.pause(10)
+    rotom.print_with_color("Listed Images have been downloaded! 🥳", 2)
+    rotom.pause(10)
 
     rois = []
     for item in items:
-        miscellaneous.print_with_color(f"Processing {item['title']}...", 4)
+        rotom.print_with_color(f"Processing {item['title']}...", 4)
         image = None
         path = ''
         if USE_LOCAL_STORAGE:
@@ -94,7 +94,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
         approx = smeargle.detect_contours(image, image_edges)
 
         if len(approx) != 4:
-            miscellaneous.print_with_color(f"Skipping '{item['title']}' — could not detect card corners.", 3)
+            rotom.print_with_color(f"Skipping '{item['title']}' — could not detect card corners.", 3)
             items.remove(item['title'])
             continue
 
@@ -102,7 +102,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
         roi = smeargle.roi_extraction(aligned, path, args.get('roi', ''))
         rois.append(porygon.cv2.resize(roi, args.get('input_shape', '')))
         item.pop('image')
-        miscellaneous.print_with_color(f"Finished Processing {item['title']}", 2)
+        rotom.print_with_color(f"Finished Processing {item['title']}", 2)
 
     truth_values = porygon.predict_and_visualize(AI, porygon.np.array(rois), USE_RGB=USE_RGB)
 
@@ -111,9 +111,9 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
         if truth_value == 0:
             card.update({'truth': True})
 
-    miscellaneous.pause(5)
+    rotom.pause(5)
     return items
 
 if __name__ == "__main__":
-    args = miscellaneous.pass_arguments_to_main()
+    args = rotom.pass_arguments_to_main()
     main(args.defect, args.price, args.use_local_storage, args.use_rgb, args.kaggle_download)

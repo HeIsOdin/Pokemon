@@ -28,7 +28,7 @@ import cv2
 import numpy as np
 import os
 from pathlib import Path
-import miscellaneous
+import rotom
 
 def order_points(pts):
     """
@@ -68,11 +68,11 @@ def load_file_from_directory(file: str, INPUT_DIR: str = 'images', OUTPUT_DIR: s
     os.makedirs(save_path, exist_ok=True)
 
     if not os.path.isfile(image_path):
-        miscellaneous.print_with_color(f"File '{image_path}' does not exist", 1)
+        rotom.print_with_color(f"File '{image_path}' does not exist", 1)
 
     img = cv2.imread(image_path)
     if img is None:
-        miscellaneous.print_with_color(f"Could not load image: {image_path}", 1)
+        rotom.print_with_color(f"Could not load image: {image_path}", 1)
     cv2.imwrite(os.path.join(save_path, "1_original.jpg"), img)
     return img, save_path
 
@@ -90,7 +90,7 @@ def load_file_from_bytearray(file: bytearray, save_path: str):
     image_bytes = np.frombuffer(file, dtype=np.uint8)
     img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
     if img is None:
-        miscellaneous.print_with_color("Could not load image as bytes", 1)
+        rotom.print_with_color("Could not load image as bytes", 1)
     return img, save_path
 
 def detect_edges(img: cv2.typing.MatLike, save_path: str) -> cv2.typing.MatLike:
@@ -160,7 +160,7 @@ def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.t
             hull = cv2.convexHull(card_contour)
             approx = cv2.approxPolyDP(hull, 0.02 * cv2.arcLength(hull, True), True)
             if len(approx) == 4:
-                miscellaneous.print_with_color("[3] Using convex hull fallback", 3)
+                rotom.print_with_color("[3] Using convex hull fallback", 3)
                 return approx
             else:
                 rect = cv2.minAreaRect(card_contour)

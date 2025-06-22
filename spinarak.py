@@ -20,7 +20,7 @@ for defect detection.
 
 import requests
 import os
-import miscellaneous
+import rotom
 import time
 
 def get_ebay_token(client_id: str, client_secret: str) -> str:
@@ -46,7 +46,7 @@ def get_ebay_token(client_id: str, client_secret: str) -> str:
     response = requests.post(url, headers=headers, data=data, auth=(client_id, client_secret))
     
     if response.status_code != 200:
-        miscellaneous.print_with_color(f"Failed to retrieve token: {response.status_code} - {response.text}", 1)
+        rotom.print_with_color(f"Failed to retrieve token: {response.status_code} - {response.text}", 1)
     
     return response.json()['access_token']
 
@@ -89,7 +89,7 @@ def search_pokemon_cards(access_token: str, query: str = "Wartortle Pokemon Card
         response = requests.get(search_url, headers=headers, params=params)
 
         if response.status_code != 200:
-            miscellaneous.print_with_color(f"Search failed at offset {offset + total_fetched}: {response.status_code} - {response.text}", 1)
+            rotom.print_with_color(f"Search failed at offset {offset + total_fetched}: {response.status_code} - {response.text}", 1)
             break
 
         data = response.json()
@@ -130,7 +130,7 @@ def download_image(original_image_url: str, title: str, save_dir: str, save: boo
             raise Exception("Fallback to low-res!")
     except:
         image_url = original_image_url  # fallback to original URL
-        miscellaneous.print_with_color("Unable to fetch high-quality image. Falling back...", 3)
+        rotom.print_with_color("Unable to fetch high-quality image. Falling back...", 3)
 
     response = requests.get(image_url)
 
@@ -144,8 +144,8 @@ def download_image(original_image_url: str, title: str, save_dir: str, save: boo
         if response.status_code == 200:
             with open(filepath, 'wb') as f:
                 f.write(response.content)
-            miscellaneous.print_with_color(f"Saved: {filepath}", 2)
+            rotom.print_with_color(f"Saved: {filepath}", 2)
         else:
-            miscellaneous.print_with_color(f"Failed to download image: {image_url}", 1)
+            rotom.print_with_color(f"Failed to download image: {image_url}", 1)
 
     return response.content
