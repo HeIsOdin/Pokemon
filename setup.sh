@@ -69,6 +69,33 @@ else
     echo "kaggle.json is valid and ready to use."
 fi
 
+echo "=== Checking for PostgreSQL ==="
+if command -v psql > /dev/null 2>&1; then
+    echo "PostgreSQL is installed: $(psql --version)"
+else
+    echo "PostgreSQL is not installed."
+
+    echo "Checking for Docker..."
+    if ! command -v docker > /dev/null 2>&1; then
+        echo "Docker is not installed. Please install PostgreSQL manually or install Docker to run it in a container."
+        exit 1
+    fi
+
+    echo "Docker is installed. Checking for running PostgreSQL containers..."
+    if docker ps --filter "ancestor=postgres" --format '{{.Names}}' | grep -q .; then
+        echo "A PostgreSQL container is currently running."
+    elif docker images --format '{{.Repository}}' | grep -q '^postgres$'; then
+        echo "A PostgreSQL image exists. You can run it with:"
+        echo "  docker run --name pg_container -e POSTGRES_PASSWORD=yourpassword -d -p 5432:5432 postgres"
+    else
+        echo "No PostgreSQL container or image found."
+        echo "You can pull and run it with:"
+        echo "  docker pull postgres"
+        echo "  docker run --name pg_container -e POSTGRES_PASSWORD=yourpassword -d -p 5432:5432 postgres"
+        exit 1
+    fi
+fi
+
 VENV="PyPikachu"
 echo "=== Creating virtual environment '$VENV' ==="
 python3 -m venv $VENV
