@@ -10,32 +10,27 @@ fi
 echo "Python version: $(python3 --version)"
 
 echo "=== Checking GitHub availability ==="
-curl -s --head https://api.github.com | head -n 1 | grep "200 OK" > /dev/null
-if [ $? -ne 0 ]; then
-    echo "Cannot reach GitHub. Please check your internet connection or proxy."
+
+if command -v curl > /dev/null 2>&1; then
+    curl -s --head https://api.github.com | head -n 1 | grep "200" > /dev/null
+elif command -v wget > /dev/null 2>&1; then
+    wget --spider --quiet https://api.github.com
+else
+    echo "Neither curl nor wget is installed. Cannot verify GitHub access."
+    echo "Please install curl or wget."
     exit 1
 fi
 
-if [ -n "$GITHUB_TOKEN" ]; then
-    echo "Found GITHUB_TOKEN. Verifying access..."
-    response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user)
-    login=$(echo "$response" | grep -o '"login": *"[^"]*"' | cut -d '"' -f4)
-
-    if [ -z "$login" ]; then
-        echo "GitHub token is invalid or unauthorized."
-        exit 1
-    fi
-
-    echo "GitHub access verified as user: $login"
-else
-    echo "No GitHub token provided. Proceeding with unauthenticated access."
+if [ $? -ne 0 ]; then
+    echo "Cannot reach GitHub. Please check your internet connection or proxy."
+    exit 1
 fi
 
 echo "=== Cloning GitHub repository ==="
 if [ ! -d "Pokemon" ]; then
     git clone https://github.com/HeIsOdin/Pokemon
     if [ $? -ne 0 ]; then
-        echo "Failed to clone repository."
+        echo "Failed to clone repository. See if git is installed with your package manager"
         exit 1
     fi
 else
@@ -45,13 +40,27 @@ fi
 cd Pokemon
 
 echo "=== Checking for kaggle.json ==="
-KAGGLE_JSON="$HOME/.kaggle/kaggle.json"
+KAGGLE_DIR="$HOME/.kaggle"
+KAGGLE_JSON="$KAGGLE_DIR/kaggle.json"
+
+# Ensure the .kaggle directory exists
+if [ ! -d "$KAGGLE_DIR" ]; then
+    echo ".kaggle directory not found. Creating it..."
+    mkdir -p "$KAGGLE_DIR"
+    if [ $? -ne 0 ]; then
+        echo "Failed to create $KAGGLE_DIR. Check permissions."
+        exit 1
+    fi
+fi
+
+# Check if kaggle.json file exists
 if [ ! -f "$KAGGLE_JSON" ]; then
     echo "kaggle.json not found at $KAGGLE_JSON"
-    echo "Download it from https://www.kaggle.com/account and place it in ~/.kaggle"
+    echo "Download it from https://www.kaggle.com/account and place it in $KAGGLE_DIR"
     exit 1
 fi
 
+# Validate JSON structure
 echo "Validating kaggle.json contents..."
 if ! python3 -c "
 import json, sys
