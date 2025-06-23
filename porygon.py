@@ -265,7 +265,7 @@ def predict_and_visualize(model: models.Sequential, images: np.ndarray, labels: 
     rotom.print_with_color("Preparing to make predictions", 4)
     size = images.shape[0]
     channels = 3 if USE_RGB else 1
-    img_reshaped = images[sample_idx].reshape(-1, 128, 128, channels) if testing else images.reshape(-1, 128, 128, channels)
+    img_reshaped = images[sample_idx].reshape((-1, 128, 128, channels)) if testing else images.reshape((-1, 128, 128, channels))
     pred_probs = model.predict(img_reshaped, batch_size=size)
     predicted_classes = np.argmax(pred_probs, axis=1)
     predicted_class = predicted_classes[sample_idx]
