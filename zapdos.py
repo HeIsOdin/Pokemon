@@ -2,10 +2,10 @@ from flask import Flask, request, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from flask_session import Session
 from datetime import timedelta
+from flask_cors import CORS
 
 import json
 import datetime
-from flask_cors import CORS
 import subprocess
 import requests
 import git
@@ -45,9 +45,10 @@ class User(UserMixin):
         self.id = username  # Used by Flask-Login
         self.name = username
 
-FLASK_PORT, NGROK_API, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS, REMOTE = rotom.enviromentals(
+FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS, REMOTE = rotom.enviromentals(
     'FLASK_PORT',
     'NGROK_API',
+    'NGROK_TOKEN',
     'POSTGRESQL_DBNAME',
     'POSTGRESQL_USER',
     'POSTGRESQL_PASSWD',
@@ -60,12 +61,18 @@ FLASK_PORT, NGROK_API, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS, REMOT
 
 def git_commit():
     repo = git.Repo(".")
-    repo.index.add(["docs/env.json"])
+    repo.index.add(["env.json"])
     repo.index.commit(f"Update env.json with new Ngrok URL ({datetime.datetime.now().isoformat()})")
     origin = repo.remote(name=REMOTE)
     origin.push()
 
 def start_ngrok():
+    result = subprocess.run(
+            ["ngrok", "config", "add-authtoken", NGROK_TOKEN],
+            capture_output=True,
+            text=True,
+            check=True  # Raise exception if command fails
+        )
     return subprocess.Popen(
         ["ngrok", "http", str(FLASK_PORT)],
         stdout=subprocess.DEVNULL,
