@@ -11,7 +11,6 @@ import requests
 import git
 import os
 import time
-import psycopg2
 import rotom
 import re
 import bcrypt
@@ -46,7 +45,7 @@ class User(UserMixin):
         self.id = username  # Used by Flask-Login
         self.name = username
 
-FLASK_PORT, NGROK_API, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = rotom.enviromentals(
+FLASK_PORT, NGROK_API, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS, REMOTE = rotom.enviromentals(
     'FLASK_PORT',
     'NGROK_API',
     'POSTGRESQL_DBNAME',
@@ -55,14 +54,15 @@ FLASK_PORT, NGROK_API, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = roto
     'POSTGRESQL_HOST',
     'POSTGRESQL_PORT',
     'POSTGRESQL_TABLE_FOR_TASKS',
-    'POSTGRESQL_TABLE_FOR_USERS'
+    'POSTGRESQL_TABLE_FOR_USERS',
+    'GIT_REMOTE_NAME'
     )
 
 def git_commit():
     repo = git.Repo(".")
     repo.index.add(["docs/env.json"])
     repo.index.commit(f"Update env.json with new Ngrok URL ({datetime.datetime.now().isoformat()})")
-    origin = repo.remote(name='Pokemon')
+    origin = repo.remote(name=REMOTE)
     origin.push()
 
 def start_ngrok():
@@ -91,7 +91,6 @@ def save_env_url(url, state):
     git_commit()
 
 def submit_task(details: dict):
-    data = []
     template = ('defect', 'threshold', 'creation', 'status', 'hash', 'market', 'username')
     defect = details.get('defect', ''); price = details.get('threshold', '')
     details['hash'] = rotom.hash_function(defect, price)
@@ -104,52 +103,43 @@ def submit_task(details: dict):
     if defect not in config:
         return f"Unable to access configuration for the defect {details['defect']}", False
     else:
-        market = details.get('market', 'eBay')
-        markets = config.get(defect).get('marketplace', [])
-        if market not in markets:
-            return f"The marketplace '{market}' is unavailable", False
-
-    for key in template:
-        if key in details.keys():
-            data.append(details.get(key, None))
+        markets = details.get('market', ['eBay'])
+        marketplaces = config.get(defect).get('marketplace', [])
+        for market in markets:
+            if market not in marketplaces:
+                return f"The marketplace '{market}' is unavailable", False
 
     try:
-        conn = psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT)
-        cursor = conn.cursor()
-
-        sql = f"""
-            INSERT INTO {TABLE} ({', '.join(template)})
-            VALUES ({', '.join(['%s' for _ in template])})
-        """
-
-        cursor.execute(sql, tuple(data))
-        conn.commit()
+        rotom.postgresql(
+            "INSERT INTO tables (columns) VALUES (values)",
+            rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
+            template,
+            details
+        )
     except Exception as e:
         message = f"The task was unable to be added. Check your task fields and try again.", False
     else:
         message = "Task was submitted successfully", True
     finally:
-        cursor.close()
-        conn.close()
         return message
 
 def sanitizer(details: dict, updating: bool = False):
     name = details.get('name', 'Pikachu'); mail = details.get("email", ''); discord = details.get('discord', '')
     user = details.get('username', ''); pwd = details.get('password', '')
     
-    if updating or not bool(re.fullmatch(r"\w{1,15}", user)):
+    if not updating or not bool(re.fullmatch(r"\w{1,15}", user)):
         return False, "Invalid username. Try again."
-    if updating or len(pwd) < 8:
+    if not updating or len(pwd) < 8:
         return False, "Password must be at least 8 characters."
-    if updating or not re.search(r"[A-Z]", pwd):
+    if not updating or not re.search(r"[A-Z]", pwd):
         return False, "Include at least one uppercase letter."
-    if updating or not re.search(r"[a-z]", pwd):
+    if not updating or not re.search(r"[a-z]", pwd):
         return False, "Include at least one lowercase letter."
-    if updating or not re.search(r"\d", pwd):
+    if not updating or not re.search(r"\d", pwd):
         return False, "Include at least one digit."
-    if updating or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", pwd):
+    if not updating or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", pwd):
         return False, "Include at least one special character."
-    if updating or pwd.strip() != pwd:
+    if not updating or pwd.strip() != pwd:
         return False, "No leading or trailing whitespace."
     if mail and not bool(re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", mail)):
         return False, "Invalid Email. Try again."
@@ -290,7 +280,7 @@ def submit():
             "defect": request.form.get("defect", "wartortle_evolution_error"),
             "threshold": float(request.form.get("price", 0)),
             "creation": datetime.datetime.now(datetime.timezone.utc),
-            "market": request.form.get("marketplace", "eBay"),
+            "market": request.form.getlist("marketplace"),
             "username": current_user.id
         })
 
