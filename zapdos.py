@@ -45,7 +45,7 @@ class User(UserMixin):
         self.id = username  # Used by Flask-Login
         self.name = username
 
-FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS, REMOTE = rotom.enviromentals(
+FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = rotom.enviromentals(
     'FLASK_PORT',
     'NGROK_API',
     'NGROK_TOKEN',
@@ -56,14 +56,15 @@ FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE,
     'POSTGRESQL_PORT',
     'POSTGRESQL_TABLE_FOR_TASKS',
     'POSTGRESQL_TABLE_FOR_USERS',
-    'GIT_REMOTE_NAME'
     )
 
 def git_commit():
     repo = git.Repo(".")
-    repo.index.add(["env.json"])
+    repo.index.add(["docs/env.json"])
     repo.index.commit(f"Update env.json with new Ngrok URL ({datetime.datetime.now().isoformat()})")
-    origin = repo.remote(name=REMOTE)
+    user, token, name = rotom.enviromentals('GIT_USER', 'GIT_TOKEN', 'GIT_REPO')
+    remote_url = f'https://{user}:{token}@github.com/{user}/{name}.git'
+    origin = repo.remote(name=name).set_url(remote_url)
     origin.push()
 
 def start_ngrok():
