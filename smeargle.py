@@ -165,7 +165,6 @@ def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.t
             else:
                 rect = cv2.minAreaRect(card_contour)
                 box = cv2.boxPoints(rect)
-                box = np.int32(box)
                 return np.array(box, dtype=np.int32)
         return approx
 
