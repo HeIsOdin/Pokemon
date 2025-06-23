@@ -28,6 +28,7 @@ import json
 import argparse
 import dotenv
 import psycopg2
+import typing
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
