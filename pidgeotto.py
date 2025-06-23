@@ -20,7 +20,7 @@ def get_report():
             info = rotom.postgresql(
                 f"SELECT columns FROM tables WHERE username = '{report.get('username', '')}'",
                 rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
-                ('email', 'discord', 'report_id'),
+                ('email', 'discord', 'id'),
                 limit=1
             ).pop()
 
@@ -36,10 +36,9 @@ def get_report():
                 tuple([key+' = %s' for key in ("status", "delivery")]),
                 {'status': 'delivered', 'delivery': datetime.datetime.now(datetime.timezone.utc)}
             )
-    return satisfactory
 
 def html_template(reports: list):
-    def render_table_from_data(data: list[dict]) -> str:
+    def render_table_from_data(data: list[dict[str, rotom.typing.Union[str, int]]]) -> str:
         if not data:
             return "<p>No results found.</p>"
 
