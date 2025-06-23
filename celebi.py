@@ -11,7 +11,7 @@ def run_script(tasks: list[dict], AI=None):
     for task in tasks:
         results = arceus.main(
             task.get('defect', ''),
-            task.get('threshold', ''),
+            task.get('threshold', 0),
             USE_LOCAL_STORAGE=False,
             USE_RGB=True,
             download_dataset=True,
@@ -78,7 +78,7 @@ def get_tasks():
     cursor.execute(sql)
     
     rows = cursor.fetchall()
-    tasks: list[dict[str, str | int]] = []
+    tasks: list[dict[str, rotom.typing.Union[str, int]]] = []
     for values in rows:
         task = {}
         for key, value in zip(template, values):
@@ -88,7 +88,7 @@ def get_tasks():
     tasks = drop_redundancy(tasks)
     return tasks
 
-def drop_redundancy(tasks: list[dict[str, str | int]]):
+def drop_redundancy(tasks: list[dict[str, rotom.typing.Union[str, int]]]):
     for task in tasks:
         pass
     return tasks
