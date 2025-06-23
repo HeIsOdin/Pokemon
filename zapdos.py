@@ -67,12 +67,12 @@ def git_commit():
     origin.push()
 
 def start_ngrok():
-    result = subprocess.run(
-            ["ngrok", "config", "add-authtoken", NGROK_TOKEN],
-            capture_output=True,
-            text=True,
-            check=True  # Raise exception if command fails
-        )
+    subprocess.run(
+        ["ngrok", "config", "add-authtoken", NGROK_TOKEN],
+        capture_output=True,
+        text=True,
+        check=True
+    )
     return subprocess.Popen(
         ["ngrok", "http", str(FLASK_PORT)],
         stdout=subprocess.DEVNULL,
