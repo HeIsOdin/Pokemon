@@ -127,19 +127,19 @@ def sanitizer(details: dict, updating: bool = False):
     name = details.get('name', 'Pikachu'); mail = details.get("email", ''); discord = details.get('discord', '')
     user = details.get('username', ''); pwd = details.get('password', '')
     
-    if not updating or not bool(re.fullmatch(r"\w{1,15}", user)):
+    if not updating and not bool(re.fullmatch(r"\w{1,15}", user)):
         return False, "Invalid username. Try again."
-    if not updating or len(pwd) < 8:
+    if not updating and len(pwd) < 8:
         return False, "Password must be at least 8 characters."
-    if not updating or not re.search(r"[A-Z]", pwd):
+    if not updating and not re.search(r"[A-Z]", pwd):
         return False, "Include at least one uppercase letter."
-    if not updating or not re.search(r"[a-z]", pwd):
+    if not updating and not re.search(r"[a-z]", pwd):
         return False, "Include at least one lowercase letter."
-    if not updating or not re.search(r"\d", pwd):
+    if not updating and not re.search(r"\d", pwd):
         return False, "Include at least one digit."
-    if not updating or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", pwd):
+    if not updating and not re.search(r"[!@#$%^&*(),.?\":{}|<>]", pwd):
         return False, "Include at least one special character."
-    if not updating or pwd.strip() != pwd:
+    if not updating and pwd.strip() != pwd:
         return False, "No leading or trailing whitespace."
     if mail and not bool(re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", mail)):
         return False, "Invalid Email. Try again."
