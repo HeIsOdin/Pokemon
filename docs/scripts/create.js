@@ -89,8 +89,7 @@ function submit_form() {
 			method: 'POST',
 			body: formData,
 			headers: {
-                "ngrok-skip-browser-warning": "true",
-                "Content-Type": "application/json"
+                "ngrok-skip-browser-warning": "true"
             },
             credentials: "include"
 		})
