@@ -42,7 +42,7 @@ def load_user(user_id):
 
 class User(UserMixin):
     def __init__(self, username):
-        self.id = username  # Used by Flask-Login
+        self.id = username
         self.name = username
 
 FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = rotom.enviromentals(
@@ -82,6 +82,7 @@ def start_ngrok():
 
 def get_ngrok_url(retries=5):
     for _ in range(retries):
+        time.sleep(5)
         try:
             response = requests.get(NGROK_API).json()
             for tunnel in response["tunnels"]:
@@ -89,7 +90,6 @@ def get_ngrok_url(retries=5):
                     return tunnel["public_url"]
         except Exception as e:
             print({e})
-        time.sleep(1)
     return None
 
 def save_env_url(url, state):
