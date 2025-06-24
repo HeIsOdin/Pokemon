@@ -126,6 +126,7 @@ def submit_task(details: dict):
         )
     except Exception as e:
         message = f"The task was unable to be added. Check your task fields and try again.", False
+        print({e})
     else:
         message = "Task was submitted successfully", True
     finally:
