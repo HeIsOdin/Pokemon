@@ -288,7 +288,7 @@ def submit():
             "defect": request.form.get("defect", "wartortle_evolution_error"),
             "threshold": float(request.form.get("price", 0)),
             "creation": datetime.datetime.now(datetime.timezone.utc),
-            "market": request.form.getlist("marketplace"),
+            "market": request.form.get("marketplace", ""),
             "username": current_user.id
         })
 
