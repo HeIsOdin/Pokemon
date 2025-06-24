@@ -87,7 +87,12 @@ function submit_form() {
 	
 		fetch(form.action, {
 			method: 'POST',
-			body: formData
+			body: formData,
+			headers: {
+                "ngrok-skip-browser-warning": "true",
+                "Content-Type": "application/json"
+            },
+            credentials: "include"
 		})
 
     	.then(response => response.json())
