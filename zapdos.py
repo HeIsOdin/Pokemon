@@ -62,9 +62,9 @@ def git_commit():
     repo = git.Repo(".")
     repo.index.add(["docs/env.json"])
     repo.index.commit(f"Update env.json with new Ngrok URL ({datetime.datetime.now().isoformat()})")
-    user, token, name = rotom.enviromentals('GIT_USER', 'GIT_TOKEN', 'GIT_REPO')
+    user, token, name, REMOTE = rotom.enviromentals('GIT_USER', 'GIT_TOKEN', 'GIT_REPO', 'GIT_REMOTE_NAME')
     remote_url = f'https://{user}:{token}@github.com/{user}/{name}.git'
-    origin = repo.remote(name=name).set_url(remote_url)
+    origin = repo.remote(name=REMOTE).set_url(remote_url)
     origin.push()
 
 def start_ngrok():
@@ -87,8 +87,8 @@ def get_ngrok_url(retries=5):
             for tunnel in response["tunnels"]:
                 if tunnel["proto"] == "https":
                     return tunnel["public_url"]
-        except Exception:
-            pass
+        except Exception as e:
+            print({e})
         time.sleep(1)
     return None
 
