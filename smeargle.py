@@ -137,7 +137,7 @@ def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.t
     # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
-        return np.ndarray([])
+        return np.empty((0, 2), dtype=np.int32)
 
     # Choose the largest yellow region
     border_contour = max(contours, key=cv2.contourArea)
@@ -147,26 +147,24 @@ def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.t
     # Use fallback box if not exactly 4 points
     if len(approx) == 4:
         return approx
-    else:
-        edges = detect_edges(img, '')
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if contours:
-            card_contour = max(contours, key=cv2.contourArea)
-            peri = cv2.arcLength(card_contour, True)
-            for eps in [0.02, 0.015, 0.01, 0.005]:
-                approx = cv2.approxPolyDP(card_contour, eps * peri, True)
-                if len(approx) == 4:
-                    return approx
+    edges = detect_edges(img, '')
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        card_contour = max(contours, key=cv2.contourArea)
+        peri = cv2.arcLength(card_contour, True)
+        for eps in [0.02, 0.015, 0.01, 0.005]:
+            approx = cv2.approxPolyDP(card_contour, eps * peri, True)
+            if len(approx) == 4:
+                return approx
             hull = cv2.convexHull(card_contour)
             approx = cv2.approxPolyDP(hull, 0.02 * cv2.arcLength(hull, True), True)
             if len(approx) == 4:
                 rotom.print_with_color("[3] Using convex hull fallback", 3)
                 return approx
-            else:
-                rect = cv2.minAreaRect(card_contour)
-                box = cv2.boxPoints(rect)
-                return np.array(box, dtype=np.int32)
-        return approx
+            rect = cv2.minAreaRect(card_contour)
+            box = cv2.boxPoints(rect)
+            return np.array(box, dtype=np.int32)
+    return np.empty((0, 2), dtype=np.int32)
 
 
 def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path: str, CARD_DIM: tuple[int, int]):
