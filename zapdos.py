@@ -118,6 +118,7 @@ def submit_task(details: dict):
                 return f"The marketplace '{market}' is unavailable", False
 
     try:
+        with open('logs/app.log', 'a') as fp: fp.write(f'{details}\n')
         rotom.postgresql(
             "INSERT INTO tables (columns) VALUES (values)",
             rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
@@ -126,7 +127,7 @@ def submit_task(details: dict):
         )
     except Exception as e:
         message = f"The task was unable to be added. Check your task fields and try again.", False
-        print({e})
+        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
     else:
         message = "Task was submitted successfully", True
     finally:
@@ -285,13 +286,14 @@ def register():
 def submit():
     message = ""; success = False
     try:
-        message, success = submit_task({
+        task_details = {
             "defect": request.form.get("defect", "wartortle_evolution_error"),
             "threshold": float(request.form.get("price", 0)),
             "creation": datetime.datetime.now(datetime.timezone.utc),
-            "market": request.form.get("marketplace", ""),
+            "market": [request.form.get("marketplace", "")],
             "username": current_user.id
-        })
+        }
+        message, success = submit_task(task_details)
 
     except Exception as e:
         success = False
