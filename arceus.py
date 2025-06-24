@@ -3,7 +3,7 @@ import smeargle
 import porygon
 import rotom
 
-def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, download_dataset: bool, AI: rotom.typing.Union[porygon.models.Sequential, None] = None, verbose: bool = False):
+def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, download_dataset: bool, AI: porygon.models.Sequential | None = None, verbose: bool = False):
     args = rotom.parse_JSON_as_arguments('config.json', defect,
         [
             "input_shape",
@@ -95,7 +95,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
 
         if len(approx) != 4:
             rotom.print_with_color(f"Skipping '{item['title']}' — could not detect card corners.", 3)
-            items.remove(item['title'])
+            items.remove(item)
             continue
 
         aligned = smeargle.draw_contours(image, approx, path, args.get('dimensions', ''))
