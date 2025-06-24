@@ -47,8 +47,8 @@ def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str, download: boo
     if download:
         path = ''
         try:
-            kaggle_json_path = os.path.expanduser('~/.kaggle/kaggle.json')
-            if os.path.isfile(kaggle_json_path):
+            kaggle_dir_path = os.path.expanduser(os.environ.get("KAGGLE_CONFIG_DIR", ""))
+            if os.path.isfile(os.path.join(kaggle_dir_path, 'kaggle.json')):
                 # Use Kaggle CLI
                 if use_local_storage:
                     os.system(f'kaggle datasets download {author}/{dataset_name} --path {TRAINING_DIR}')
