@@ -198,9 +198,11 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
             data = []
             if pairs:
                 for key in template:
-                    key = key.strip(' = %s')
+                    key = key.replace(' = %s', '')
                     if key in pairs.keys():
-                        data.append(pairs.get(key, ""))
+                        data.append(pairs.get(key, None))
+                    else:
+                        pass
 
             cursor.execute(sql, tuple(data))
             
