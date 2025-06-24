@@ -286,14 +286,13 @@ def register():
 def submit():
     message = ""; success = False
     try:
-        task_details = {
+        message, success = submit_task({
             "defect": request.form.get("defect", "wartortle_evolution_error"),
             "threshold": float(request.form.get("price", 0)),
             "creation": datetime.datetime.now(datetime.timezone.utc),
             "market": [request.form.get("marketplace", "")],
             "username": current_user.id
-        }
-        message, success = submit_task(task_details)
+        })
 
     except Exception as e:
         success = False
