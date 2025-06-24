@@ -100,7 +100,7 @@ def save_env_url(url, state):
 
 def submit_task(details: dict):
     template = ('defect', 'threshold', 'creation', 'status', 'hash', 'market', 'username')
-    defect = details.get('defect', ''); price = details.get('threshold', '')
+    defect = details.get('defect', ''); price = details.get('threshold', 0)
     details['hash'] = rotom.hash_function(defect, price)
     details['status'] = "submitted"
 
@@ -290,7 +290,7 @@ def submit():
             "defect": request.form.get("defect", "wartortle_evolution_error"),
             "threshold": float(request.form.get("price", 0)),
             "creation": datetime.datetime.now(datetime.timezone.utc),
-            "market": [request.form.get("marketplace", "")],
+            "market": [request.form.get("marketplace", "eBay")],
             "username": current_user.id
         })
 
