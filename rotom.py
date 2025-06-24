@@ -148,7 +148,6 @@ def parse_JSON_as_arguments(file: str, defect: str, arg_template: list) -> dict:
     """
     with open(file, 'r') as fp:
         configs: dict = json.load(fp)[defect]
-        print(configs)
     
     args = {}
     for key, value in configs.items():
