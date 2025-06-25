@@ -20,7 +20,7 @@ def get_report():
             info = rotom.postgresql(
                 f"SELECT columns FROM tables WHERE username = '{report.get('username', '')}'",
                 rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
-                ('email', 'discord', 'id'),
+                ('email', 'discord'),
                 limit=1
             ).pop()
 
@@ -30,15 +30,18 @@ def get_report():
                     query.update({'product_url': f"<a href='{query.get('product_url', '')}'>Click Me!</a>"})
                     satisfactory.append(query)
             send_email(info.get('email', ''), 'PyPikachu', html_template(satisfactory))
-            rotom.postgresql(
-                f"UPDATE tables SET columns WHERE report_id = {info.get('report_id', '')}",
-                rotom.enviromentals('POSTGRESQL_TABLE_FOR_REPORTS'),
-                tuple([key+' = %s' for key in ("status", "delivery")]),
-                {'status': 'delivered', 'delivery': datetime.datetime.now(datetime.timezone.utc)}
-            )
+            try:
+                rotom.postgresql(
+                    f"UPDATE tables SET columns WHERE id = '{report.get('id', '')}'",
+                    rotom.enviromentals('POSTGRESQL_TABLE_FOR_REPORTS'),
+                    tuple([key+' = %s' for key in ("status", "delivery")]),
+                    {'status': 'delivered', 'delivery': datetime.datetime.now(datetime.timezone.utc)}
+                )
+            except Exception as e:
+                with open('logs/messenger.log', 'a') as fp: fp.write(f'{e}\n')
 
 def html_template(reports: list):
-    def render_table_from_data(data: list[dict[str, rotom.typing.Union[str, int]]]) -> str:
+    def render_table_from_data(data: list[dict[str, str | int]]) -> str:
         if not data:
             return "<p>No results found.</p>"
 
