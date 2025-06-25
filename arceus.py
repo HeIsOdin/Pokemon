@@ -89,6 +89,13 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
             image, path = smeargle.load_file_from_directory(item['title'], args.get('input_dir', ''), args.get('debugging_dir', ''))
         else:
             image, path = smeargle.load_file_from_bytearray(item.get('image', bytearray()), item.get('title', 'no_title'))
+        if 'image' in item:
+            item.pop('image')
+        if 'image' in item.keys():
+            item.pop('image')
+        for key in item:
+            if key == 'image':
+                item.pop('image')
         image_edges = smeargle.detect_edges(image, path)
 
         approx = smeargle.detect_contours(image, image_edges)
@@ -101,7 +108,6 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
         aligned = smeargle.draw_contours(image, approx, path, args.get('dimensions', ''))
         roi = smeargle.roi_extraction(aligned, path, args.get('roi', ''))
         rois.append(porygon.cv2.resize(roi, args.get('input_shape', '')))
-        item.pop('image')
         rotom.print_with_color(f"Finished Processing {item['title']}", 2)
 
     truth_values = porygon.predict_and_visualize(AI, porygon.np.array(rois), USE_RGB=USE_RGB)
