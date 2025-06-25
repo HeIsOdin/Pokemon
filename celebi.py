@@ -16,27 +16,31 @@ def run_script(tasks: list[dict], AI=None):
             download_dataset=True,
             AI=AI
         )
+        #with open('logs/setup.log', 'a') as fp: fp.write(f'1 {results[0]}\n')
+        for result in results:
+            if 'image' in result:
+                result.pop('image')
         report(results, task.get('id', ''), task.get('username', ''))
 
 def report(results: list, id: str, username: str):
+    with open('logs/setu.log', 'a') as fp: fp.write(f'{results}\n')
     try:
         rotom.postgresql(
             "INSERT INTO tables (columns) VALUES (values)",
             rotom.enviromentals('POSTGRESQL_TABLE_FOR_REPORTS'),
-            ('id', 'username', 'body', 'creation', 'status'),
-            {'id': id, 'username': username, 'body': json.dumps(results), 'creation': datetime.datetime.now(datetime.timezone.utc), 'status': 'ready'}
+            ('taskid', 'username', 'body', 'creation', 'status'),
+            {'taskid': id, 'username': username, 'body': json.dumps(results), 'creation': datetime.datetime.now(datetime.timezone.utc), 'status': 'ready'}
     )
-    
     except Exception as e:
-        print(e)
+        with open('logs/setup.log', 'a') as fp: fp.write(f'2 {e}\n')
     else:
         try:
             rotom.postgresql(
                 f"UPDATE tables SET epoch = epoch - 1, status = CASE WHEN epoch <= 1 THEN 'completed' ELSE status END WHERE id = {id};",
-                rotom.enviromentals('POSTGRESQL_TABLE_FOR_TABLES')
+                rotom.enviromentals('POSTGRESQL_TABLE_FOR_TASKS')
             )
         except Exception as e:
-            with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
+            with open('logs/setup.log', 'a') as fp: fp.write(f'3 {e}\n')
             pass
                 
 def get_tasks():
