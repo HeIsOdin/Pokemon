@@ -1048,6 +1048,10 @@ input, select, textarea {
 		.button:active {
 			background-color: rgba(255, 255, 255, 0.175);
 		}
+                .delete:hover{
+			background-color: rgb(255, 6, 6);
+		}
+
 
 		input[type="submit"].icon:before,
 		input[type="reset"].icon:before,
