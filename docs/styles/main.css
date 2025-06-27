@@ -1098,7 +1098,7 @@ input, select, textarea {
 		}
 
 		/* logout */
-#logout-popup {
+#logout_popup {
   display: none;
   position: fixed;
   top: 0;
