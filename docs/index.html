@@ -4,7 +4,7 @@
 		<title>PyPikachu</title>
 		<meta charset="utf-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-        <link rel="icon" href="/Pokemon/media/favicon.jpg"/>
+        <link rel="icon" href="/Pokemon/media/favicon.png"/>
 		<link rel="stylesheet" href="/Pokemon/styles/main.css"/>
 	</head>
 	<body class="is-preload">
@@ -106,8 +106,19 @@
 									<ul class="actions">
 										<li><input type="submit" value="Save Changes" class="primary" /></li>
 										<li><input type="reset" value="Reset" /></li>
+										
 									</ul>
-								</div>
+									<button type="button" class="logout">Logout</button>
+									<div id="logout_popup">
+									<div id="popup1">
+          									<p>Are you sure you want to logout?</p>
+    										<button id="confirmLogout">Yes, Logout</button>
+    										<button id="cancelLogout">Cancel</button>
+  											</div>
+									</div>
+									<button type="button" class="delete">Delete</button>
+									 
+								
 							</div>
 						</form>
 						<div id="error"></div>

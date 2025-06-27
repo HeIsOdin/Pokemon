@@ -360,7 +360,26 @@ document.addEventListener("DOMContentLoaded", function () {
 					}
 
 			});
+	// logout
+const logout = document.getElementById("logout");
+const logout_popup = document.getElementById("logout_popup");
+const confirmLogout = document.getElementById("confirmLogout");
+const cancelLogout = document.getElementById("cancelLogout");
 
+logout.addEventListener("click", () => {
+  logout_popup.style.display = "flex";
+});
+
+cancelLogout.addEventListener("click", () => {
+  logout_popup.style.display = "none";
+});
+
+confirmLogout.addEventListener("click", () => {
+
+
+});
+
+	
 		// Scroll restoration.
 		// This prevents the page from scrolling back to the top on a hashchange.
 			if ('scrollRestoration' in history)
