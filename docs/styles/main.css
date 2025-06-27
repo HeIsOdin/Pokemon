@@ -1001,6 +1001,8 @@ input, select, textarea {
 	input[type="submit"],
 	input[type="reset"],
 	input[type="button"],
+        input[type="logout"],
+        input[type="delete"],
 	button,
 	.button {
 		-moz-appearance: none;
@@ -1077,11 +1079,22 @@ input, select, textarea {
 		input[type="reset"].primary,
 		input[type="button"].primary,
 		button.primary,
-		.button.primary {
+		.button.primary
+                 
+{
 			background-color: #ffffff;
 			color: #1b1f22 !important;
 			font-weight: 600;
 		}
+
+                .button.delete{
+                        background-color: rgb(236, 32, 32) ;
+			color:#ffffff;
+			
+		}
+
+
+
 
 		input[type="submit"].disabled, input[type="submit"]:disabled,
 		input[type="reset"].disabled,
