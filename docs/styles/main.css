@@ -1048,9 +1048,13 @@ input, select, textarea {
 		.button:active {
 			background-color: rgba(19, 18, 18, 0.801);
 		}
-                .delete:hover{
-			background-color: rgb(255, 6, 6);
+              
+		.delete:hover{
+			background-color: red ;
 		}
+                
+		
+
 
 
 		input[type="submit"].icon:before,
