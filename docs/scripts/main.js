@@ -360,25 +360,6 @@ document.addEventListener("DOMContentLoaded", function () {
 					}
 
 			});
-	// logout
-const logout = document.getElementById("logout");
-const logout_popup = document.getElementById("logout_popup");
-const confirmLogout = document.getElementById("confirmLogout");
-const cancelLogout = document.getElementById("cancelLogout");
-
-logout.addEventListener("click", () => {
-  logout_popup.style.display = "flex";
-});
-
-cancelLogout.addEventListener("click", () => {
-  logout_popup.style.display = "none";
-});
-
-confirmLogout.addEventListener("click", () => {
-
-
-});
-
 	
 		// Scroll restoration.
 		// This prevents the page from scrolling back to the top on a hashchange.
@@ -441,12 +422,18 @@ function callHamster(url='hamster.html') {
 let data_and_info;
 async function body() {
 	const form = document.querySelector('form')
+	const logout = document.getElementById("logout");
+	const logout_popup = document.getElementById("logout_popup");
+	const confirmLogout = document.getElementById("confirmLogout");
+	const cancelLogout = document.getElementById("cancelLogout");
+
 	if (!form) return
 	
 	form.action = getCookie('url')+'/update';
-	const url = form.action.replace('update', 'user-info');
+	const data_and_info_url = form.action.replace('update', 'user-info');
+	const logout_url = form.action.replace('update', 'logout');
     try {
-	    const response = await fetch(url, {
+	    const response = await fetch(data_and_info_url, {
 		    headers: {
                 "ngrok-skip-browser-warning": "true",
                 "Content-Type": "application/json"
@@ -530,4 +517,23 @@ async function body() {
 			errorDiv.textContent = error.message;
     	});
 	});
+	logout.addEventListener("click", () => {
+		logout_popup.style.display = "flex";
+	});
+	
+	cancelLogout.addEventListener("click", () => {
+		logout_popup.style.display = "none";
+	});
+	
+	confirmLogout.addEventListener("click", () => {
+		fetch(logout_url, {
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
+            credentials: "include",
+			method: 'POST',
+			body: formData
+		})
+	});
 }
+
