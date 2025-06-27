@@ -530,9 +530,7 @@ async function body() {
 			headers: {
                 "ngrok-skip-browser-warning": "true"
             },
-            credentials: "include",
-			method: 'POST',
-			body: formData
+            credentials: "include"
 		})
 	});
 }
