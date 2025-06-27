@@ -362,16 +362,16 @@ document.addEventListener("DOMContentLoaded", function () {
 			});
 	// logout
 const logout = document.getElementById("logout");
-const logout-popup = document.getElementById("logout-popup");
+const logout_popup = document.getElementById("logout-popup");
 const confirmLogout = document.getElementById("confirmLogout");
 const cancelLogout = document.getElementById("cancelLogout");
 
 logout.addEventListener("click", () => {
-  logout-popup.style.display = "flex";
+  logout_popup.style.display = "flex";
 });
 
 cancelLogout.addEventListener("click", () => {
-  logoutpopup.style.display = "none";
+  logout_popup.style.display = "none";
 });
 
 confirmLogout.addEventListener("click", () => {
