@@ -361,13 +361,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
 			});
 	// logout
-const logoutBtn = document.getElementById("logout");
-const logoutPopup = document.getElementById("logout-popup");
+const logout = document.getElementById("logout");
+const logout-popup = document.getElementById("logout-popup");
 const confirmLogout = document.getElementById("confirmLogout");
 const cancelLogout = document.getElementById("cancelLogout");
 
-logoutBtn.addEventListener("click", () => {
-  logoutpopup.style.display = "flex";
+logout.addEventListener("click", () => {
+  logout-popup.style.display = "flex";
 });
 
 cancelLogout.addEventListener("click", () => {
