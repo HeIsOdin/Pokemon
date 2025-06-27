@@ -362,7 +362,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			});
 	// logout
 const logout = document.getElementById("logout");
-const logout_popup = document.getElementById("logout-popup");
+const logout_popup = document.getElementById("logout_popup");
 const confirmLogout = document.getElementById("confirmLogout");
 const cancelLogout = document.getElementById("cancelLogout");
 
