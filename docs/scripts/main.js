@@ -375,8 +375,8 @@ cancelLogout.addEventListener("click", () => {
 });
 
 confirmLogout.addEventListener("click", () => {
-// redirection
-	window.location.href = "/Pokemon/login.html";
+
+
 });
 
 	
