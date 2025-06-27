@@ -1103,8 +1103,8 @@ input, select, textarea {
   position: fixed;
   top: 0;
   left: 0;
-  width: 120%;
-  height: 1200%;
+  width: 110%;
+  height: 110%;
   background: rgba(0,0,0,0.5);
   justify-content: center;
   align-items: center;}
