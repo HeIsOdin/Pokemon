@@ -1087,7 +1087,7 @@ input, select, textarea {
 			font-weight: 600;
 		}
 
-                .button.delete{
+                .delete{
                         background-color: rgb(236, 32, 32) ;
 			color:#ffffff;
 			
