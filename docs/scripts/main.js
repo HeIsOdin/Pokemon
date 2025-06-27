@@ -360,7 +360,26 @@ document.addEventListener("DOMContentLoaded", function () {
 					}
 
 			});
+	// logout
+const logoutBtn = document.getElementById("logout");
+const logoutPopup = document.getElementById("logout-popup");
+const confirmLogout = document.getElementById("confirmLogout");
+const cancelLogout = document.getElementById("cancelLogout");
 
+logoutBtn.addEventListener("click", () => {
+  logoutpopup.style.display = "flex";
+});
+
+cancelLogout.addEventListener("click", () => {
+  logoutpopup.style.display = "none";
+});
+
+confirmLogout.addEventListener("click", () => {
+// redirection
+	window.location.href = "/Pokemon/login.html";
+});
+
+	
 		// Scroll restoration.
 		// This prevents the page from scrolling back to the top on a hashchange.
 			if ('scrollRestoration' in history)
