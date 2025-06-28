@@ -532,7 +532,7 @@ async function body() {
             },
             credentials: "include"
 		}).then(res => res.json())
-  		.then(data => window.location.href = 'pages/'+data.redirect);
+  		.then(data => window.location.replace('/Pokemon/pages/' + data.redirect));
 	});
 }
 
