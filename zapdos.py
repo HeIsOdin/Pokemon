@@ -309,6 +309,7 @@ def submit():
 def logout():
     logout_user()
     session.clear()
+    session.modified = True
     return jsonify({'redirect':'login.html'})
 
 @app.route('/user-info')
