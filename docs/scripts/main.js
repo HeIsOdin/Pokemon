@@ -533,7 +533,6 @@ async function body() {
             credentials: "include"
 		}).then(res => res.json())
   		.then(data => window.location.href = data.redirect);
-
 	});
 }
 
