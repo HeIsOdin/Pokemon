@@ -531,7 +531,9 @@ async function body() {
                 "ngrok-skip-browser-warning": "true"
             },
             credentials: "include"
-		})
+		}).then(res => res.json())
+  		.then(data => window.location.href = data.redirect);
+
 	});
 }
 
