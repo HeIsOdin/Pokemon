@@ -71,17 +71,17 @@ def establish_model():
     global AI
     #AI = porygon.main()
 
-def _main():
+def main():
     tasks = get_tasks()
     run_script(tasks)
 # ----------------------------
 # ⏰ Scheduler
 # ----------------------------
 #schedule.every(1).days.do(establish_model)
-schedule.every(3).minutes.do(_main)
+schedule.every(3).minutes.do(main)
 
 if __name__ == "__main__":
     #establish_model()  # Ensure model is available before first run
-    _main()
+    main()
     while True:
         schedule.run_pending()

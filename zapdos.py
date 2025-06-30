@@ -65,6 +65,7 @@ def git_commit():
     user, token, name, REMOTE = rotom.enviromentals('GIT_USER', 'GIT_TOKEN', 'GIT_REPO', 'GIT_REMOTE_NAME')
     remote_url = f'https://{user}:{token}@github.com/{user}/{name}.git'
     origin = repo.remote(name=REMOTE).set_url(remote_url)
+    repo.git.pull(REMOTE, repo.active_branch.name, rebase=True)
     origin.push()
 
 def start_ngrok():
