@@ -198,7 +198,66 @@ def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path
         cv2.imwrite(os.path.join(save_path, "4_aligned.jpg"), aligned)
     return aligned
 
-def roi_extraction(aligned: np.ndarray, save_path: str, ROI_BOX: tuple[int, int, int, int]):
+def align_with_orb(img, template, out_wh):
+    h, w = out_wh[1], out_wh[0]
+    orb = cv2.ORB.create(1500)
+    kp1, des1 = orb.detectAndCompute(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), np.array([]))
+    kp2, des2 = orb.detectAndCompute(cv2.cvtColor(template, cv2.COLOR_BGR2GRAY),  np.array([]))
+    if des1 is None or des2 is None: return None
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
+    matches = sorted(bf.match(des1, des2), key=lambda m: m.distance)[:200]
+    if len(matches) < 10: return None
+    src = np.array([kp1[m.queryIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
+    dst = np.array([kp2[m.trainIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
+    H, mask = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
+    if H is None: return None
+    return cv2.warpPerspective(img, H, (w, h), flags=cv2.INTER_LANCZOS4)
+
+def refine_roi_by_ncc(aligned, roi_box, roi_template_path, search=8):
+    x,y,w,h = roi_box
+    roi_template = cv2.imread(roi_template_path, cv2.IMREAD_COLOR)
+    best, best_off = -1.0, (0,0)
+    for dy in range(-search, search+1):
+        for dx in range(-search, search+1):
+            xs, ys = x+dx, y+dy
+            patch = aligned[ys:ys+h, xs:xs+w]
+            if patch.shape[:2] != (h,w): continue
+            res = cv2.matchTemplate(cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY),
+                                    cv2.cvtColor(roi_template, cv2.COLOR_BGR2GRAY),
+                                    cv2.TM_CCOEFF_NORMED)
+            score = float(res.max())
+            if score > best:
+                best, best_off = score, (dx,dy)
+    dx,dy = best_off
+    return (x+dx, y+dy, w, h), best
+
+def robust_roi(aligned, path, ROI_BOX, ROI_TEMPLATE, search=8):
+    # 1) optional local refinement
+    box_refined, score = refine_roi_by_ncc(aligned, ROI_BOX, ROI_TEMPLATE, search)
+    x,y,w,h = box_refined
+    roi = aligned[y:y+h, x:x+w]
+
+    # 2) normalize (helps classifier)
+    lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
+    l,a,b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4,4))
+    l = clahe.apply(l)
+    roi = cv2.cvtColor(cv2.merge([l,a,b]), cv2.COLOR_LAB2BGR)
+
+    # 3) quality gates (simple examples)
+    if cv2.Laplacian(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var() < 20:
+        if path:
+            cv2.imwrite(os.path.join(path, "6_roi_blurry.jpg"), roi)
+        return roi, score, "blurry"
+    if score < 0.6:
+        if path:
+            cv2.imwrite(os.path.join(path, "6_roi_low_template_match.jpg"), roi)
+        return roi, score, "low_template_match"
+    if path:
+            cv2.imwrite(os.path.join(path, "6_roi.jpg"), roi)
+    return roi, score, "ok"
+
+def roi_extraction(aligned: np.ndarray, path: str, ROI_BOX: tuple[int, int, int, int], ROI_TEMPLATE: str = 'roi_templates/wartortle_evolution_error.jpg', search: int = 8):
     """
     Extract the defined region of interest (ROI) from an aligned image.
 
@@ -210,16 +269,59 @@ def roi_extraction(aligned: np.ndarray, save_path: str, ROI_BOX: tuple[int, int,
     Returns:
     - MatLike: Cropped ROI image.
     """
-    x, y, w_roi, h_roi = ROI_BOX
+    # 1) optional local refinement
+    box_refined, score = refine_roi_by_ncc(aligned, ROI_BOX, ROI_TEMPLATE, search)
+    x,y,w,h = box_refined
+    roi = aligned[y:y+h, x:x+w]
 
-    # Draw and save ROI box on aligned image
-    aligned_with_box = aligned.copy()
-    cv2.rectangle(aligned_with_box, (x, y), (x + w_roi, y + h_roi), (0, 0, 255), 2)
-    if save_path:
-        cv2.imwrite(os.path.join(save_path, "5_aligned_with_roi.jpg"), aligned_with_box)
+    # 2) normalize (helps classifier)
+    lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
+    l,a,b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4,4))
+    l = clahe.apply(l)
+    roi = cv2.cvtColor(cv2.merge([l,a,b]), cv2.COLOR_LAB2BGR)
 
-    # Extract and save the ROI
-    roi = aligned[y:y + h_roi, x:x + w_roi]
-    if save_path:
-        cv2.imwrite(os.path.join(save_path, "6_roi.jpg"), roi)
-    return roi
+    # 3) quality gates (simple examples)
+    if cv2.Laplacian(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var() < 20:
+        if path:
+            cv2.imwrite(os.path.join(path, "6_roi_blurry.jpg"), roi)
+        return roi, score, "blurry"
+    if score < 0.6:
+        if path:
+            cv2.imwrite(os.path.join(path, "6_roi_low_template_match.jpg"), roi)
+        return roi, score, "low_template_match"
+    if path:
+            cv2.imwrite(os.path.join(path, "6_roi.jpg"), roi)
+    return roi, score, "ok"
+    # x, y, w_roi, h_roi = ROI_BOX
+
+    # # Draw and save ROI box on aligned image
+    # aligned_with_box = aligned.copy()
+    # cv2.rectangle(aligned_with_box, (x, y), (x + w_roi, y + h_roi), (0, 0, 255), 2)
+    # if save_path:
+    #     cv2.imwrite(os.path.join(save_path, "5_aligned_with_roi.jpg"), aligned_with_box)
+
+    # # Extract and save the ROI
+    # roi = aligned[y:y + h_roi, x:x + w_roi]
+    # if save_path:
+    #     cv2.imwrite(os.path.join(save_path, "6_roi.jpg"), roi)
+    # return roi
+
+def main():
+    args = {
+        "title": "demo",
+        "input_dir": "",
+        "debugging_dir": "",
+        "dimensions": [480, 680],
+        "roi": [40, 45, 60, 60]
+    }
+    image, path = load_file_from_directory(args.get('title', ''), args.get('input_dir', ''), args.get('debugging_dir', ''))
+    image_edges = detect_edges(image, path)
+    approx = detect_contours(image, image_edges)
+    aligned = draw_contours(image, approx, path, args.get('dimensions', [480, 680]))
+    roi, score, status = roi_extraction(aligned, path, args.get('roi', [40, 45, 60, 60]))
+    rotom.show_image(roi, f"Score: {score}, Status: {status}")
+    return
+
+if __name__ == "__main__":
+    main()
