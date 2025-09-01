@@ -26,3 +26,6 @@ logs/
 
 to-do.txt
 demo*
+
+Dockerfiles/
+.DS*
