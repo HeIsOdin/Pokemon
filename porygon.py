@@ -251,7 +251,7 @@ def evaluate_model(model: models.Sequential, X_test: np.ndarray, y_test: np.ndar
     test_loss, test_acc = model.evaluate(X_test, y_test)
     rotom.print_with_color(f"Test accuracy: {test_acc:.4f}, Loss: {test_loss:.4f}", 4)
 
-def predict_and_visualize(model: models.Sequential, images: np.ndarray, labels: np.ndarray = np.array([]), USE_RGB: bool = True, sample_idx: int = 0, verbose: bool = False, testing: bool = False):
+def predict_and_visualize(model: models.Sequential, images: np.ndarray, labels: np.ndarray = np.array([]), USE_RGB: bool = True, sample_idx: int = 0, verbose: bool = False, testing: bool = False, threshold: float = 0.5):
     """
     Predict and visualize a single test image.
 
@@ -269,45 +269,64 @@ def predict_and_visualize(model: models.Sequential, images: np.ndarray, labels: 
     pred_probs = model.predict(img_reshaped, batch_size=size)
     predicted_classes = np.argmax(pred_probs, axis=1)
     predicted_class = predicted_classes[sample_idx]
+    confidences = np.max(pred_probs, axis=1)
+
+    # Apply threshold
+    final_preds = []
+    for c, p in zip(predicted_classes, confidences):
+        if p >= threshold:
+            final_preds.append(c)
+        else:
+            final_preds.append(-1)  # -1 means "uncertain"
 
     if verbose:
-        cv2.imshow("Pokemon", images[sample_idx])
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        rotom.show_image(images[sample_idx], "Pokemon")
         rotom.print_with_color(f"Probabilities: {pred_probs}", 4)
 
     if testing:
         true_label = labels[sample_idx]
-        if predicted_class == true_label:
+        if final_preds[sample_idx] == true_label:
             rotom.print_with_color("The model was right! 🥳", 2)
+        elif final_preds[sample_idx] == -1:
+            rotom.print_with_color("The model was uncertain 🤔", 3)
         else:
             rotom.print_with_color("Oh no! The model was wrong! 🥺", 1)
-        rotom.print_with_color(f"True label: {true_label}, Predicted: {predicted_class}", 4)
-    return predicted_classes
+        rotom.print_with_color(f"True label: {true_label}, Predicted: {final_preds[sample_idx]}", 4)
+
+    return np.array(final_preds), confidences
 
 def main(defect: str, use_local_storage: bool, use_rgb: bool, kaggle_download: bool, verbose: bool = False):
-    author, dataset_name, input_shape, num_classes, TRAINING_DIR  = rotom.parse_JSON_as_arguments(
+    args = rotom.parse_JSON_as_arguments(
         'config.json',
         defect,
         ["input_shape", "dataset", "num_classes", "training_dir"])
     
     rotom.clear_terminal()
+    TRAINING_DIR = args.get('training_dir', '')
 
     directoryCheck = rotom.directory_check(TRAINING_DIR)
     attempts = 3
     while not directoryCheck:
         if attempts < 0:
             exit()
-        TRAINING_DIR = get_dataset(TRAINING_DIR, author, dataset_name, kaggle_download, use_local_storage)
+        TRAINING_DIR = get_dataset(
+            TRAINING_DIR,
+            args.get('author', 'benjaminadedowole'),
+            args.get('dataset', 'wartortle-evolution-error'),
+            kaggle_download,
+            use_local_storage)
         attempts -= 1
         directoryCheck = rotom.directory_check(TRAINING_DIR)
 
-    images, labels, filenames = load_dataset_from_directory(TRAINING_DIR, input_shape, use_rgb)
+    images, labels, filenames = load_dataset_from_directory(TRAINING_DIR, args.get('input_shape', [128, 128]), use_rgb)
     if verbose: display_sample(images, labels, filenames)
     new_images, new_labels = convert_and_reshape(images, labels)
     training_images, testing_images, training_labels, testing_labels = split_dataset(new_images, new_labels)
-    AI = build_model(num_classes, use_rgb)
+    AI = build_model(args.get('num_classes', 2), use_rgb)
     train_model(AI, training_images, training_labels)
     evaluate_model(AI, testing_images, testing_labels)
     predict_and_visualize(AI, testing_images, testing_labels, use_rgb, verbose)
     return AI
+
+if "__main__" == __name__:
+    main('wartortle_evolution_error', False, True, True, True)
