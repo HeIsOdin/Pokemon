@@ -15,6 +15,7 @@
 		"roi": [40, 45, 60, 60],
 		"input_dir": "imag",
 		"debugging_dir": "adjust",
-		"training_dir": "wartortle-evolution-error"
+		"training_dir": "wartortle-evolution-error",
+		"roi_template": "roi_templates/wartortle_evolution_error.jpg"
 	}
 }
