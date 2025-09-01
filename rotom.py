@@ -28,6 +28,7 @@ import json
 import argparse
 import dotenv
 import psycopg2
+import cv2
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -154,6 +155,10 @@ def parse_JSON_as_arguments(file: str, defect: str, arg_template: list) -> dict:
         if key in arg_template:
             if isinstance(value, list):
                 args[key] = tuple(value)
+            elif key == "dataset":
+                if type(value) == str:
+                    args['author'], args['dataset'] = value.split("/")
+                if type(value) == list: args['author'], args['dataset'] = value
             else:
                 args[key] = value
     return args
@@ -218,3 +223,8 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
                 return results
             conn.commit()
             return []
+
+def show_image(image, image_name="demo"):
+    cv2.imshow(image_name, image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
