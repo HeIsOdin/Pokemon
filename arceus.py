@@ -106,7 +106,8 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
 
         aligned = smeargle.draw_contours(image, approx, path, args.get('dimensions', [480, 680]))
         roi, _, status = smeargle.roi_extraction(aligned, path, args.get('roi', [40, 45, 60, 60]))
-        if status != "ok": continue
+        if status != "ok":
+            rotom.print_with_color(f"The ROI for '{item['title']}' may be weird. Reason: {status}", 3)
         rois.append(porygon.cv2.resize(roi, args.get('input_shape', [128, 128])))
         rotom.print_with_color(f"Finished Processing {item['title']}", 2)
 
@@ -125,4 +126,9 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
 
 if __name__ == "__main__":
     args = rotom.pass_arguments_to_main()
-    main(args.defect, args.price, args.use_local_storage, args.use_rgb, args.kaggle_download)
+    with open('here', 'w') as fp: fp.write(str(main(
+        args.defect,
+        args.price,
+        args.use_local_storage,
+        args.use_rgb,
+        args.kaggle_download)))
