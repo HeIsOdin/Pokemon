@@ -17,7 +17,6 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
             'queries'
         ]
     )
-    author, dataset_name = args.get('dataset', []).split("/")
 
     rotom.clear_terminal()
 
@@ -30,15 +29,15 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
             args.update({
                 'training_dir': porygon.get_dataset(
                     args.get("training_dir", ""),
-                    author,
-                    dataset_name,
+                    args['author'],
+                    args['dataset'],
                     download_dataset,
                     USE_LOCAL_STORAGE
                 )})
             attempts -= 1
             directoryCheck = rotom.directory_check(args.get("training_dir", ""))
 
-        images, labels, filenames = porygon.load_dataset_from_directory(args.get("training_dir", ""), args.get('input_shape', ''), USE_RGB)
+        images, labels, filenames = porygon.load_dataset_from_directory(args.get("training_dir", ""), args.get('input_shape', [128, 128]), USE_RGB)
         if verbose: porygon.display_sample(images, labels, filenames)
         new_images, new_labels = porygon.convert_and_reshape(images, labels)
         training_images, testing_images, training_labels, testing_labels = porygon.split_dataset(new_images, new_labels)
@@ -105,17 +104,21 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
             items.remove(item)
             continue
 
-        aligned = smeargle.draw_contours(image, approx, path, args.get('dimensions', ''))
-        roi = smeargle.roi_extraction(aligned, path, args.get('roi', ''))
-        rois.append(porygon.cv2.resize(roi, args.get('input_shape', '')))
+        aligned = smeargle.draw_contours(image, approx, path, args.get('dimensions', [480, 680]))
+        roi, _, status = smeargle.roi_extraction(aligned, path, args.get('roi', [40, 45, 60, 60]))
+        if status != "ok": continue
+        rois.append(porygon.cv2.resize(roi, args.get('input_shape', [128, 128])))
         rotom.print_with_color(f"Finished Processing {item['title']}", 2)
 
-    truth_values = porygon.predict_and_visualize(AI, porygon.np.array(rois), USE_RGB=USE_RGB)
+    truth_values, confs = porygon.predict_and_visualize(AI, porygon.np.array(rois), USE_RGB=USE_RGB)
 
-    for truth_value, card in zip(truth_values, items):
-        card['truth'] = False
-        if truth_value == 0:
-            card.update({'truth': True})
+    for truth_value, conf, card in zip(truth_values, confs, items):
+        if truth_value == -1:
+            card['truth'] = False
+            card['note'] = "uncertain_low_conf"
+        else:
+            card['truth'] = (truth_value == 0)
+            card['confidence'] = float(conf)
 
     rotom.pause(5)
     return items
