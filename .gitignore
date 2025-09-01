@@ -1,0 +1,28 @@
+# Environment variables / secrets
+.env
+
+# Image downloads
+/images
+
+# virtual environment
+PyPikachu
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# VSCode / IDE settings (optional)
+.vscode/
+
+# My Scripts
+my_scripts/
+setup.py
+
+# Sessions
+flask_sessions/
+
+# Logs
+logs/
+
+to-do.txt
+demo*
