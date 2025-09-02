@@ -8,7 +8,6 @@ import json
 import datetime
 import subprocess
 import requests
-import git
 import os
 import time
 import rotom
@@ -18,7 +17,7 @@ import logging
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=["https://heisodin.github.io"])
-app.secret_key = rotom.enviromentals('FLASK_SECRET_KEY')
+(app.secret_key,) = rotom.enviromentals('FLASK_SECRET_KEY')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(os.getcwd(), 'flask_sessions')
 app.config.update(
@@ -59,14 +58,12 @@ FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE,
     )
 
 def git_commit():
-    repo = git.Repo(".")
-    repo.index.add(["docs/env.json"])
-    repo.index.commit(f"Update env.json with new Ngrok URL ({datetime.datetime.now().isoformat()})")
-    user, token, name, REMOTE = rotom.enviromentals('GIT_USER', 'GIT_TOKEN', 'GIT_REPO', 'GIT_REMOTE_NAME')
-    remote_url = f'https://{user}:{token}@github.com/{user}/{name}.git'
-    origin = repo.remote(name=REMOTE).set_url(remote_url)
-    repo.git.pull(REMOTE, repo.active_branch.name, rebase=True)
-    origin.push()
+    subprocess.run(["git", "fetch", "Pokemon"], check=True)
+    subprocess.run(["git", "rebase", "Pokemon/main"], check=True)
+    subprocess.run(["git", "add", "docs/env.json"], check=True)
+    subprocess.run(["git", "commit", "-m", f"Update env.json {datetime.datetime.now().isoformat()}"], check=True)
+    subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
+
 
 def start_ngrok():
     subprocess.run(
@@ -319,7 +316,7 @@ def send_info():
     username = current_user.id
 
     data = rotom.postgresql(
-        f"SELECT columns FROM tables WHERE username = '{username}'",
+        f"SELECT tables FROM columns WHERE username = '{username}'",
         rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
         ('name', 'email', 'discord'),
         limit=1
