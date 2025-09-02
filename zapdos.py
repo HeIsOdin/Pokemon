@@ -91,6 +91,8 @@ def get_ngrok_url(retries=5):
     return None
 
 def save_env_url(url, state):
+    with open("docs/env.json", "r") as p: prev_env = json.load(p)
+    if prev_env.get('url', '') == url: return
     env_data = {"url": url, "state":state}
     with open("docs/env.json", "w") as f:
         json.dump(env_data, f, indent=2)
