@@ -317,7 +317,7 @@ def send_info():
     username = current_user.id
 
     data = rotom.postgresql(
-        f"SELECT tables FROM columns WHERE username = '{username}'",
+        f"SELECT columns FROM tables WHERE username = '{username}'",
         rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
         ('name', 'email', 'discord'),
         limit=1
