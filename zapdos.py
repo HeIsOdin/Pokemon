@@ -58,9 +58,6 @@ FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE,
     )
 
 def git_commit():
-    (REMOTE_NAME,) = rotom.enviromentals("GIT_REMOTE_NAME")
-    subprocess.run(["git", "fetch", f"{REMOTE_NAME}"], check=True)
-    subprocess.run(["git", "rebase", f"{REMOTE_NAME}/main"], check=True)
     subprocess.run(["git", "add", "docs/env.json"], check=True)
     subprocess.run(["git", "commit", "-m", f"Update env.json {datetime.datetime.now().isoformat()}"], check=True)
     subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
@@ -93,9 +90,11 @@ def get_ngrok_url(retries=5):
 def save_env_url(url, state):
     with open("docs/env.json", "r") as p: prev_env = json.load(p)
     if prev_env.get('url', '') == url: return
-    env_data = {"url": url, "state":state}
+    (REMOTE_NAME,) = rotom.enviromentals("GIT_REMOTE_NAME")
+    subprocess.run(["git", "fetch", f"{REMOTE_NAME}"], check=True)
+    subprocess.run(["git", "rebase", f"{REMOTE_NAME}/main"], check=True)
     with open("docs/env.json", "w") as f:
-        json.dump(env_data, f, indent=2)
+        json.dump({"url": url, "state":state}, f, indent=2)
     git_commit()
 
 def submit_task(details: dict):
