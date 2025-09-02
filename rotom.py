@@ -22,13 +22,8 @@ be run as a standalone executable.
 
 
 import os
-import time
-import zipfile
 import json
 import argparse
-import dotenv
-import psycopg2
-import cv2
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -69,6 +64,7 @@ def enviromentals(*vars: str) -> tuple:
     Returns:
     - tuple (number of arguments passed): values of environmental variables
     """
+    import dotenv
     dotenv.load_dotenv()
 
     values = []
@@ -87,6 +83,7 @@ def pause(seconds: float):
     Args:
         seconds (float): Time to pause in seconds.
     """
+    import time
     time.sleep(seconds)
     print("")  # Add spacing
 
@@ -123,6 +120,7 @@ def extract_zipfile(TRAINING_DIR: str) -> str:
     Returns:
     - str: Path to the extracted directory.
     """
+    import zipfile
     zip_file_path = TRAINING_DIR
     extract_to = TRAINING_DIR.replace(".zip", "")
     print_with_color(f"Extracting compressed dataset to {extract_to}...", 4)
@@ -184,6 +182,7 @@ def hash_function(itemId: str, price: float) -> str:
     return str(hash)
 
 def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: dict = {}, limit: int = -1,):
+    import psycopg2
     DATABASE, USER, PASSWORD, HOST, PORT = enviromentals(
     'POSTGRESQL_DBNAME',
     'POSTGRESQL_USER',
@@ -225,6 +224,7 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
             return []
 
 def show_image(image, image_name="demo"):
+    import cv2
     cv2.imshow(image_name, image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
