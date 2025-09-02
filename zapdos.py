@@ -58,12 +58,12 @@ FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE,
     )
 
 def git_commit():
-    subprocess.run(["git", "fetch", "Pokemon"], check=True)
-    subprocess.run(["git", "rebase", "Pokemon/main"], check=True)
+    (REMOTE_NAME,) = rotom.enviromentals("GIT_REMOTE_NAME")
+    subprocess.run(["git", "fetch", f"{REMOTE_NAME}"], check=True)
+    subprocess.run(["git", "rebase", f"{REMOTE_NAME}/main"], check=True)
     subprocess.run(["git", "add", "docs/env.json"], check=True)
     subprocess.run(["git", "commit", "-m", f"Update env.json {datetime.datetime.now().isoformat()}"], check=True)
     subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
-
 
 def start_ngrok():
     subprocess.run(
