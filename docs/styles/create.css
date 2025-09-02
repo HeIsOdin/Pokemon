@@ -7,6 +7,17 @@ body {
     border-radius: 8px;
     box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
 }
+.images{
+	display:flex;
+	float:right;
+	position:absolute;
+	justify-content:center;
+	
+}
+.imagesss:hover{
+	border:1px solid black;
+	box-shadow: 0 4px 8px 0 rgba(20, 20, 20, 0.9), 0 6px 20px 0 rgba(255, 255, 255, 0.15);
+}
  .popup{
 	 display:none;
  }
