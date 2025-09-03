@@ -24,7 +24,7 @@ body {
     transition: 0.3s;
 }
 .imagesss:hover{
-	border:1px solid black;
+	border:1px solid rgba(255, 255, 255, 0);
 	box-shadow: 0 4px 8px 0 rgba(20, 20, 20, 0.9), 0 6px 20px 0 rgba(255, 255, 255, 0.15);\
     transform: scale: 1.1;
 }
