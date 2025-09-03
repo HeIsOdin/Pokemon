@@ -3,6 +3,7 @@ import smtplib
 from email.message import EmailMessage
 import rotom
 import datetime
+import discord
 
 EMAIL, PASSWORD = rotom.enviromentals('EMAIL', 'EMAIL_PASSWORD')
 
