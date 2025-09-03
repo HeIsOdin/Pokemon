@@ -20,7 +20,8 @@ body {
     margin:10px;
     margin-left: 10px;
     border-radius:8px;
-    transition: 0.3s;
+    transition: 0.6s;
+    object-fit:fill;
 }
 .imagesss:hover{
 	
