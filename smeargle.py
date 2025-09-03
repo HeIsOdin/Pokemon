@@ -30,7 +30,7 @@ import os
 from pathlib import Path
 import rotom
 
-def order_points(pts):
+def order_points(pts: np.ndarray) -> np.ndarray:
     """
     Reorder corner points into a consistent top-left, top-right, bottom-right, bottom-left order.
 
@@ -93,13 +93,13 @@ def load_file_from_bytearray(file: bytearray, save_path: str):
         rotom.print_with_color("Could not load image as bytes", 1)
     return img, save_path
 
-def detect_edges(img: cv2.typing.MatLike, save_path: str) -> cv2.typing.MatLike:
+def detect_edges(img: cv2.typing.MatLike, path: str) -> cv2.typing.MatLike:
     """
     Convert an image to grayscale, apply blur, and detect edges using Canny.
 
     Args:
         - img (MatLike): Input image matrix.
-        - save_path (str): Directory path to save edge debug image.
+        - path (str): Directory path to save edge debug image.
 
     Returns:
     - MatLike: Binary edge map.
@@ -108,15 +108,15 @@ def detect_edges(img: cv2.typing.MatLike, save_path: str) -> cv2.typing.MatLike:
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blur, 50, 150)
 
-    if save_path:
-        cv2.imwrite(os.path.join(save_path, "2_edges.jpg"), edges)
+    if path: cv2.imwrite(os.path.join(path, "2_edges.jpg"), edges)
     return edges
 
 def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.typing.MatLike:
     """
     Detect the largest external contour in an edge image.
-
+    
     Args:
+        - img (MatLike): Image to be processed.
         - edges (MatLike): Binary edge map.
 
     Returns:
@@ -293,19 +293,6 @@ def roi_extraction(aligned: np.ndarray, path: str, ROI_BOX: tuple[int, int, int,
     if path:
             cv2.imwrite(os.path.join(path, "6_roi.jpg"), roi)
     return roi, score, "ok"
-    # x, y, w_roi, h_roi = ROI_BOX
-
-    # # Draw and save ROI box on aligned image
-    # aligned_with_box = aligned.copy()
-    # cv2.rectangle(aligned_with_box, (x, y), (x + w_roi, y + h_roi), (0, 0, 255), 2)
-    # if save_path:
-    #     cv2.imwrite(os.path.join(save_path, "5_aligned_with_roi.jpg"), aligned_with_box)
-
-    # # Extract and save the ROI
-    # roi = aligned[y:y + h_roi, x:x + w_roi]
-    # if save_path:
-    #     cv2.imwrite(os.path.join(save_path, "6_roi.jpg"), roi)
-    # return roi
 
 def main():
     args = {
