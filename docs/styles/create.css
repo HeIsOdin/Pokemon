@@ -12,15 +12,15 @@ body {
 	position:absolute;
 	justify-content:center;
 	align-content: center;
-      top: 25%;
+      margin-top: 10px;;
       
 }
 .imagesss{
  
     margin:10px;
-    margin-left: 10px;
+    margin-left: px;
     border-radius:8px;
-    transition: 1.5s;
+    transition: 1.0s;
   
 }
 img{
@@ -67,15 +67,15 @@ img{
         position:absolute;
         justify-content:center;
         align-content: center;
-              top: 35%;
-                margin: 0px 5px 0px 5px;
+              
+                margin: 10px 13px 0px 13px;
     }
     .imagesss{
         
         margin:5px;
         margin-left: px;
         border-radius:8px;
-        transition: 1.5s;
+        transition: 1.0s;
       
     }
     img{
