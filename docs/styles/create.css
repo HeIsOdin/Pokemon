@@ -33,14 +33,13 @@ img{
 }
 
 /* for tablet interface */
-@media only screen and (max-width: 600px) {
+@media only screen and (max-width: ) {
 .images{
-	display:flex;
-	float:right;
+	display:block;
 	position:absolute;
 	justify-content:center;
 	align-content: center;
-      top: 25%;
+      
       
 }
 .imagesss{
