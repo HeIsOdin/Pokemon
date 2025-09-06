@@ -11,7 +11,6 @@ body {
     grid-auto-flow: column;
     grid-template-columns: auto;
     grid-gap:20px;
-    grid-auto-columns: 100%;
 	position:absolute;
 	justify-content:center;
 	align-content: center;
