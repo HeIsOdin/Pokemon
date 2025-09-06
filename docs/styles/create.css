@@ -19,10 +19,9 @@ body {
 .images{
     width:900px;
     display;flex;
-  overflow-x: scroll;
     border-radius:8px;
     transition: 0.5s;
-  overflow-x: scroll; 
+
 }
 img{
     
