@@ -30,41 +30,15 @@ img{
 	
 	box-shadow: 0 4px 8px 0 rgba(20, 20, 20, 0.9), 0 6px 20px 0 rgba(255, 255, 255, 0.15);\
     transform: scale: 1.3;
-      object-fit:fill;
+    
 }
 
-/* for tablet interface */
-@media only screen and (max-width:1024px ) {
-.images{
-	display:block;
-	position:absolute;
-	justify-content:center;
-	align-content: center;
-      
-      
-}
-.imagesss{
- 
-    margin:10px;
-    margin-left: 1;
-    border-radius:8px;
-    transition: 0.5s;
-  
-}
-img{
-      object-fit:fill;
-}
-.imagesss:hover{
-	
-	box-shadow: 0 4px 8px 0 rgba(20, 20, 20, 0.9), 0 6px 20px 0 rgba(255, 255, 255, 0.15);\
-    transform: scale: 1.3;
-     object-fit:fill;
-}
-}
+
   /* for phone interface */
 @media only screen and (max-width: 600px) {
     .images{
-        display:block;
+        display:flex;
+        overflow-x: scroll;
         position:absolute;
         justify-content:center;
         align-content: center;
