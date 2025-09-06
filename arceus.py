@@ -118,7 +118,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
             card['truth'] = False
             card['note'] = "uncertain_low_conf"
         else:
-            card['truth'] = (truth_value == 0)
+            card['truth'] = bool(truth_value == 0)
             card['confidence'] = float(conf)
 
     rotom.pause(5)
