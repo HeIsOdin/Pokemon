@@ -6,7 +6,7 @@ body {
 }
 
 .images{
-    width: 100%;
+    width: 350px;
 	display:grid;
     grid-auto-flow: column;
     grid-template-columns: auto;
