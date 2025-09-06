@@ -27,8 +27,8 @@ body {
   
 }
 img{
-    width: 50%;
-    height: 60%;
+    width: 100px;
+    height: 130px;
     object-fit: cover;
 }
 .imagesss:hover{
