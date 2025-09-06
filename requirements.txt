@@ -1,6 +1,5 @@
 requests
 opencv-python
-ultralytics
 numpy
 python-dotenv
 tensorflow
