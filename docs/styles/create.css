@@ -5,7 +5,7 @@ body {
     
 }
 
-.imagesss{
+.images{
     width: 30%;
 	display:grid;
     grid-auto-flow: column;
@@ -17,8 +17,8 @@ body {
       overflow-x: scroll;
       
 }
-.images{
-    width:900px;
+.imagesss{
+    
     display;flex;
     border-radius:8px;
     transition: 0.5s;
