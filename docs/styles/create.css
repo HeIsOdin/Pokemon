@@ -1,7 +1,5 @@
 body {
 	font-family: Arial, sans-serif;
-	max-width: 600px;
-    margin: 40px auto;
     background-image: url('/Pokemon/media/favicon.jpg');
     background-color: rgb(0,0,0,0.8);
     
