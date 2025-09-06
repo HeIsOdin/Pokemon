@@ -82,7 +82,7 @@ function submit_form() {
 		.then(response => response.json())
     	.then(data => {
 			if (data.success) {
-				const url = getCookie('callerII') || document.baseURI;
+				const url = getCookie('callerII') || document.querySelector("base").getAttribute("href") || '/';
 				window.location.replace(url);
 			} else {
 				errorDiv.style.display = "block";
