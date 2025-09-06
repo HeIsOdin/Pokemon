@@ -2,6 +2,22 @@
 <html lang="en">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <head>
+		<script>
+		(function() {
+	  		const isGithub = window.location.hostname.includes("github.io");
+      		let base = "/";
+			if (isGithub) {
+        		const pathParts = window.location.pathname.split("/");
+        		if (pathParts.length > 1 && pathParts[1]) base = "/" + pathParts[1] + "/";
+      		}
+      		let baseEl = document.querySelector("base");
+      		if (!baseEl) {
+        		baseEl = document.createElement("base");
+        		document.head.prepend(baseEl);
+      		}
+      		baseEl.setAttribute("href", base);
+    	})();
+		</script>
 	    <meta name="description" content="Pokemon defects register,  find, search, error, cards">
 		<meta name="keywords" content="pokemon, defects">
         <title>PyPikachu</title>
