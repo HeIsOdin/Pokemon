@@ -22,7 +22,7 @@ body {
     grid-gap: 20px;
     border-radius:8px;
     transition: 0.5s;
-  
+  overflow-x: scroll; 
 }
 img{
     
