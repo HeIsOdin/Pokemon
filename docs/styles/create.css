@@ -6,10 +6,10 @@ body {
 }
 
 .images{
+    width: 300px;
 	display:grid;
     grid-auto-flow: column;
     grid-template-columns: auto;
-    grid-gap:20px;
 	position:absolute;
 	justify-content:center;
 	align-content: center;
