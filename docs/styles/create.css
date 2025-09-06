@@ -6,7 +6,11 @@ body {
 }
 
 .images{
-	display:flex;
+	display:grid;
+    grid-auto-flow: column;
+    grid-template-columns: auto;
+    grid-gap:20px;
+
 	position:absolute;
 	justify-content:center;
 	align-content: center;
@@ -34,7 +38,7 @@ img{
   /* for phone interface */
 @media only screen and (max-width: 600px) {
     .images{
-        display:flex;
+        display:grid;
         overflow-x: scroll;
         position:absolute;
         justify-content:center;
