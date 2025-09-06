@@ -2,13 +2,29 @@
 <html lang="en">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <head>
+		<script>
+		(function() {
+	  		const isGithub = window.location.hostname.includes("github.io");
+      		let base = "/";
+			if (isGithub) {
+        		const pathParts = window.location.pathname.split("/");
+        		if (pathParts.length > 1 && pathParts[1]) base = "/" + pathParts[1] + "/";
+      		}
+      		let baseEl = document.querySelector("base");
+      		if (!baseEl) {
+        		baseEl = document.createElement("base");
+        		document.head.prepend(baseEl);
+      		}
+      		baseEl.setAttribute("href", base);
+    	})();
+		</script>
 	    <meta name="description" content="Pokemon defects landing">
 		<meta name="keywords" content="pokemon, defects, find, search, error, cards">
         <title>PyPikachu</title>
-        <link rel="icon" href="/Pokemon/media/favicon.png">
-        <link rel="stylesheet" href="/Pokemon/styles/hamster.css">
+        <link rel="icon" href="media/favicon.png">
+        <link rel="stylesheet" href="styles/hamster.css">
     </head>
-	<script src="/Pokemon/scripts/hamster.js"></script>
+	<script src="scripts/hamster.js"></script>
 	<body>
 		<div id="container">
 			<div id="log">
