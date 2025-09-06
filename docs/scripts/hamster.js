@@ -42,7 +42,7 @@ async function logoAnimation() {
 
 async function setCookie(hours, state='') {
     try {
-        const response = await fetch('/Pokemon/env.json');
+        const response = await fetch('env.json');
         /** @type {{ url: string, state: string }} */
         const data = await response.json();
 
@@ -54,7 +54,7 @@ async function setCookie(hours, state='') {
             }
         }
     } catch (error) {
-        window.location.replace('/Pokemon/pages/unknown.html');
+        window.location.replace('pages/unknown.html');
     }
 }
 
@@ -109,7 +109,7 @@ async function waitForCookie() {
             retries++;
         }
     }
-    window.location.replace('/Pokemon/pages/unknown.html');
+    window.location.replace('pages/unknown.html');
 }
 
 waitForCookie();
