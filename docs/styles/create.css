@@ -18,6 +18,8 @@ body {
      overflow-x: scroll; 
 }
 .imagesss{
+    width:270px;
+     height:380px;
     display;grid;
     grid-gap: 20px;
     margin-top: 15px;
