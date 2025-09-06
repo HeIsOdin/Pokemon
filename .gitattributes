@@ -3,3 +3,5 @@ docs/** linguist-detectable=true
 docs/** linguist-documentation=false
 docs/styles/main.css linguist-detectable=false
 docs/styles/main.css linguist-documentation=true
+docs/pages/create.html linguist-detectable=false
+docs/pages/create.html linguist-documentation=true
