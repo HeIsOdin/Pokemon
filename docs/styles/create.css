@@ -19,7 +19,8 @@ body {
 }
 .imagesss{
     
-    display;flex;
+    display;grid;
+    grid-gap: 20px;
     border-radius:8px;
     transition: 0.5s;
   
