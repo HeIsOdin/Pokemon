@@ -16,8 +16,7 @@ body {
      overflow-x: scroll; 
 }
 .imagesss{
- 
-    margin:10px;
+    display;grid;
     margin-top: 15px;
     border-radius:8px;
     transition: 0.5s;
@@ -43,11 +42,11 @@ img{
         justify-content:center;
         align-content: center;
               
-                margin: 10px 23px 0px 23px;
+              
     }
     .imagesss{
         
-        margin:8px;
+        display: grid;
         margin-left: px;
         border-radius:8px;
         transition: 0.5s;
