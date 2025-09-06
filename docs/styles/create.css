@@ -21,14 +21,13 @@ body {
     
     display;grid;
     grid-gap: 20px;
-    margin-top: 15px;
     border-radius:8px;
     transition: 0.5s;
   
 }
 img{
-    width: 100px;
-    height: 130px;
+    width: 500px;
+    height: 600px;
     object-fit: cover;
 }
 .imagesss:hover{
