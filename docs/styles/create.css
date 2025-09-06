@@ -5,7 +5,7 @@ body {
     
 }
 
-.images{
+.imagesss{
     width: 30%;
 	display:grid;
     grid-auto-flow: column;
@@ -14,12 +14,12 @@ body {
 	justify-content:center;
 	align-content: center;
       margin-top: 10px;;
-     overflow-x: scroll; 
+      
 }
-.imagesss{
-    
-    display;grid;
-    grid-gap: 20px;
+.images{
+    width:900px;
+    display;flex;
+  overflow-x: scroll;
     border-radius:8px;
     transition: 0.5s;
   overflow-x: scroll; 
