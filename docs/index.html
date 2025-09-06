@@ -1,7 +1,32 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<base href="/Pokemon/">
+		<script>
+		(function() {
+      		// Detect if running on GitHub Pages
+	  		const isGithub = window.location.hostname.includes("github.io");
+
+      		// Default base href
+      		let base = "/";
+
+      		if (isGithub) {
+        		// Extract repo name from pathname
+        		// Example: https://username.github.io/repo-name/...
+        		const pathParts = window.location.pathname.split("/");
+        		if (pathParts.length > 1 && pathParts[1]) {
+          			base = "/" + pathParts[1] + "/";
+        		}
+      		}
+
+      		// Create or update the <base> element
+      		let baseEl = document.querySelector("base");
+      		if (!baseEl) {
+        		baseEl = document.createElement("base");
+        		document.head.prepend(baseEl);
+      		}
+      		baseEl.setAttribute("href", base);
+    		})();
+  		</script>
 		<meta name="description" content="Pokemon defects landing">
 		<title>PyPikachu</title>
 		<meta charset="utf-8"/>

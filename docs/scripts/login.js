@@ -21,7 +21,7 @@ function callHamster(url='hamster.html') {
     const expires = new Date(Date.now() + 6e5).toUTCString();
     document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
 
-    window.location.replace('/Pokemon/pages/' + url);
+    window.location.replace('pages/' + url);
 }
 
 async function load_url_into_form() {
@@ -82,8 +82,8 @@ function submit_form() {
 		.then(response => response.json())
     	.then(data => {
 			if (data.success) {
-				const url = getCookie('callerII') || '/Pokemon';
-				window.location.replace(url)
+				const url = getCookie('callerII') || document.baseURI;
+				window.location.replace(url);
 			} else {
 				errorDiv.style.display = "block";
 				errorDiv.textContent = data.message || 'There was an error.';
