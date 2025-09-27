@@ -1,8 +1,6 @@
 body {
 	font-family: Arial, sans-serif;
-    background-color: #d3d3d3;
-    background-size:cover;
-	background-attachment:fixed;
+    background-color: #808080;
 
 }
 
@@ -50,10 +48,6 @@ body {
       border-radius:100% ;
       z-index: 10;
       transition: background 0.3s;
-    }
-
-    .arrow:hover {
-      background: rgba(255,255,255,0.8);
     }
 
     .prev {
