@@ -86,7 +86,7 @@ legend {
 /* input autofill color*/
 input:-webkit-autofill {
     background-color: #171717;
-    color: #ffd494;
+    color: #d3d3d3;
     -webkit-box-shadow: 0 0 0px 1000px #ffd494 inset; 
     transition: background-color 5000s ease-in-out 0s; 
 }
