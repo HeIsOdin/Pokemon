@@ -1,6 +1,6 @@
 body {
 	font-family: Arial, sans-serif;
-    background: url("media/pic02.jpg ");
+    background-image: url("media/pic02.jpg ");
     background-size:cover;
 	background-attachment:fixed;
 
