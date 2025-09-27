@@ -6,7 +6,7 @@ body {
 
 }
 
-body2{
+.body2{
 	 display: flex;
       justify-content: center;
       align-items: center;
