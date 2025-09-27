@@ -3,6 +3,28 @@ document.addEventListener("DOMContentLoaded", function () {
     else callHamster();
 });
 
+const slides = document.querySelector('.slides');
+    const images = document.querySelectorAll('.slides img');
+    const prevBtn = document.querySelector('.prev');
+    const nextBtn = document.querySelector('.next');
+
+    let index = 0;
+    const slideWidth = 400; // same as CSS width
+
+    function showSlide() {
+      slides.style.transform = `translateX(${-index * slideWidth}px)`;
+    }
+
+    nextBtn.addEventListener('click', () => {
+      index = (index + 1) % images.length;
+      showSlide();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      index = (index - 1 + images.length) % images.length;
+      showSlide();
+    });
+
 let defectConfig = {};
 
 function getCookie(name) {
