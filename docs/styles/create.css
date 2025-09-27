@@ -3,9 +3,16 @@ body {
     background: url("media/pic02.jpg ");
     background-size:cover;
 	background-attachment:fixed;
+
 }
 
-
+body2{
+	 display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+}
     .slider {
       position: relative;
       width: 400px;   /* desktop width */
