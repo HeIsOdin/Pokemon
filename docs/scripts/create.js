@@ -16,7 +16,7 @@ function getCookie(name) {
   return null;
 }
 
-function callHamster(url='hamster.html') {
+function callHamster(url="hamster.html") {
     const currentUrl = window.location.href;
 
 	const expires = new Date(Date.now() + 6e5).toUTCString();
