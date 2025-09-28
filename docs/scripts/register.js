@@ -40,6 +40,32 @@ async function load_url_into_form() {
     }
 }
 
+
+				                    const wlogo = document.querySelector(".whatsapp");
+									const dropdown = document.querySelector(".dropdown");
+									const input = document.getElementById("phoneInput");
+
+									// Toggle dropdown on logo click
+									wlogo.addEventListener("click", () => {
+ 									 dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+									});
+
+									// Select code and update input
+									dropdown.querySelectorAll("div").forEach(option => {
+ 									 option.addEventListener("click", () => {
+  									  input.value = option.dataset.code + " ";
+  									  dropdown.style.display = "none";
+   										 input.focus();
+ 									 });
+								    });
+
+									// Close dropdown if clicking outside
+									document.addEventListener("click", (e) => {
+ 									 if (!e.target.closest(".phone-box")) {
+   									 dropdown.style.display = "none";
+ 										 }
+									});
+
 function hide_and_show(class_of_caller) {
 	const extraneous = ("toggle-").length;
 	let better_class = '.' + class_of_caller; let id_of_caller = '#'+class_of_caller.slice(extraneous);
