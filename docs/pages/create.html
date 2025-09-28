@@ -29,7 +29,29 @@
 			  <button class="arrow prev">&#10094;</button>
                <button class="arrow next">&#10095;</button>
 		</div>
-        
+        <script> 
+			const slides = document.querySelector('.slides');
+    const images = document.querySelectorAll('.slides img');
+    const prevBtn = document.querySelector('.prev');
+    const nextBtn = document.querySelector('.next');
+
+    let index = 0;
+    const slideWidth = 400; // same as CSS width
+
+    function showSlide() {
+      slides.style.transform = `translateX(${-index * slideWidth}px)`;
+    }
+
+    nextBtn.addEventListener('click', () => {
+      index = (index + 1) % images.length;
+      showSlide();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      index = (index - 1 + images.length) % images.length;
+      showSlide();
+    });
+		</script>
 		<div class="popup">
         <h2>PokéPrint Alert Configuration 🧠🎴</h2>
         <form method="POST" action="">
