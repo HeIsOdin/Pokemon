@@ -31,26 +31,50 @@
 		</div>
         <script> 
 			const slides = document.querySelector('.slides');
-    const images = document.querySelectorAll('.slides img');
-    const prevBtn = document.querySelector('.prev');
-    const nextBtn = document.querySelector('.next');
+const images = document.querySelectorAll('.slides img');
+const prevBtn = document.querySelector('.prev');
+const nextBtn = document.querySelector('.next');
 
-    let index = 0;
-    const slideWidth = 400; // same as CSS width
+let index = 0;
+const slideWidth = 400; // same as CSS width
+let autoPlay;
 
-    function showSlide() {
-      slides.style.transform = `translateX(${-index * slideWidth}px)`;
-    }
+// General function to control slider
+function controlSlider(action, value) {
+  if (action === "show") {
+    slides.style.transform = `translateX(${-index * slideWidth}px)`;
+  }
 
-    nextBtn.addEventListener('click', () => {
-      index = (index + 1) % images.length;
-      showSlide();
-    });
+  if (action === "next") {
+    index = (index + 1) % images.length;
+    controlSlider("show");
+  }
 
-    prevBtn.addEventListener('click', () => {
-      index = (index - 1 + images.length) % images.length;
-      showSlide();
-    });
+  if (action === "prev") {
+    index = (index - 1 + images.length) % images.length;
+    controlSlider("show");
+  }
+
+  if (action === "goTo") {
+    index = (value + images.length) % images.length; // jump to a specific slide
+    controlSlider("show");
+  }
+
+  if (action === "startAuto") {
+    autoPlay = setInterval(() => {
+      controlSlider("next");
+    }, value || 3000); // default 3s
+  }
+
+  if (action === "stopAuto") {
+    clearInterval(autoPlay);
+  }
+}
+
+// Button events
+nextBtn.addEventListener("click", () => controlSlider("next"));
+prevBtn.addEventListener("click", () => controlSlider("prev"));
+
 		</script>
 		<div class="popup">
         <h2>PokéPrint Alert Configuration 🧠🎴</h2>
