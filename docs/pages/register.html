@@ -17,6 +17,32 @@
       		}
       		baseEl.setAttribute("href", base);
     	})();
+
+				const logo = document.querySelector(".whatapplogo");
+									const dropdown = document.querySelector(".dropdown");
+									const input = document.getElementById("phoneInput");
+
+									// Toggle dropdown on logo click
+									logo.addEventListener("click", () => {
+ 									 dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+									});
+
+									// Select code and update input
+									dropdown.querySelectorAll("div").forEach(option => {
+ 									 option.addEventListener("click", () => {
+  									  input.value = option.dataset.code + " ";
+  									  dropdown.style.display = "none";
+   										 input.focus();
+ 									 });
+								    });
+
+									// Close dropdown if clicking outside
+									document.addEventListener("click", (e) => {
+ 									 if (!e.target.closest(".phone-box")) {
+   									 dropdown.style.display = "none";
+ 										 }
+									});
+
 		</script>
 	    <meta name="description" content="Pokemon defects register,  find, search, error, cards">
 		<meta name="keywords" content="pokemon, defects">
@@ -64,32 +90,6 @@
    												 <div data-code="+91">🇮🇳 India (+91)</div>
  									 </div>
 									</div>
-							<script>
-									const logo = document.querySelector(".whatapplogo");
-									const dropdown = document.querySelector(".dropdown");
-									const input = document.getElementById("phoneInput");
-
-									// Toggle dropdown on logo click
-									logo.addEventListener("click", () => {
- 									 dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-									});
-
-									// Select code and update input
-									dropdown.querySelectorAll("div").forEach(option => {
- 									 option.addEventListener("click", () => {
-  									  input.value = option.dataset.code + " ";
-  									  dropdown.style.display = "none";
-   										 input.focus();
- 									 });
-								    });
-
-									// Close dropdown if clicking outside
-									document.addEventListener("click", (e) => {
- 									 if (!e.target.closest(".phone-box")) {
-   									 dropdown.style.display = "none";
- 										 }
-									});
-</script>
 						
 						<div class="field">
 							<svg xmlns="http://www.w3.org/2000/svg" class="input-icon" viewBox="0 0 16 16">
