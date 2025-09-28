@@ -2,6 +2,54 @@ document.addEventListener("DOMContentLoaded", function () {
     if (getCookie('url') && getCookie('state') === 'active') body();
     else callHamster();
 });
+const slides = document.querySelector('.slides');
+const images = document.querySelectorAll('.slides img');
+const prevBtn = document.querySelector('.prev');
+const nextBtn = document.querySelector('.next');
+
+let index = 0;
+const slideWidth = 400; // same as CSS width
+let autoPlay;
+
+// General function to control slider
+function controlSlider(action, value) {
+  if (action === "show") {
+    slides.style.transform = `translateX(${-index * slideWidth}px)`;
+  }
+
+  if (action === "next") {
+    index = (index + 1) % images.length;
+    controlSlider("show");
+  }
+
+  if (action === "prev") {
+    index = (index - 1 + images.length) % images.length;
+    controlSlider("show");
+  }
+
+  if (action === "goTo") {
+    index = (value + images.length) % images.length; // jump to a specific slide
+    controlSlider("show");
+  }
+
+  if (action === "startAuto") {
+    autoPlay = setInterval(() => {
+      controlSlider("next");
+    }, value || 3000); // default 3s
+  }
+
+  if (action === "stopAuto") {
+    clearInterval(autoPlay);
+  }
+}
+
+// Button events
+nextBtn.addEventListener("click", () => controlSlider("next"));
+prevBtn.addEventListener("click", () => controlSlider("prev"));
+
+// Example usage:
+// controlSlider("startAuto", 2000);  // autoplay every 2s
+// controlSlider("goTo", 2);          // jump to 3rd slide
 
 let defectConfig = {};
 
@@ -111,29 +159,7 @@ function submit_form() {
     	});
 	});
 }
-   const slides = document.querySelector('.slides');
-    const images = document.querySelectorAll('.slides img');
-    const prevBtn = document.querySelector('.prev');
-    const nextBtn = document.querySelector('.next');
-
-    let index = 0;
-    const slideWidth = 400; // same as CSS width
-
-    function showSlide() {
-      slides.style.transform = `translateX(${-index * slideWidth}px)`;
-    }
-
-    nextBtn.addEventListener('click', () => {
-      index = (index + 1) % images.length;
-      showSlide();
-    });
-
-    prevBtn.addEventListener('click', () => {
-      index = (index - 1 + images.length) % images.length;
-      showSlide();
-    });
-
-
+   
 async function body() {
 	load_options_from_JSON();
     submit_form();
