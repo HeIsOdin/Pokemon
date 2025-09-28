@@ -72,7 +72,7 @@
 									// Toggle dropdown on logo click
 									whatapplogo.addEventListener("click", () => {
  									 dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-										});
+									});
 
 									// Select code and update input
 									dropdown.querySelectorAll("div").forEach(option => {
@@ -80,8 +80,8 @@
   									  input.value = option.dataset.code + " ";
   									  dropdown.style.display = "none";
    										 input.focus();
- 											 });
-											});
+ 									 });
+								    });
 
 									// Close dropdown if clicking outside
 									document.addEventListener("click", (e) => {
