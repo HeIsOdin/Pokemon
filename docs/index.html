@@ -3,7 +3,7 @@
 	<head>
 		<script>
 		(function() {
-	  		const isGithub = window.location.hostname.includes("github.io");
+	  		const isGithub = window.location.hostname.split(".")[1] === "github";
       		let base = "/";
       		if (isGithub) {
         		const pathParts = window.location.pathname.split("/");
