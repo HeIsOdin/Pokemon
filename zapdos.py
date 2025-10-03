@@ -326,12 +326,13 @@ def send_info():
     user_data = data.pop() if data else {}
                
     info_data = rotom.postgresql(
-        f"SELECT columns FROM tables WHERE username = '{username}'
-        ORDER BY creation DESC
-        ",
+        f"SELECT columns FROM tables WHERE username = '{username}'",
         rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
         ('defect', 'threshold', 'creation', 'status', 'market')
     )
+    
+    info_data = sorted(info_data, key=lambda x:x['creation'], reverse=True)
+    
     return jsonify({
         "data": user_data,
         "info": info_data
