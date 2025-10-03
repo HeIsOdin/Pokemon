@@ -326,7 +326,8 @@ def send_info():
     user_data = data.pop() if data else {}
 
     info_data = rotom.postgresql(
-        f"SELECT columns FROM tables WHERE username = '{username}'",
+        f"SELECT columns FROM tables WHERE username = '{username}'
+        ORDER BY creation DESC;",
         rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
         ('defect', 'threshold', 'creation', 'status', 'market')
     )
