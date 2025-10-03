@@ -1,7 +1,3 @@
-document.addEventListener("DOMContentLoaded", function () {
-    if (getCookie('url') && getCookie('state') === 'active') body();
-    else callHamster();
-});
 
 let data_and_info;
 async function body() {
