@@ -36,7 +36,6 @@ async function body() {
 
         thead.innerHTML = ""; 
         tbody.innerHTML = "";
-        // ... rest of your code ...
     
 		if (info.length > 0) {
 			const keys = Object.keys(info[0]);
