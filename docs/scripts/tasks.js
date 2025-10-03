@@ -59,5 +59,7 @@ async function body() {
 				});
 				tbody.appendChild(row);
 			});
+			}
+			}
 		}
-	
+	}
