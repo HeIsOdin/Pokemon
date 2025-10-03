@@ -331,7 +331,10 @@ def send_info():
         ('defect', 'threshold', 'creation', 'status', 'market')
     )
     
-    info_data = sorted(info_data, key=lambda x:x['creation'], reverse=True)
+    info_data = sorted(
+    info_data, key=lambda x: datetime.strptime(x['creation'], "%d-%m-%Y %H:%M:%S"), 
+    reverse=True
+    )
     
     return jsonify({
         "data": user_data,
