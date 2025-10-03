@@ -327,7 +327,8 @@ def send_info():
 
     info_data = rotom.postgresql(
         f"SELECT columns FROM tables WHERE username = '{username}'
-        ORDER BY creation DESC;",
+        ORDER BY creation DESC
+        ",
         rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
         ('defect', 'threshold', 'creation', 'status', 'market')
     )
