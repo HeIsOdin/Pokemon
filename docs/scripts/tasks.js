@@ -24,15 +24,20 @@ async function body() {
     } catch {
 		callHamster();
     } finally {
-		let info = data_and_info['info'];
-		let data = data_and_info['data'];
-		const table = document.querySelector("table");
-  		const thead = table.querySelector("thead");
-  		const tbody = table.querySelector("tbody");
-		
-		thead.innerHTML = ""; 
-		tbody.innerHTML = "";
-		
+    // Check if data_and_info is valid before using it
+    if (data_and_info && data_and_info['info'] && data_and_info['data']) {
+        let info = data_and_info['info'];
+        let data = data_and_info['data'];
+        const table = document.querySelector("table");
+        if (!table) return; // Guard for missing table
+        const thead = table.querySelector("thead");
+        const tbody = table.querySelector("tbody");
+        if (!thead || !tbody) return; // Guard for missing thead/tbody
+
+        thead.innerHTML = ""; 
+        tbody.innerHTML = "";
+        // ... rest of your code ...
+    
 		if (info.length > 0) {
 			const keys = Object.keys(info[0]);
 			const headerRow = document.createElement("tr");
@@ -55,4 +60,4 @@ async function body() {
 				tbody.appendChild(row);
 			});
 		}
-	}
+	
