@@ -332,9 +332,6 @@ def send_info():
         rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
         ('defect', 'threshold', 'creation', 'status', 'market')
     )
-
-     info_data = sorted(info_data, key=lamba x:x['creation'], reverse=True)  
-
     return jsonify({
         "data": user_data,
         "info": info_data
