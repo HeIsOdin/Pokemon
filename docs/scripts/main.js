@@ -465,7 +465,7 @@ async function body() {
 			});
 			thead.appendChild(headerRow);
 			
-			info.slice(0,3).forEach(item => {
+			info.forEach(item => {
 				const row = document.createElement("tr");
 				
 				keys.forEach(key => {
@@ -536,6 +536,7 @@ async function body() {
   		.then(data => window.location.replace('/Pokemon/pages/' + data.redirect));
 	});
 }
+
 
 
 
