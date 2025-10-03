@@ -451,7 +451,8 @@ async function body() {
   		const thead = table.querySelector("thead");
   		const tbody = table.querySelector("tbody");
 		
-		thead.innerHTML = ""; tbody.innerHTML = "";
+		thead.innerHTML = ""; 
+		tbody.innerHTML = "";
 		
 		if (info.length > 0) {
 			const keys = Object.keys(info[0]);
@@ -535,6 +536,7 @@ async function body() {
   		.then(data => window.location.replace('/Pokemon/pages/' + data.redirect));
 	});
 }
+
 
 
 
