@@ -147,14 +147,7 @@ input, select, textarea {
 		font-size: 1rem;
 		line-height: 1.65;
 	}
-   .light-theme  input select textarea {
-	   color: #000000;
-		font-family: "Source Sans Pro", sans-serif;
-		font-weight: 300;
-		font-size: 1rem;
-		line-height: 1.65;
-   }
-
+  
 	a {
 		-moz-transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
 		-webkit-transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
@@ -191,14 +184,6 @@ input, select, textarea {
 		letter-spacing: 0.2rem;
 	} 
 	
-	.light-theme h1 h2 h3 h4 h5 h6 {
-		color: #000000;
-		font-weight: 600;
-		line-height: 1.5;
-		margin: 0 0 1rem 0;
-		text-transform: uppercase;
-		letter-spacing: 0.2rem;
-	}
 
 
 		h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
@@ -208,15 +193,6 @@ input, select, textarea {
 
 		h1.major, h2.major, h3.major, h4.major, h5.major, h6.major {
 			border-bottom: solid 1px #ffffff;
-			width: -moz-max-content;
-			width: -webkit-max-content;
-			width: -ms-max-content;
-			width: max-content;
-			padding-bottom: 0.5rem;
-			margin: 0 0 2rem 0;
-		}
-.light-theme h1.major h2.major h3.major h4.major h5.major h6.major {
-			border-bottom: solid 1px #000000;
 			width: -moz-max-content;
 			width: -webkit-max-content;
 			width: -ms-max-content;
@@ -417,18 +393,7 @@ input, select, textarea {
 		margin: 0 0 1rem 0;
 		text-transform: uppercase;
 	}
-    .light-theme label {
-		color: #000000;
-		display: block;
-		font-size: 0.8rem;
-		font-weight: 300;
-		letter-spacing: 0.2rem;
-		line-height: 1.5;
-		margin: 0 0 1rem 0;
-		text-transform: uppercase;
-	}
-
-
+    
 	input[type="text"],
 	input[type="password"],
 	input[type="email"],
@@ -453,14 +418,7 @@ input, select, textarea {
 		text-decoration: none;
 		width: 100%;
 	}
-     .light-theme input[type="text"]
-	input[type="password"]
-	input[type="email"]
-	input[type="tel"]
-	select {
-		border: solid 1px #000000;
-		color: inherit;
-	}
+   
 	textarea {
 		input[type="text"]:invalid,
 		input[type="password"]:invalid,
@@ -496,10 +454,7 @@ input, select, textarea {
 			color: #ffffff;
 			background: #1b1f22;
 		}
-       .light-theme select option {
-			color: #000000;
-			background: #ffffff;
-		}
+       
 		select:focus::-ms-value {
 			background-color: transparent;
 		}
