@@ -1,287 +1,92 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Data Table - Debug</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 20px 0;
-        }
-        
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-        
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-        
-        .debug {
-            background: #fffacd;
-            padding: 15px;
-            margin: 10px 0;
-            border-left: 4px solid #ffeb3b;
-        }
-        
-        .error {
-            background: #ffebee;
-            padding: 15px;
-            margin: 10px 0;
-            border-left: 4px solid #f44336;
-            color: #c62828;
-        }
-        
-        .success {
-            background: #e8f5e8;
-            padding: 15px;
-            margin: 10px 0;
-            border-left: 4px solid #4caf50;
-            color: #2e7d32;
-        }
-    </style>
-</head>
-<body>
-    <h1>Data Table - Debug Mode</h1>
-    
-    <div id="debugInfo" class="debug">
-        <h3>Debug Information:</h3>
-        <div id="debugMessages">Initializing...</div>
-    </div>
-
-    <!-- Hidden form -->
-    <form style="display: none;"></form>
-    
-    <!-- Table for INFO data -->
-    <table id="infoTable">
-        <thead>
-            <tr>
-                <th colspan="5">Database Info</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td colspan="5">Loading...</td></tr>
-        </tbody>
-    </table>
-
-    <!-- Display USER DATA -->
-    <div id="userData" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px;">
-        <h3>User Information</h3>
-        <div id="userDetails">Loading user data...</div>
-    </div>
-
-    <script>
-        // Debug logging function
-        function debugLog(message) {
-            console.log(message);
-            const debugDiv = document.getElementById('debugMessages');
-            debugDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
-        }
-
-        debugLog('Script started loading');
-
-        async function initializePage() {
-            debugLog('initializePage() called');
-            
-            try {
-                // Check if form exists
-                const form = document.querySelector('form');
-                debugLog('Form found: ' + (form ? 'YES' : 'NO'));
-                
-                if (!form) {
-                    debugLog('ERROR: No form element found');
-                    return;
-                }
-
-                // Try to get URL
-                let baseUrl;
-                try {
-                    baseUrl = getCookie('url');
-                    debugLog('Cookie URL: ' + baseUrl);
-                } catch (e) {
-                    baseUrl = window.location.origin;
-                    debugLog('Using window.location.origin: ' + baseUrl);
-                }
-
-                form.action = baseUrl + '/update';
-                const data_and_info_url = form.action.replace('update', 'user-info');
-                
-                debugLog('Trying to fetch from: ' + data_and_info_url);
-
-                // Try the fetch
-                const response = await fetch(data_and_info_url, {
-                    headers: {
-                        "heroku-skip-browser-warning": "true",
-                        "content-type": "application/json"
-                    },
-                    credentials: "include"
-                });
-                
-                debugLog('Response status: ' + response.status);
-                debugLog('Response OK: ' + response.ok);
-
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status + ' - ' + response.statusText);
-                }
-
-                const data_and_info = await response.json();
-                debugLog('Successfully parsed JSON response');
-                debugLog('Response keys: ' + Object.keys(data_and_info));
-
-                // Check for redirect
-                if ('redirect' in data_and_info) {
-                    debugLog('Redirect detected to: ' + data_and_info.redirect);
-                    window.location.href = data_and_info.redirect;
-                    return;
-                }
-
-                // Check if we have the expected data structure
-                if (!data_and_info.info && !data_and_info.data) {
-                    debugLog('WARNING: No "info" or "data" keys found in response');
-                    debugLog('Available keys: ' + JSON.stringify(Object.keys(data_and_info)));
-                }
-
-                debugLog('Info data type: ' + typeof data_and_info.info);
-                debugLog('Data data type: ' + typeof data_and_info.data);
-
-                if (data_and_info.info) {
-                    debugLog('Info length: ' + (Array.isArray(data_and_info.info) ? data_and_info.info.length : 'Not an array'));
-                }
-
-                // Process the data
-                processData(data_and_info);
-
-            } catch (error) {
-                debugLog('ERROR: ' + error.message);
-                document.getElementById('debugInfo').className = 'error';
-                document.getElementById('debugMessages').innerHTML += '<div><strong>Error:</strong> ' + error.message + '</div>';
-                
-                // Show fallback data for testing
-                showFallbackData();
-            }
-        }
-
-        function processData(data_and_info) {
-            debugLog('Processing data...');
-            
-            let info = data_and_info['info'];
-            let data = data_and_info['data'];
-            
-            debugLog('Info: ' + JSON.stringify(info).substring(0, 200) + '...');
-            debugLog('Data: ' + JSON.stringify(data));
-
-            createInfoTable(info);
-            displayUserData(data);
-            
-            document.getElementById('debugInfo').className = 'success';
-            debugLog('Data processing completed successfully');
-        }
-
-        function createInfoTable(info) {
-            debugLog('Creating info table...');
-            const table = document.getElementById('infoTable');
-            const tbody = table.querySelector('tbody');
-            
-            tbody.innerHTML = '';
-
-            if (info && Array.isArray(info) && info.length > 0) {
-                const keys = Object.keys(info[0]);
-                debugLog('Table columns: ' + keys.join(', '));
-
-                // Create header
-                const headerRow = document.createElement('tr');
-                keys.forEach(key => {
-                    const th = document.createElement('th');
-                    th.textContent = key.charAt(0).toUpperCase() + key.slice(1);
-                    headerRow.appendChild(th);
-                });
-                table.querySelector('thead').innerHTML = '';
-                table.querySelector('thead').appendChild(headerRow);
-
-                // Create data rows
-                info.slice(0, 3).forEach((item, index) => {
-                    const row = document.createElement('tr');
-                    keys.forEach(key => {
-                        const td = document.createElement('td');
-                        td.textContent = item[key] || '';
-                        row.appendChild(td);
-                    });
-                    tbody.appendChild(row);
-                });
-                
-                debugLog('Table created with ' + Math.min(info.length, 3) + ' rows');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5">No database records found or invalid data format</td></tr>';
-                debugLog('No valid info data to display');
-            }
-        }
-
-        function displayUserData(data) {
-            debugLog('Displaying user data...');
-            const userDetails = document.getElementById('userDetails');
-            
-            if (data && typeof data === 'object' && Object.keys(data).length > 0) {
-                let html = '<dl>';
-                for (const [key, value] of Object.entries(data)) {
-                    html += `<dt><strong>${key}:</strong></dt><dd>${value}</dd>`;
-                }
-                html += '</dl>';
-                userDetails.innerHTML = html;
-                debugLog('User data displayed successfully');
-            } else {
-                userDetails.innerHTML = 'No user data available';
-                debugLog('No user data to display');
-            }
-        }
-
-        function showFallbackData() {
-            debugLog('Showing fallback data for testing...');
-            
-            // Create some dummy data to test the table rendering
-            const fallbackInfo = [
-                { defect: 'Test Defect 1', threshold: '100', creation: '2024-01-01', status: 'Active', market: 'US' },
-                { defect: 'Test Defect 2', threshold: '200', creation: '2024-01-02', status: 'Inactive', market: 'EU' }
-            ];
-            
-            const fallbackData = {
-                username: 'testuser',
-                email: 'test@example.com',
-                role: 'user'
-            };
-            
-            createInfoTable(fallbackInfo);
-            displayUserData(fallbackData);
-        }
-
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(';').shift();
-            return window.location.origin;
-        }
-
-        // Initialize when page loads
-        debugLog('Setting up DOMContentLoaded listener');
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('DOMContentLoaded fired - starting initialization');
-            initializePage();
+  <head>
+	   <link rel="icon" href="/Pokemon/media/favicon.png">
+        <link rel="stylesheet" href="/Pokemon/styles/tasks.css">
+  </head>
+	<body>
+		<div>
+			<table>
+				<thead></thead>
+				<tbody></tbody>
+			</table>
+		</div>
+        <script>
+        async function fetchDataAndRenderTable(data_and_info_url) {
+    try {
+        // Fetch JSON from your backend endpoint
+        const response = await fetch(data_and_info_url, {
+            headers: {
+                "ngrok-skip-browser-warning": "true", // useful if using ngrok
+                "Content-Type": "application/json"
+            },
+            credentials: "include" // keeps cookies/session if needed
         });
 
-        // Also try initializing after a short delay in case DOM is already ready
-        setTimeout(function() {
-            if (document.readyState === 'complete' || document.readyState === 'interactive') {
-                debugLog('Document already ready, initializing now');
-                initializePage();
-            }
-        }, 100);
-    </script>
-</body>
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data_and_info = await response.json();
+
+        // Grab the "info" part (or use "data" if you prefer)
+        let info = data_and_info['info'];
+        // let data = data_and_info['data'];  // optional second dataset
+
+        // Render the table
+        renderTable(info);
+
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+}
+
+function renderTable(data) {
+    const table = document.querySelector("table");
+    const thead = table.querySelector("thead");
+    const tbody = table.querySelector("tbody");
+
+    // Clear previous content
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+
+    if (!Array.isArray(data) || data.length === 0) {
+        console.warn("No data available to render.");
+        return;
+    }
+
+    // Create headers from first object keys
+    const keys = Object.keys(data[0]);
+    const headerRow = document.createElement("tr");
+
+    keys.forEach(key =&gt; {
+        const th = document.createElement("th");
+        th.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+        headerRow.appendChild(th);
+    });
+
+    thead.appendChild(headerRow);
+
+    // Create rows
+    data.forEach(item =&gt; {
+        const row = document.createElement("tr");
+
+        keys.forEach(key =&gt; {
+            const td = document.createElement("td");
+            td.textContent = item[key] ?? "";
+            row.appendChild(td);
+        });
+
+        tbody.appendChild(row);
+    });
+}
+
+// Example: call this when page loads
+document.addEventListener("DOMContentLoaded", () =&gt; {
+    const url = "https://6671d9467d47.ngrok-free.app"; // &lt;-- replace with your backend endpoint
+    fetchDataAndRenderTable(url);
+});
+        </script>		
+  </body>
 </html>
+
