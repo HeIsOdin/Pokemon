@@ -451,8 +451,7 @@ async function body() {
   		const thead = table.querySelector("thead");
   		const tbody = table.querySelector("tbody");
 		
-		thead.innerHTML = ""; 
-		tbody.innerHTML = "";
+		thead.innerHTML = ""; tbody.innerHTML = "";
 		
 		if (info.length > 0) {
 			const keys = Object.keys(info[0]);
@@ -465,7 +464,7 @@ async function body() {
 			});
 			thead.appendChild(headerRow);
 			
-			info.slice(0,3).forEach(item => {
+			info.forEach(item => {
 				const row = document.createElement("tr");
 				
 				keys.forEach(key => {
@@ -536,15 +535,3 @@ async function body() {
   		.then(data => window.location.replace('/Pokemon/pages/' + data.redirect));
 	});
 }
-
-
-
-
-
-
-
-
-
-
-
-
