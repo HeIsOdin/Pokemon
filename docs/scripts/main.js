@@ -399,6 +399,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
 })(jQuery);
 
+document.addEventListener('DOMContentLoaded', () => {
+    const themeRadios = document.querySelectorAll('input[name="theme"]');
+    const body = document.body;
+
+    // Load saved theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        body.classList.remove('is-preload', 'light-theme');
+        body.classList.add(`${savedTheme}-theme`);
+        document.querySelector(`input[value="${savedTheme}"]`).checked = true;
+    }
+
+    themeRadios.forEach(radio => {
+        radio.addEventListener('change', (event) => {
+            const selectedTheme = event.target.value;
+
+            // Update body class
+            body.classList.remove('is-preload', 'light-theme');
+            body.classList.add(`${selectedTheme}-theme`);
+
+            // Save theme preference to localStorage
+            localStorage.setItem('theme', selectedTheme);
+        });
+    });
+});
+
 function getCookie(name) {
     const cookies = document.cookie.split('; ');
     for (let cookie of cookies) {
@@ -536,6 +562,7 @@ async function body() {
   		.then(data => window.location.replace('/Pokemon/pages/' + data.redirect));
 	});
 }
+
 
 
 
