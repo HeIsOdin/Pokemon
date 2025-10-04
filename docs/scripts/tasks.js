@@ -1,18 +1,31 @@
-// Example: data_and_info is passed from your Python backend
-// It should look like:
-// data_and_info = {
-//     "info": [
-//         { "id": 1, "name": "Alice", "age": 23 },
-//         { "id": 2, "name": "Bob", "age": 30 }
-//     ],
-//     "data": [
-//         { "score": 85, "grade": "B" },
-//         { "score": 92, "grade": "A" }
-//     ]
-// };
+async function fetchDataAndRenderTable(data_and_info_url) {
+    try {
+        // Fetch JSON from your backend endpoint
+        const response = await fetch(data_and_info_url, {
+            headers: {
+                "ngrok-skip-browser-warning": "true", // useful if using ngrok
+                "Content-Type": "application/json"
+            },
+            credentials: "include" // keeps cookies/session if needed
+        });
 
-let info = data_and_info['info'];
-let data = data_and_info['data'];
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data_and_info = await response.json();
+
+        // Grab the "info" part (or use "data" if you prefer)
+        let info = data_and_info['info'];
+        // let data = data_and_info['data'];  // optional second dataset
+
+        // Render the table
+        renderTable(info);
+
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+}
 
 function renderTable(data) {
     const table = document.querySelector("table");
@@ -28,7 +41,7 @@ function renderTable(data) {
         return;
     }
 
-    // Get headers from first object keys
+    // Create headers from first object keys
     const keys = Object.keys(data[0]);
     const headerRow = document.createElement("tr");
 
@@ -40,7 +53,7 @@ function renderTable(data) {
 
     thead.appendChild(headerRow);
 
-    // Add all rows
+    // Create rows
     data.forEach(item => {
         const row = document.createElement("tr");
 
@@ -54,9 +67,9 @@ function renderTable(data) {
     });
 }
 
-// Call this to render your "info" dataset
-renderTable(info);
-
-// If you want to render "data" instead, call:
-// renderTable(data);
+// Example: call this when page loads
+document.addEventListener("DOMContentLoaded", () => {
+    const url = "http://127.0.0.1:8000/data"; // <-- replace with your backend endpoint
+    fetchDataAndRenderTable(url);
+});
 
