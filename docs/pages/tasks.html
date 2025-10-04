@@ -1,16 +1,99 @@
 <!DOCTYPE html>
 <html>
-  <head>
-	  <script src="/pokemon/scripts/tasks.js"> </script>		
-	   <link rel="icon" href="/Pokemon/media/favicon.png">
-        <link rel="stylesheet" href="/Pokemon/styles/tasks.css">
-  </head>
-	<body>
-		<div>
-			<table>
-				<thead></thead>
-				<tbody></tbody>
-			</table>
-		</div>
-  </body>
+<head>
+    <title>Simple Table</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid black; padding: 8px; text-align: left; }
+        th { background-color: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Simple Data Table</h1>
+    <table id="dataTable">
+        <thead>
+            <tr><th>Loading...</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Please wait...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        async function loadTable() {
+            try {
+                // Try different possible endpoints
+                const endpoints = [
+                    '/user-info',
+                    '/api/user-info', 
+                    window.location.origin + '/user-info',
+                    './user-info'
+                ];
+                
+                let data = null;
+                
+                for (let endpoint of endpoints) {
+                    try {
+                        console.log('Trying:', endpoint);
+                        const response = await fetch(endpoint, {
+                            headers: {
+                                "heroku-skip-browser-warning": "true"
+                            },
+                            credentials: "include"
+                        });
+                        
+                        if (response.ok) {
+                            data = await response.json();
+                            console.log('Success with:', endpoint);
+                            break;
+                        }
+                    } catch (e) {
+                        console.log('Failed with:', endpoint, e);
+                    }
+                }
+                
+                if (!data) {
+                    document.getElementById('dataTable').innerHTML = 
+                        '<tr><td>No data available - check console for errors</td></tr>';
+                    return;
+                }
+                
+                // Create table
+                const info = data.info || [];
+                const table = document.getElementById('dataTable');
+                table.innerHTML = '';
+                
+                if (info.length > 0) {
+                    // Create header
+                    const keys = Object.keys(info[0]);
+                    let headerRow = '<tr>';
+                    keys.forEach(key => {
+                        headerRow += `<th>${key}</th>`;
+                    });
+                    headerRow += '</tr>';
+                    table.innerHTML = `<thead>${headerRow}</thead><tbody></tbody>`;
+                    
+                    // Create rows
+                    const tbody = table.querySelector('tbody');
+                    info.slice(0, 3).forEach(item => {
+                        let row = '<tr>';
+                        keys.forEach(key => {
+                            row += `<td>${item[key] || ''}</td>`;
+                        });
+                        row += '</tr>';
+                        tbody.innerHTML += row;
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Final error:', error);
+                document.getElementById('dataTable').innerHTML = 
+                    '<tr><td>Error loading data</td></tr>';
+            }
+        }
+        
+        // Start loading
+        loadTable();
+    </script>
+</body>
 </html>
