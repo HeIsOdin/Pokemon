@@ -1,5 +1,7 @@
 function generateTable(info, targetElement) {
     // 1. Create the main table structure elements
+    let info = data_and_info['info'];
+	let data = data_and_info['data'];
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     const tbody = document.createElement('tbody');
