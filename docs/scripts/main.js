@@ -399,17 +399,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 })(jQuery);
 
-const savedTheme = localStorage.getItem('theme');
-
-// Only apply if the theme actually exists in your CSS
-if (savedTheme &amp;&amp; ['dark', 'default'].includes(savedTheme)) {
-  body.classList.add(`${savedTheme}-theme`);
-} else {
-  // fallback or remove invalid theme
-  localStorage.removeItem('theme');
-  body.classList.add('default-theme');
-}
-
 function getCookie(name) {
     const cookies = document.cookie.split('; ');
     for (let cookie of cookies) {
@@ -547,6 +536,7 @@ async function body() {
   		.then(data => window.location.replace('/Pokemon/pages/' + data.redirect));
 	});
 }
+
 
 
 
