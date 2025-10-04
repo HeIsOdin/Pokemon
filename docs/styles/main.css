@@ -147,7 +147,7 @@ input, select, textarea {
 		font-size: 1rem;
 		line-height: 1.65;
 	}
-   .light-theme body input select textarea {
+   .light-theme  input select textarea {
 	   color: #000000;
 		font-family: "Source Sans Pro", sans-serif;
 		font-weight: 300;
