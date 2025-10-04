@@ -97,8 +97,7 @@ input, select, textarea {
 	body {
 		background: #1b1f22;
 	}
-    .light-theme body{
-	}	
+
 		body.is-preload *, body.is-preload *:before, body.is-preload *:after {
 			-moz-animation: none !important;
 			-webkit-animation: none !important;
@@ -291,12 +290,7 @@ input, select, textarea {
 		border-bottom: solid 1px #ffffff;
 		margin: 2.75rem 0;
 	}
-   .light-theme	hr {
-		border: 0;
-		border-bottom: solid 1px #000000;
-		margin: 2.75rem 0;
-	}
-
+   
 	.align-left {
 		text-align: left;
 	}
