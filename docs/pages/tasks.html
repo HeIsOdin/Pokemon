@@ -2,103 +2,26 @@
 <html>
 <head>
     <title>Data Table - Fixed URL</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-    </style>
+    
 </head>
 <body>
-    <h1>User Data</h1>
-    
-    <div id="status">Loading...</div>
-    
-    <table id="infoTable">
-        <thead><tr><th>Loading...</th></tr></thead>
-        <tbody><tr><td>Please wait...</td></tr></tbody>
-    </table>
-
-    <div id="userData">
-        <h3>User Information</h3>
-        <div id="userDetails">Loading...</div>
+   <article id="history">
+					<h2 class="major">Task History</h2>
+					<span class="image main"><img src="media/pic03.jpg" alt="Task history visual" /></span>
+					<p>Here you can view all your previously submitted search tasks. Each task tracks specific Pokémon card defects you're interested in, along with price thresholds and marketplace preferences.</p>
+					<p>Use this page to monitor which tasks are active, what terms are being searched, and whether any matches have been found. Tasks are processed in the background and can notify you via your preferred contact method.</p>
+					
+					<div id="task-history-container">
+						<table>
+							<thead></thead>
+							<tbody></tbody>
+						</table>
+					</div>
+					<p><a href="pages/tasks.html" class="button primary"><span class="fa fa-history"></span> History</a></a></p>
+				</article>
+<script src="/pokemon/scripts/task.js"></script>
     </div>
 
-    <script>
-        async function loadData() {
-            // HARDCODED URL - Replace with your actual backend URL
-            const BACKEND_URL = 'https://6671d9467d47.ngrok.free.app';
-            const data_url = BACKEND_URL + '/user-info';
-            
-            console.log('Fetching from:', data_url);
-            document.getElementById('status').textContent = 'Fetching from: ' + data_url;
-
-            try {
-                const response = await fetch(data_url, {
-                    headers: {
-                        "heroku-skip-browser-warning": "true"
-                    // Remove content-type if it causes issues
-                    // "content-type": "application/json"
-                    },
-                    credentials: "include"
-                });
-                
-                console.log('Response status:', response.status);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('Data received:', data);
-                
-                document.getElementById('status').textContent = 'Data loaded successfully!';
-                
-                // Create table
-                const info = data.info || [];
-                const table = document.getElementById('infoTable');
-                
-                if (info.length > 0) {
-                    const keys = Object.keys(info[0]);
-                    let header = '<tr>';
-                    keys.forEach(key => {
-                        header += `<th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>`;
-                    });
-                    header += '</tr>';
-                    
-                    table.innerHTML = `<thead>${header}</thead><tbody></tbody>`;
-                    
-                    const tbody = table.querySelector('tbody');
-                    info.slice(0, 3).forEach(item => {
-                        let row = '<tr>';
-                        keys.forEach(key => {
-                            row += `<td>${item[key] || ''}</td>`;
-                        });
-                        row += '</tr>';
-                        tbody.innerHTML += row;
-                    });
-                }
-                
-                // Display user data
-                const userData = data.data || {};
-                if (Object.keys(userData).length > 0) {
-                    let userHtml = '';
-                    for (const [key, value] of Object.entries(userData)) {
-                        userHtml += `<p><strong>${key}:</strong> ${value}</p>`;
-                    }
-                    document.getElementById('userDetails').innerHTML = userHtml;
-                }
-                
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('status').textContent = 'Error: ' + error.message;
-                document.getElementById('status').style.color = 'red';
-            }
-        }
-
-        // Start loading
-        loadData();
-    </script>
 </body>
 </html>
 
