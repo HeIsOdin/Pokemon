@@ -1,99 +1,200 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Table</title>
+    <title>Data Table</title>
     <style>
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid black; padding: 8px; text-align: left; }
-        th { background-color: #f0f0f0; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
     </style>
 </head>
 <body>
-    <h1>Simple Data Table</h1>
-    <table id="dataTable">
+    <h1>User Data</h1>
+    
+    <!-- Hidden form (same as your original) -->
+    <form style="display: none;"></form>
+    
+    <!-- Table for INFO data (from PostgreSQL) -->
+    <table id="infoTable">
         <thead>
-            <tr><th>Loading...</th></tr>
+            <tr>
+                <th colspan="5">Database Info</th>
+            </tr>
         </thead>
         <tbody>
-            <tr><td>Please wait...</td></tr>
+            <tr><td colspan="5">Loading...</td></tr>
         </tbody>
     </table>
 
+    <!-- Display USER DATA (from data.pop()) -->
+    <div id="userData" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+        <h3>User Information</h3>
+        <div id="userDetails">Loading user data...</div>
+    </div>
+
     <script>
-        async function loadTable() {
+
+        let info = data_and_info['info']; // Array of objects from database
+        let data = data_and_info['data']; // User data object
+        // EXACT implementation matching your code structure
+        let data_and_info;
+
+        async function initializePage() {
+            console.log('Initializing page...');
+            
             try {
-                // Try different possible endpoints
-                const endpoints = [
-                    '/user-info',
-                    '/api/user-info', 
-                    window.location.origin + '/user-info',
-                    './user-info'
-                ];
-                
-                let data = null;
-                
-                for (let endpoint of endpoints) {
-                    try {
-                        console.log('Trying:', endpoint);
-                        const response = await fetch(endpoint, {
-                            headers: {
-                                "heroku-skip-browser-warning": "true"
-                            },
-                            credentials: "include"
-                        });
-                        
-                        if (response.ok) {
-                            data = await response.json();
-                            console.log('Success with:', endpoint);
-                            break;
-                        }
-                    } catch (e) {
-                        console.log('Failed with:', endpoint, e);
-                    }
-                }
-                
-                if (!data) {
-                    document.getElementById('dataTable').innerHTML = 
-                        '<tr><td>No data available - check console for errors</td></tr>';
+                // EXACT URL construction from your code
+                const form = document.querySelector('form');
+                if (!form) {
+                    console.error('Form not found');
                     return;
                 }
+
+                // Same as your original: getCookie('url') + '/update'
+                const baseUrl = getCookie('url') || window.location.origin;
+                form.action = baseUrl + '/update';
+                const data_and_info_url = form.action.replace('update', 'user-info');
+
+                console.log('Fetching from:', data_and_info_url);
+
+                // EXACT fetch from your code
+                const response = await fetch(data_and_info_url, {
+                    headers: {
+                        "heroku-skip-browser-warning": "true",
+                        "content-type": "application/json"
+                    },
+                    credentials: "include"
+                });
                 
-                // Create table
-                const info = data.info || [];
-                const table = document.getElementById('dataTable');
-                table.innerHTML = '';
-                
-                if (info.length > 0) {
-                    // Create header
-                    const keys = Object.keys(info[0]);
-                    let headerRow = '<tr>';
-                    keys.forEach(key => {
-                        headerRow += `<th>${key}</th>`;
-                    });
-                    headerRow += '</tr>';
-                    table.innerHTML = `<thead>${headerRow}</thead><tbody></tbody>`;
-                    
-                    // Create rows
-                    const tbody = table.querySelector('tbody');
-                    info.slice(0, 3).forEach(item => {
-                        let row = '<tr>';
-                        keys.forEach(key => {
-                            row += `<td>${item[key] || ''}</td>`;
-                        });
-                        row += '</tr>';
-                        tbody.innerHTML += row;
-                    });
+                data_and_info = await response.json();
+                console.log('Full response:', data_and_info);
+
+                // Check for redirect (same as your code)
+                if ('redirect' in data_and_info) {
+                    window.location.href = data_and_info['redirect'];
+                    return;
                 }
-                
+
+                // Process the data EXACTLY as your code does
+                processData();
+
             } catch (error) {
-                console.error('Final error:', error);
-                document.getElementById('dataTable').innerHTML = 
-                    '<tr><td>Error loading data</td></tr>';
+                console.error('Error:', error);
+                // Same fallback as your code
+                callMaster();
             }
         }
-        
-        // Start loading
-        loadTable();
+
+        function processData() {
+            // EXACT variable assignment from your code
+            let info = data_and_info['info']; // Array from PostgreSQL
+            let data = data_and_info['data']; // Object from data.pop()
+            
+            console.log('Info data (PostgreSQL):', info);
+            console.log('User data (data.pop()):', data);
+
+            // Create table from INFO data (PostgreSQL results)
+            createInfoTable(info);
+            
+            // Display USER DATA
+            displayUserData(data);
+        }
+
+        function createInfoTable(info) {
+            const table = document.getElementById('infoTable');
+            const tbody = table.querySelector('tbody');
+            
+            // Clear loading message
+            tbody.innerHTML = '';
+
+            if (info && info.length > 0) {
+                // Get column names from first object (same as your code)
+                const keys = Object.keys(info[0]);
+                
+                // Create header
+                const headerRow = document.createElement('tr');
+                keys.forEach(key => {
+                    const th = document.createElement('th');
+                    th.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+                    headerRow.appendChild(th);
+                });
+                table.querySelector('thead').innerHTML = '';
+                table.querySelector('thead').appendChild(headerRow);
+
+                // Create data rows (LIMIT to 3 as in your original .slice(0,3))
+                info.slice(0, 3).forEach(item => {
+                    const row = document.createElement('tr');
+                    
+                    keys.forEach(key => {
+                        const td = document.createElement('td');
+                        td.textContent = item[key] || '';
+                        row.appendChild(td);
+                    });
+                    
+                    tbody.appendChild(row);
+                });
+                
+                console.log(`Created table with ${Math.min(info.length, 3)} rows`);
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5">No database records found</td></tr>';
+            }
+        }
+
+        function displayUserData(data) {
+            const userDetails = document.getElementById('userDetails');
+            
+            if (data && Object.keys(data).length > 0) {
+                let html = '<dl>';
+                for (const [key, value] of Object.entries(data)) {
+                    html += `<dt><strong>${key}:</strong></dt><dd>${value}</dd>`;
+                }
+                html += '</dl>';
+                userDetails.innerHTML = html;
+            } else {
+                userDetails.innerHTML = 'No user data available';
+            }
+        }
+
+        // Utility functions (same as your likely setup)
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return window.location.origin;
+        }
+
+        function callMaster(url) {
+            if (url) {
+                window.location.href = url;
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', initializePage);
     </script>
 </body>
 </html>
