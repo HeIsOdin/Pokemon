@@ -1,90 +1,16 @@
 <!DOCTYPE html>
 <html>
   <head>
-	  <script>
-		(function() {
-	  		const isGithub = window.location.hostname.split(".")[1] === "github";
-      		let base = "/";
-      		if (isGithub) {
-        		const pathParts = window.location.pathname.split("/");
-        		if (pathParts.length > 1 && pathParts[1])  base = "/" + pathParts[1] + "/";
-      		}
-      		let baseEl = document.querySelector("base");
-      		if (!baseEl) {
-        		baseEl = document.createElement("base");
-        		document.head.prepend(baseEl);
-      		}
-      		baseEl.setAttribute("href", base);
-    	})();
-  		</script>
-	<link rel="icon" href="/Pokemon/media/favicon.png"/>
-    <link rel="stylesheet" href="/Pokemon/styles/tasks.css">
+	  <script src="/pokemon/scripts/tasks.js"></script>		
+	   <link rel="icon" href="/Pokemon/media/favicon.png">
+        <link rel="stylesheet" href="/Pokemon/styles/tasks.css">
   </head>
-	
-  <body>
-    <h2>TASKS HISTORY:</h2><br>
-	  <form>
-  <div id="task-history-container">
-						<table>
-							<thead></thead>
-							<tbody></tbody>
-						</table>
-					</div>
-		  </form>
-			<script>
-				let data_and_info;
-async function body() {
-	const form = document.querySelector('form')
-	if (!form) return
-	
-	form.action = getCookie('url')+'/update';
-	const data_and_info_url = form.action.replace('update', 'user-info');
-	
-    try {
-	    const response = await fetch(data_and_info_url, {
-		    headers: {
-                "ngrok-skip-browser-warning": "true",
-                "Content-Type": "application/json"
-            },
-            credentials: "include"
-	    });
-        data_and_info = await response.json();
-		if ('redirect' in data_and_info) callHamster(data_and_info['redirect']);
-    } catch {
-		callHamster();
-    } finally {
-		let info = data_and_info['info'];
-		let data = data_and_info['data'];
-		const table = document.querySelector("table");
-  		const thead = table.querySelector("thead");
-  		const tbody = table.querySelector("tbody");
-		
-		thead.innerHTML = ""; 
-		tbody.innerHTML = "";
-		
-		if (info.length > 0) {
-			const keys = Object.keys(info[0]);
-			const headerRow = document.createElement("tr");
-    	
-			keys.forEach(key => {
-				const th = document.createElement("th");
-				th.textContent = key.charAt(0).toUpperCase() + key.slice(1);
-				headerRow.appendChild(th);
-			});
-			thead.appendChild(headerRow);
-			
-			info.slice(0,3).forEach(item => {
-				const row = document.createElement("tr");
-				
-				keys.forEach(key => {
-					const td = document.createElement("td");
-					td.textContent = item[key];
-					row.appendChild(td);
-				});
-				tbody.appendChild(row);
-			});
-		}
-}
-</script>		
+	<body>
+		<div>
+			<table>
+				<thead></thead>
+				<tbody></tbody>
+			</table>
+		</div>
   </body>
 </html>
