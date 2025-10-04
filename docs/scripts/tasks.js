@@ -67,9 +67,4 @@ function renderTable(data) {
     });
 }
 
-// Example: call this when page loads
-document.addEventListener("DOMContentLoaded", () => {
-    const url = "http://127.0.0.1:8000/data"; // <-- replace with your backend endpoint
-    fetchDataAndRenderTable(url);
-});
 
