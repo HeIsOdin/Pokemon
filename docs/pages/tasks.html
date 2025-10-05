@@ -1,18 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-	  <script src="/Pokemon/scripts/tasks.js"> </script>		
-	   <link rel="icon" href="/Pokemon/media/favicon.png">
-        <link rel="stylesheet" href="/Pokemon/styles/tasks.css">
+    <meta charset="utf-8"/>
+    <title>Task History • PyPikachu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="icon" href="/Pokemon/media/favicon.png"/>
+
+    <!-- Reuse the homepage look -->
+    <link rel="stylesheet" href="/Pokemon/styles/main.css"/>
+    <!-- Page-specific styles (below) -->
+    <link rel="stylesheet" href="/Pokemon/styles/tasks.css"/>
+
+    <script defer src="/Pokemon/scripts/tasks.js"></script>
   </head>
-	<body>
-		<div>
-			<table>
-				<thead></thead>
-				<tbody></tbody>
-			</table>
-		</div>
+  <body class="is-preload">
+    <div id="wrapper">
+      <header id="header">
+        <div class="logo">
+          <!-- tiny lightning/poké-esque circle stays consistent with home -->
+          <svg width="50" height="50" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="none" stroke="#fff"/></svg>
+        </div>
+        <div class="content">
+          <div class="inner">
+            <h1>Task History</h1>
+            <p>Click a row to see details.</p>
+          </div>
+        </div>
+      </header>
+
+      <main id="main">
+        <article class="active" style="width: 60rem; max-width: 95%;">
+          <div class="table-wrapper">
+            <table id="tasks-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </article>
+      </main>
+
+      <footer id="footer">
+        <p class="copyright">&copy; PyPikachu</p>
+      </footer>
+    </div>
+
+    <!-- Same cinematic background as the homepage -->
+    <div id="bg"></div>
+
+    <!-- Slide-in details drawer -->
+    <aside id="task-drawer" aria-hidden="true">
+      <div class="drawer-overlay" data-close></div>
+      <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <button class="drawer-close" title="Close" aria-label="Close" data-close>&times;</button>
+
+        <h2 id="drawer-title" class="major">Task Details</h2>
+
+        <!-- Placeholder content, replace later -->
+        <div class="drawer-grid">
+          <div class="drawer-block">
+            <h3>Meta</h3>
+            <ul id="drawer-meta">
+              <!-- filled by JS -->
+            </ul>
+          </div>
+
+          <div class="drawer-block">
+            <h3>Status</h3>
+            <p id="drawer-status">—</p>
+          </div>
+
+          <div class="drawer-block">
+            <h3>Last Run</h3>
+            <p id="drawer-last-run">—</p>
+          </div>
+
+          <div class="drawer-block">
+            <h3>Notes</h3>
+            <p id="drawer-notes">Lorem ipsum placeholder copy. Add whatever fields you like here later (e.g., defect type, set, price cap, marketplace).</p>
+          </div>
+        </div>
+
+        <div class="drawer-actions">
+          <button class="button">Pause Task</button>
+          <button class="button primary">Run Now</button>
+        </div>
+      </section>
+    </aside>
   </body>
 </html>
-
-
