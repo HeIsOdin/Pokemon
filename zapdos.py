@@ -373,5 +373,5 @@ def update_info():
         })
 
 if __name__ == "__main__":
-    #while True: pass
-    main()
+    while True: pass
+    #main()
