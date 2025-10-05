@@ -32,3 +32,5 @@ demo*
 
 Dockerfiles/
 .DS*
+
+*.zip
