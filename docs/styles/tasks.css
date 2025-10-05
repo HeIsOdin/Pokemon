@@ -592,6 +592,7 @@ body {
 			transition: opacity 0.325s ease-in-out;
 			position: relative;
 			margin-top: 3.5rem;
+			margin-bottom: 0.5rem;
 		}
 
 		#header > *:before {
@@ -650,8 +651,7 @@ body {
 				-webkit-transition-delay: 0.25s;
 				-ms-transition-delay: 0.25s;
 				transition-delay: 0.25s;
-				padding: 3rem 0.5rem;
-				margin-bottom: 0.5rem;
+				padding: 0.5rem 3rem;
 				max-height: 40rem;
 				overflow: hidden;
 			}
