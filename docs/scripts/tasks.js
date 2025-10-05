@@ -14,7 +14,7 @@ function getCookie(name) {
   return null;
 }
 
-let info;
+let data_and_info;
 async function body() {
     let url = getCookie('url') + '/user-info';
     try {
@@ -25,11 +25,12 @@ async function body() {
             },
             credentials: "include"
 	    });
-        info = await response.json()['info'];
+        data_and_info = await response.json();
 		if ('redirect' in data_and_info) callHamster(data_and_info['redirect']);
     } catch {
 		callHamster();
     } finally {
+		let info = data_and_info.info || [];
 		const table = document.querySelector("table");
   		const thead = table.querySelector("thead");
   		const tbody = table.querySelector("tbody");
