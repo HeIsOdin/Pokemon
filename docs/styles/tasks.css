@@ -876,9 +876,6 @@ body {
 			-webkit-transition: opacity 0.325s ease-in-out, -webkit-transform 0.325s ease-in-out;
 			-ms-transition: opacity 0.325s ease-in-out, -ms-transform 0.325s ease-in-out;
 			transition: opacity 0.325s ease-in-out, transform 0.325s ease-in-out;
-			-webkit-scrollbar: none; /* For Chrome, Safari, and Opera */
-			-ms-overflow-style: none;  /* For Internet Explorer and Edge */
-			scrollbar-width: none;  /* For Firefox */
 			padding: 1.5rem 2.5rem;
 			position: relative;
 			width: 40rem;
@@ -998,11 +995,18 @@ body {
 		}
 
 /* Table polish */
+#tasks-table {
+-webkit-scrollbar: none; /* For Chrome, Safari, and Opera */
+-ms-overflow-style: none;  /* For Internet Explorer and Edge */
+scrollbar-width: none;  /* For Firefox */
+}
+
 #tasks-table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: inherit;
+  background: rgba(27, 31, 34, 0.85);
+  backdrop-filter: blur(4px);
 }
 
 #tasks-table tbody tr {
