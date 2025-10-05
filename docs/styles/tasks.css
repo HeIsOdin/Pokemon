@@ -227,6 +227,7 @@ body {
 /* Table */
 
 	.table-wrapper {
+		max-height: 60vh;
 		overflow: auto;
 		-ms-overflow-style: none;    /* IE/Edge legacy */
 		scrollbar-width: none;       /* Firefox */
