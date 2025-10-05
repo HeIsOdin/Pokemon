@@ -227,10 +227,14 @@ body {
 /* Table */
 
 	.table-wrapper {
-		-webkit-overflow-scrolling: touch;
-		max-height: 60vh;
-		overflow-y: auto;
+		overflow: auto;
+		-ms-overflow-style: none;    /* IE/Edge legacy */
+		scrollbar-width: none;       /* Firefox */
 	}
+
+	.table-wrapper::-webkit-scrollbar {
+		display: none;
+	}  /* Chrome/Safari */
 
 	table {
 		margin: 0 0 2rem 0;
@@ -292,107 +296,6 @@ body {
 			table.alt tfoot {
 				border-top: 0;
 			}
-
-/* Button */
-
-	input[type="submit"],
-	input[type="reset"],
-	input[type="button"],
-        input[type="logout"],
-        input[type="delete"],
-	button,
-	.button {
-		-moz-appearance: none;
-		-webkit-appearance: none;
-		-ms-appearance: none;
-		appearance: none;
-		-moz-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-		-webkit-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-		-ms-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-		transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-		background-color: transparent;
-		border-radius: 4px;
-		border: 0;
-		box-shadow: inset 0 0 0 1px #ffffff;
-		color:   #ffffff !important;
-		cursor: pointer;
-		display: inline-block;
-		font-size: 0.8rem;
-		font-weight: 300;
-		height: 2.75rem;
-		letter-spacing: 0.2rem;
-		line-height: 2.75rem;
-		outline: 0;
-		padding: 0 1.25rem 0 1.35rem;
-		text-align: center;
-		text-decoration: none;
-		text-transform: uppercase;
-		white-space: nowrap;
-	}
-
-		input[type="submit"]:hover,
-		input[type="reset"]:hover,
-		input[type="button"]:hover,
-		button:hover,
-		.button:hover {
-			background-color:  rgba(255, 255, 255, 0.175);
-		}
-
-		input[type="submit"]:active,
-		input[type="reset"]:active,
-		input[type="button"]:active,
-		button:active,
-		.button:active,
-		#confirmLogout:active,
-		#cancelLogout:active{
-			background-color: rgba(19, 18, 18, 0.801);
-		}													
-              
-		.delete:hover{
-			background-color: red ;
-		}
-                
-		
-
-
-
-		input[type="submit"].icon:before,
-		input[type="reset"].icon:before,
-		input[type="button"].icon:before,
-		button.icon:before,
-		.button.icon:before {
-			margin-right: 0.5em;
-		}
-
-		input[type="submit"].fit,
-		input[type="reset"].fit,
-		input[type="button"].fit,
-		button.fit,
-		.button.fit {
-			width: 100%;
-		}
-
-		input[type="submit"].small,
-		input[type="reset"].small,
-		input[type="button"].small,
-		button.small,
-		.button.small {
-			font-size: 0.6rem;
-			height: 2.0625rem;
-			line-height: 2.0625rem;
-		}
-
-		input[type="submit"].primary,
-		input[type="reset"].primary,
-		input[type="button"].primary,
-		button.primary,
-		.button.primary
-                 
-{
-			background-color: #ffffff;
-			color: #1b1f22 !important;
-			font-weight: 600;
-		}
 
 		/* logout */
 #logout_popup {
@@ -526,7 +429,6 @@ body {
 		position: relative;
 		min-height: 100vh;
 		width: 100%;
-		padding: 4rem 2rem;
 		z-index: 3;
 	}
 
@@ -600,10 +502,10 @@ body {
 			content: '';
 			display: block;
 			position: absolute;
-			top: calc(-3.5rem - 1px);
+			top: calc(-3rem - 1px);
 			left: calc(50% - 1px);
 			width: 1px;
-			height: calc(3.5rem + 1px);
+			height: calc(3rem + 1px);
 			background: #ffffff;
 		}
 
@@ -691,14 +593,6 @@ body {
 				opacity: 0;
 			}
 
-		@media screen and (max-width: 980px) {
-
-			#header .content p br {
-				display: none;
-			}
-
-		}
-
 		@media screen and (max-width: 736px) {
 
 			#header > * {
@@ -724,11 +618,6 @@ body {
 			#header .content .inner {
 				padding: 2.5rem 1rem;
 			}
-
-			#header .content p {
-				line-height: 1.875;
-			}
-
 		}
 
 		@media screen and (max-width: 480px) {
@@ -739,35 +628,6 @@ body {
 
 				#header .content .inner {
 					padding: 2.5rem 0;
-				}
-
-				#header nav ul {
-					-moz-flex-direction: column;
-					-webkit-flex-direction: column;
-					-ms-flex-direction: column;
-					flex-direction: column;
-					min-width: 10rem;
-					max-width: 100%;
-				}
-
-					#header nav ul li {
-						border-left: 0;
-						border-top: solid 1px #ffffff;
-					}
-
-						#header nav ul li:first-child {
-							border-top: 0;
-						}
-
-						#header nav ul li a {
-							height: 3rem;
-							line-height: 3rem;
-							min-width: 0;
-							width: 100%;
-						}
-
-				#header nav.use-middle:after {
-					display: none;
 				}
 
 		}
@@ -829,47 +689,7 @@ body {
 				transform: translateY(0);
 				opacity: 1;
 			}
-
-			#main article .close {
-				display: block;
-				position: absolute;
-				top: 0;
-				right: 0;
-				width: 4rem;
-				height: 4rem;
-				cursor: pointer;
-				text-indent: 4rem;
-				overflow: hidden;
-				white-space: nowrap;
-			}
-
-				#main article .close:before {
-					-moz-transition: background-color 0.2s ease-in-out;
-					-webkit-transition: background-color 0.2s ease-in-out;
-					-ms-transition: background-color 0.2s ease-in-out;
-					transition: background-color 0.2s ease-in-out;
-					content: '';
-					display: block;
-					position: absolute;
-					top: 0.75rem;
-					left: 0.75rem;
-					width: 2.5rem;
-					height: 2.5rem;
-					border-radius: 100%;
-					background-position: center;
-					background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='20px' height='20px' viewBox='0 0 20 20' zoomAndPan='disable'%3E%3Cstyle%3Eline %7B stroke: %23ffffff%3B stroke-width: 1%3B %7D%3C/style%3E%3Cline x1='2' y1='2' x2='18' y2='18' /%3E%3Cline x1='18' y1='2' x2='2' y2='18' /%3E%3C/svg%3E");
-					background-size: 20px 20px;
-					background-repeat: no-repeat;
-				}
-
-				#main article .close:hover:before {
-					background-color: rgba(255, 255, 255, 0.075);
-				}
-
-				#main article .close:active:before {
-					background-color: rgba(255, 255, 255, 0.175);
-				}
-
+				
 		@media screen and (max-width: 736px) {
 
 			#main article {
@@ -932,16 +752,6 @@ body {
 		}
 
 /* Table polish */
-.table-wrapper {
-  overflow: auto;
-  -ms-overflow-style: none;    /* IE/Edge legacy */
-  scrollbar-width: none;       /* Firefox */
-}
-
-.table-wrapper::-webkit-scrollbar {
-	display: none;
-}  /* Chrome/Safari */
-
 #tasks-table thead th {
   position: sticky;
   top: 0;
