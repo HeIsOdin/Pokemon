@@ -201,7 +201,7 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
             data = []
             if pairs:
                 for key in template:
-                    key = key.replace(' = %s', '')
+                    key = key.replace(' = %s', '') # Condition when UPDATE is in sql
                     if key in pairs.keys():
                         data.append(pairs.get(key, None))
                     else:
@@ -217,7 +217,7 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
                         if row and len(row) == len(template):
                             result = {}
                             for key, value in zip(template, row):
-                                result[key.strip(' = %s')] = value
+                                result[key.replace(' = %s', '')] = value
                             results.append(result)
                 return results
             conn.commit()
