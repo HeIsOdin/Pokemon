@@ -1497,11 +1497,12 @@ input, select, textarea {
 				width: 4.75rem;
 				height: 4.75rem;
 				line-height: 4.75rem;
+				cursor: pointer;
 			}
 
-				#header .logo .icon:before {
-					font-size: 1.75rem;
-				}
+			#header .logo .icon:before {
+				font-size: 1.75rem;
+			}
 
 			#header .content .inner {
 				padding: 2.5rem 1rem;
