@@ -57,7 +57,7 @@ async function init() {
       keys.forEach(k => {
         const td = document.createElement("td");
         td.textContent = item[k];
-		td.title = String(item[key] ?? "");
+		td.title = String(item[k] ?? "");
         tr.appendChild(td);
       });
 
