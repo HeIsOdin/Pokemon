@@ -765,11 +765,20 @@ body {
   cursor: pointer;
   transition: background-color .15s ease, transform .05s ease;
 }
+
 #tasks-table tbody tr:hover {
   background-color: rgba(255,255,255,0.12);
 }
+
 #tasks-table tbody tr:active {
   transform: scale(0.999);
+}
+
+#tasks-table td,
+#tasks-table th {
+  overflow: hidden;
+  white-space: nowrap;     /* prevent wrapping */
+  text-overflow: ellipsis; /* show … when clipped */
 }
 
 /* Drawer (slide-in) */
@@ -801,6 +810,7 @@ body {
   transition: transform .28s ease;
   overflow-y: auto;
 }
+
 #task-drawer.open .drawer-panel { transform: translateX(0); }
 
 .drawer-close {
