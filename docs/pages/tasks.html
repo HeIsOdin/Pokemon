@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+	<script>
+		(function() {
+	  		const isGithub = window.location.hostname.split(".")[1] === "github";
+      		let base = "/";
+      		if (isGithub) {
+        		const pathParts = window.location.pathname.split("/");
+        		if (pathParts.length > 1 && pathParts[1])  base = "/" + pathParts[1] + "/";
+      		}
+      		let baseEl = document.querySelector("base");
+      		if (!baseEl) {
+        		baseEl = document.createElement("base");
+        		document.head.prepend(baseEl);
+      		}
+      		baseEl.setAttribute("href", base);
+    	})();
+  	</script>
     <meta charset="utf-8"/>
     <title>Task History</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>

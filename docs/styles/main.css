@@ -41,10 +41,10 @@ blockquote, q {
 	quotes: none;
 }
 
-	blockquote:before, blockquote:after, q:before, q:after {
-		content: '';
-		content: none;
-	}
+blockquote:before, blockquote:after, q:before, q:after {
+	content: '';
+	content: none;
+}
 
 table {
 	border-collapse: collapse;
@@ -1317,24 +1317,24 @@ input, select, textarea {
 			margin-top: 3.5rem;
 		}
 
-			#header > *:before {
-				content: '';
-				display: block;
-				position: absolute;
-				top: calc(-3.5rem - 1px);
-				left: calc(50% - 1px);
-				width: 1px;
-				height: calc(3.5rem + 1px);
-				background: #ffffff;
-			}
+		#header > *:before {
+			content: '';
+			display: block;
+			position: absolute;
+			top: calc(-3.5rem - 1px);
+			left: calc(50% - 1px);
+			width: 1px;
+			height: calc(3.5rem + 1px);
+			background: #ffffff;
+		}
 
 		#header > :first-child {
 			margin-top: 0;
 		}
 
-			#header > :first-child:before {
-				display: none;
-			}
+		#header > :first-child:before {
+			display: none;
+		}
 
 		#header .logo {
 			width: 5.5rem;
@@ -1344,7 +1344,7 @@ input, select, textarea {
 		}
 
 		#header .logo .icon:before {
-				font-size: 2rem;
+			font-size: 2rem;
 		}
 
 		.logo {
@@ -1353,6 +1353,7 @@ input, select, textarea {
 			align-items: center;     /* centers vertically */
 			height: 100px;           /* or whatever height you want */
 			width: 100px;            /* optional, adjust as needed */
+			cursor: pointer;
 		}
 
 		#header .content {
@@ -1377,9 +1378,9 @@ input, select, textarea {
 				overflow: hidden;
 			}
 
-				#header .content .inner > :last-child {
-					margin-bottom: 0;
-				}
+			#header .content .inner > :last-child {
+				margin-bottom: 0;
+			}
 
 			#header .content p {
 				text-transform: uppercase;
