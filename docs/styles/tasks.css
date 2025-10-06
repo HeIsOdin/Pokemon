@@ -227,7 +227,7 @@ body {
 /* Table */
 
 	.table-wrapper {
-		max-height: 60vh;
+		max-height: 50vh;
 		overflow: auto;
 		-ms-overflow-style: none;    /* IE/Edge legacy */
 		scrollbar-width: none;       /* Firefox */
@@ -428,6 +428,7 @@ body {
 		-ms-justify-content: space-between;
 		justify-content: space-between;
 		position: relative;
+		padding: 1rem;
 		min-height: 100vh;
 		width: 100%;
 		z-index: 3;
@@ -436,30 +437,6 @@ body {
 		#wrapper:before {
 			content: '';
 			display: block;
-		}
-
-		@media screen and (max-width: 1680px) {
-
-			#wrapper {
-				padding: 3rem 2rem;
-			}
-
-		}
-
-		@media screen and (max-width: 736px) {
-
-			#wrapper {
-				padding: 2rem 1rem;
-			}
-
-		}
-
-		@media screen and (max-width: 480px) {
-
-			#wrapper {
-				padding: 1rem;
-			}
-
 		}
 
 /* Header */
@@ -495,7 +472,7 @@ body {
 			-ms-transition: opacity 0.325s ease-in-out;
 			transition: opacity 0.325s ease-in-out;
 			position: relative;
-			margin-top: 2.5rem;
+			margin-top: 1.5rem;
 			margin-bottom: 0.5rem;
 		}
 
