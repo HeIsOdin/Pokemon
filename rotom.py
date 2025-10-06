@@ -174,6 +174,7 @@ def pass_arguments_to_main() -> argparse.Namespace:
     parser.add_argument("--use_local_storage", action='store_true', help="Use permanent local storage?")
     parser.add_argument("--use_rgb", action='store_true', help="Use RGB instead of grayscale?")
     parser.add_argument("--kaggle_download", action='store_true', help="Download Kaggle dataset")
+    parser.add_argument("--verbose", action='store_true', help='Show a verbose output')
     return parser.parse_args()
 
 def hash_function(itemId: str, price: float) -> str:
