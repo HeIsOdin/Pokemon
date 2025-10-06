@@ -3,7 +3,7 @@ import smeargle
 import porygon
 import rotom
 
-def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, download_dataset: bool, AI: porygon.models.Sequential | None = None, verbose: bool = False):
+def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, download_dataset: bool, verbose: bool = False, AI: porygon.models.Sequential | None = None,):
     args = rotom.parse_JSON_as_arguments('config.json', defect,
         [
             "input_shape",
@@ -131,4 +131,5 @@ if __name__ == "__main__":
         args.price,
         args.use_local_storage,
         args.use_rgb,
-        args.kaggle_download)))
+        args.kaggle_download,
+        args.verbose)))
