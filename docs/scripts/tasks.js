@@ -39,13 +39,13 @@ function transformInfo(list, tz='America/Chicago') {
       .map(w => (w ? w[0].toUpperCase() + w.slice(1) : w))
       .join(' ');
 
-	let status = String(item?.status ?? 'submitted').toLowerCase();
+	let status = String(item?.status ?? item?.tatu ?? 'submitted').toLowerCase();
 	if (status === 'submitted') status = '🕓';
 	if (status === 'completed') status = '✅';
 	if (status === 'failed') status = '❌';
 	if (status === 'warning') status = '⚠️';
-
-    return { ...item, creation, defect, status };
+	const tatu = status;
+    return { ...item, creation, defect, tatu };
   });
 }
 
