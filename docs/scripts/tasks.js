@@ -12,6 +12,39 @@ function getCookie(name) {
   return null;
 }
 
+function transformInfo(list, tz='America/Chicago') {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: 'numeric', // no leading zero
+    day: 'numeric',   // no leading zero
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+
+  return (Array.isArray(list) ? list : []).map(item => {
+    // Creation date → shorthand
+    let creation = item?.creation;
+    const d = new Date(creation);
+    if (!isNaN(d)) {
+      const parts = dtf.formatToParts(d).reduce((acc, p) => {
+        acc[p.type] = p.value; return acc;
+      }, {});
+      creation = `${parts.month}/${parts.day}/${parts.year} ${parts.hour}:${parts.minute}:${parts.second}`;
+    }
+
+    // Defect → title case, underscores → spaces
+    const defect = String(item?.defect ?? '')
+      .split('_')
+      .map(w => (w ? w[0].toUpperCase() + w.slice(1) : w))
+      .join(' ');
+
+    return { ...item, creation, defect };
+  });
+}
+
 let data_and_info;
 
 async function init() {
@@ -33,7 +66,7 @@ async function init() {
   }
 
   // Build table
-  const info = data_and_info?.info || [];
+  const info = transformInfo(data_and_info?.info || []);
   const table = document.getElementById("tasks-table");
   const thead = table.querySelector("thead");
   const tbody = table.querySelector("tbody");
