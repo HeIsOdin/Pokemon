@@ -21,7 +21,6 @@ for defect detection.
 import requests
 import os
 import rotom
-import time
 
 def get_ebay_token(client_id: str, client_secret: str) -> str:
     """
@@ -68,13 +67,15 @@ def search_pokemon_cards(access_token: str, query: str = "Wartortle Pokemon Card
     search_url = 'https://api.ebay.com/buy/browse/v1/item_summary/search'
     headers = {
         'Authorization': f'Bearer {access_token}',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
     }
 
     all_items = []
     page_size = 50
     total_fetched = 0
 
+    condition_ids = "1000|3000|4000"
     while total_fetched < limit:
         batch_limit = min(page_size, limit - total_fetched)
         params = {
@@ -82,8 +83,7 @@ def search_pokemon_cards(access_token: str, query: str = "Wartortle Pokemon Card
             'limit': str(batch_limit),
             'offset': str(offset + total_fetched),
             'sort': 'newlyListed',
-            'filter': f'conditionIds:{1000|3000|4000},price:[0..{price}]',
-            'category_ids': '183454'
+            'filter': f'conditionIds:{{{condition_ids}}},price:[0..{price}]'
         }
 
         response = requests.get(search_url, headers=headers, params=params)
@@ -103,7 +103,7 @@ def search_pokemon_cards(access_token: str, query: str = "Wartortle Pokemon Card
         if len(items) < batch_limit:
             break
 
-        time.sleep(0.25)
+        rotom.pause(0.25)
 
     return {'itemSummaries': all_items}
 
@@ -149,3 +149,48 @@ def download_image(original_image_url: str, title: str, save_dir: str, save: boo
             rotom.print_with_color(f"Failed to download image: {image_url}", 1)
 
     return response.content
+
+def main():
+    args = {
+        'queries': [
+            "Wartortle 42/102",
+			"Wartortle base set",
+			"Wartortle WOTC base",
+			"Wartortle vintage"
+        ],
+        'input_dir': 'imag'
+    }
+    threshold, USE_LOCAL_STORAGE = 20, True
+    CLIENT_ID, CLIENT_SECRET = rotom.enviromentals('EBAY_CLIENT_ID', 'EBAY_CLIENT_SECRET')
+
+    rotom.print_with_color("Authenticating with eBay...", 4)
+    token = get_ebay_token(CLIENT_ID, CLIENT_SECRET)
+
+    items = []
+
+    queries = args.get('queries', [])
+
+    for query in queries:
+        rotom.print_with_color(f"Searching for Pokémon card listings '{query}'...", 4)
+        results = search_pokemon_cards(token, price=threshold, query=query)
+
+        rotom.print_with_color("Downloading listing images...", 4)
+
+        for item in results.get('itemSummaries', []):
+            card = {
+                'title': item.get('title', ''),
+                'product_url': item.get('itemWebUrl', ''),
+                'image_url': item.get('image', {}).get('imageUrl', '')
+            }
+        
+            if card['image_url']:
+                card['image'] = bytearray(download_image(card['image_url'], card['title'], args.get('input_dir', ''), USE_LOCAL_STORAGE))
+                items.append(card)
+                continue
+            rotom.print_with_color(f"No image found for: {card['title']}", 3)
+            
+
+    rotom.print_with_color("Listed Images have been downloaded! 🥳", 2)
+
+if __name__ == "__main__":
+    main()
