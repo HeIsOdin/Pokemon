@@ -58,7 +58,7 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
 
     for query in queries:
         rotom.print_with_color(f"Searching for Pokémon card listings '{query}'...", 4)
-        results = spinarak.search_pokemon_cards(token, price=threshold, query='')
+        results = spinarak.search_pokemon_cards(token, price=threshold, query=query)
 
         rotom.print_with_color("Downloading listing images...", 4)
 
