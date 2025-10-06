@@ -46,7 +46,6 @@ function transformInfo(list, tz='America/Chicago') {
 }
 
 let data_and_info;
-
 async function init() {
   const base = getCookie('url');
   const infoUrl = base + '/user-info';
