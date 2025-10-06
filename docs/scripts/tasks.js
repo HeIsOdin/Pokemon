@@ -39,7 +39,7 @@ function transformInfo(list, tz='America/Chicago') {
       .map(w => (w ? w[0].toUpperCase() + w.slice(1) : w))
       .join(' ');
 
-	const status = String(item?.status ?? 'submitted').toLowerCase();
+	let status = String(item?.status ?? 'submitted').toLowerCase();
 	if (status === 'submitted') status = '🕓';
 	if (status === 'completed') status = '✅';
 	if (status === 'failed') status = '❌';
