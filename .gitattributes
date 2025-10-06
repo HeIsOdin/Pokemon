@@ -5,5 +5,5 @@ docs/styles/main.css linguist-detectable=false
 docs/styles/main.css linguist-documentation=true
 docs/pages/create.html linguist-detectable=false
 docs/pages/create.html linguist-documentation=true
-docs/pages/task.html linguist-detectable=false
-docs/pages/task.html linguist-documentation=true
+docs/pages/tasks.html linguist-detectable=false
+docs/pages/tasks.html linguist-documentation=true
