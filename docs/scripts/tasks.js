@@ -25,7 +25,6 @@ function transformInfo(list, tz='America/Chicago') {
   });
 
   return (Array.isArray(list) ? list : []).map(item => {
-    // Creation date → shorthand
     let creation = item?.creation;
     const d = new Date(creation);
     if (!isNaN(d)) {
@@ -35,13 +34,18 @@ function transformInfo(list, tz='America/Chicago') {
       creation = `${parts.month}/${parts.day}/${parts.year} ${parts.hour}:${parts.minute}:${parts.second}`;
     }
 
-    // Defect → title case, underscores → spaces
     const defect = String(item?.defect ?? '')
       .split('_')
       .map(w => (w ? w[0].toUpperCase() + w.slice(1) : w))
       .join(' ');
 
-    return { ...item, creation, defect };
+	const status = String(item?.status ?? 'submitted').toLowerCase();
+	if (status === 'submitted') status = '🕓';
+	if (status === 'completed') status = '✅';
+	if (status === 'failed') status = '❌';
+	if (status === 'warning') status = '⚠️';
+
+    return { ...item, creation, defect, status };
   });
 }
 
