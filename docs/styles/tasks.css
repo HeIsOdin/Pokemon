@@ -701,7 +701,7 @@ body {
 		transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
 		width: 100%;
 		max-width: 100%;
-		margin-top: 2rem;
+		margin-top: 1rem;
 		text-align: center;
 	}
 
