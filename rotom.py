@@ -109,9 +109,3 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
     except psycopg2.OperationalError as e:
         with open('logs/pidgeotto.log', 'a') as fp: fp.write(f'{e}\n')
         return []
-    except psycopg2.DatabaseError as e:
-        with open('logs/pidgeotto.log', 'a') as fp: fp.write(f'{e}\n')
-        return []
-    except Exception as e:
-        with open('logs/pidgeotto.log', 'a') as fp: fp.write(f'{e}\n')
-        return []
