@@ -1,36 +1,15 @@
 # Environment variables / secrets
 .env
 
-# Image downloads
-/images
-
 # virtual environment
-PyPikachu
+.venv/
 
 # Python cache files
 __pycache__/
 *.pyc
 
-# VSCode / IDE settings (optional)
+# VSCode / IDE settings
 .vscode/
-
-# My Scripts
-my_scripts/
-setup.py
-
-# Sessions
-flask_sessions/
 
 # Logs
 logs/
-
-# Dockerfile
-Dockerfile
-
-to-do.txt
-demo*
-
-Dockerfiles/
-.DS*
-
-*.zip
