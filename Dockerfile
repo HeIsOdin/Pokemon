@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy project files into the container
+# Clone project files into the container
 ARG REPO='https://github.com/HeIsOdin/Pokemon.git'
 ARG BRANCH='pidgeotto'
 RUN git clone --single-branch --branch $BRANCH $REPO /pidgeotto
