@@ -23,10 +23,6 @@ RUN apt-get update && apt-get install -y \
 ARG REPO='https://github.com/HeIsOdin/Pokemon.git'
 ARG BRANCH='pidgeotto'
 RUN git clone --single-branch --branch $BRANCH $REPO /pidgeotto
-# COPY pidgeotto.py /pidgeotto/
-# COPY rotom.py /pidgeotto/
-# COPY requirements.txt /pidgeotto/
-# COPY template.html /pidgeotto/
 
 # Install Python dependencies
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
