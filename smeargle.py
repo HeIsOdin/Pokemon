@@ -92,6 +92,7 @@ def load_file_from_bytearray(file: bytearray, save_path: str):
     img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
     if img is None:
         rotom.print_with_color("Could not load image as bytes", 1)
+        img = np.zeros((100, 100, 3), dtype=np.uint8)
     return img, save_path
 
 def detect_edges(img: cv2.typing.MatLike, path: str) -> cv2.typing.MatLike:
