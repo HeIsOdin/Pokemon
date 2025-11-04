@@ -75,35 +75,40 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
     'POSTGRESQL_HOST',
     'POSTGRESQL_PORT',
     )
+    try:
+        with psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT) as conn:
+            with conn.cursor() as cursor:
 
-    with psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT) as conn:
-        with conn.cursor() as cursor:
+                columns = ', '.join(template); sql = sql.replace('columns', columns)
+                values = ', '.join(['%s' for _ in template]); sql = sql.replace('values', values)
+                table_name = ', '.join(table); sql = sql.replace('tables', table_name)
 
-            columns = ', '.join(template); sql = sql.replace('columns', columns)
-            values = ', '.join(['%s' for _ in template]); sql = sql.replace('values', values)
-            table_name = ', '.join(table); sql = sql.replace('tables', table_name)
+                data = []
+                if pairs:
+                    for key in template:
+                        key = key.replace(' = %s', '') # Condition when UPDATE is in sql
+                        if key in pairs.keys(): data.append(pairs.get(key, None))
+                        else:
+                            pass
 
-            data = []
-            if pairs:
-                for key in template:
-                    key = key.replace(' = %s', '') # Condition when UPDATE is in sql
-                    if key in pairs.keys():
-                        data.append(pairs.get(key, None))
-                    else:
-                        pass
-
-            cursor.execute(sql, tuple(data))
+                cursor.execute(sql, tuple(data))
             
-            if sql.strip().lower().startswith("select"):
-                results = []
-                rows = cursor.fetchall() if limit == -1 else [cursor.fetchone()] if limit == 1 else cursor.fetchmany(limit)
-                if rows:
-                    for row in rows:
-                        if row and len(row) == len(template):
-                            result = {}
-                            for key, value in zip(template, row):
-                                result[key.replace(' = %s', '')] = value
-                            results.append(result)
-                return results
-            conn.commit()
-            return []
+                if sql.strip().lower().startswith("select"):
+                    results = []
+                    rows = cursor.fetchall() if limit == -1 else [cursor.fetchone()] if limit == 1 else cursor.fetchmany(limit)
+                    if rows:
+                        for row in rows:
+                            if row and len(row) == len(template):
+                                result = {}
+                                for key, value in zip(template, row):
+                                    result[key.replace(' = %s', '')] = value
+                                results.append(result)
+                    return results
+                conn.commit()
+                return []
+    except psycopg2.DatabaseError as e:
+        with open('logs/pidgeotto.log', 'a') as fp: fp.write(f'{e}\n')
+        return []
+    except Exception as e:
+        with open('logs/pidgeotto.log', 'a') as fp: fp.write(f'{e}\n')
+        return []
