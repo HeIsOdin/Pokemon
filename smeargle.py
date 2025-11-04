@@ -73,7 +73,8 @@ def load_file_from_directory(file: str, INPUT_DIR: str = 'images', OUTPUT_DIR: s
     img = cv2.imread(image_path)
     if img is None:
         rotom.print_with_color(f"Could not load image: {image_path}", 1)
-    cv2.imwrite(os.path.join(save_path, "1_original.jpg"), img)
+        img = np.zeros((100, 100, 3), dtype=np.uint8)
+    cv2.imwrite(filename=os.path.join(save_path, "1_original.jpg"), img=img)
     return img, save_path
 
 def load_file_from_bytearray(file: bytearray, save_path: str):
@@ -215,7 +216,7 @@ def align_with_orb(img, template, out_wh):
 
 def refine_roi_by_ncc(aligned, roi_box, roi_template_path, search=8):
     x,y,w,h = roi_box
-    roi_template = cv2.imread(roi_template_path, cv2.IMREAD_COLOR)
+    roi_template = cv2.imread(roi_template_path, cv2.IMREAD_COLOR) or np.zeros((h, w, 3), dtype=np.uint8)
     best, best_off = -1.0, (0,0)
     for dy in range(-search, search+1):
         for dx in range(-search, search+1):
