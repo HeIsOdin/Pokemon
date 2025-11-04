@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     wget \
     unzip \
+    git \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone project files into the container
