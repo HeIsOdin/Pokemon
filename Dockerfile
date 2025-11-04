@@ -27,5 +27,8 @@ RUN git clone --single-branch --branch $BRANCH $REPO /pidgeotto
 # Install Python dependencies
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# Run the Flask app
+# Make log directory
+RUN mkdir -p /pidgeotto/logs
+
+# Run the app
 CMD ["python", "pidgeotto.py"]
