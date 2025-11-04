@@ -86,10 +86,9 @@ def send_email(to_email: str, subject: str, body: str):
         smtp.login(EMAIL, PASSWORD)
         smtp.send_message(msg)
 
-#schedule.every(3).minutes.do(get_report)
+schedule.every(3).minutes.do(get_report)
 
 if __name__ == "__main__":
-    while True: pass
     get_report()
     while True:
         schedule.run_pending()
