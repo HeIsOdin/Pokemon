@@ -4,6 +4,8 @@ from email.message import EmailMessage
 import rotom
 import datetime
 import discord
+import dotenv
+dotenv.load_dotenv()
 
 EMAIL, PASSWORD = rotom.enviromentals('EMAIL', 'EMAIL_PASSWORD')
 
