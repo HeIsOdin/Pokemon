@@ -1,0 +1,36 @@
+# Use an official Python base image
+FROM python:3.10-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
+WORKDIR /pidgeotto
+
+# Install OS dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project files into the container
+# COPY pidgeotto.py /pidgeotto/
+# COPY rotom.py /pidgeotto/
+# COPY .env /pidgeotto/
+ARG REPO='https://github.com/HeIsOdin/Pokemon.git'
+ARG BRANCH='pidgeotto'
+RUN git clone --single-branch --branch $BRANCH $REPO /pidgeotto
+
+# Install Python dependencies
+RUN pip install --upgrade pip && pip install \
+    schedule \
+    discord.py \
+    python-dotenv \
+    psycopg2-binary
+
+# Run the Flask app
+CMD ["python", "pidgeotto.py"]
