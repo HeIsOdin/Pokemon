@@ -20,7 +20,7 @@ This module is intended to be imported by other scripts and should not
 be run as a standalone executable.
 """
 
-import os
+import os, traceback
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -106,6 +106,13 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
                     return results
                 conn.commit()
                 return []
-    except psycopg2.OperationalError as e:
-        with open('logs/pidgeotto.log', 'a') as fp: fp.write(f'{e}\n')
+    except psycopg2.Error as e:  # catches OperationalError, ProgrammingError, IntegrityError, etc.
+        os.makedirs('logs', exist_ok=True)
+        with open('logs/pidgeotto.log', 'a') as fp:
+            fp.write(f'{e}\n{traceback.format_exc()}\n')
+        return []  # distinguish error from “no rows”
+    except Exception as e:
+        os.makedirs('logs', exist_ok=True)
+        with open('logs/pidgeotto.log', 'a') as fp:
+            fp.write(f'{e}\n{traceback.format_exc()}\n')
         return []
