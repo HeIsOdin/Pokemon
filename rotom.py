@@ -21,6 +21,7 @@ be run as a standalone executable.
 """
 
 import os, traceback
+import psycopg2
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -67,7 +68,6 @@ def enviromentals(*vars: str) -> tuple:
     return tuple(values)
 
 def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: dict = {}, limit: int = -1,):
-    import psycopg2
     DATABASE, USER, PASSWORD, HOST, PORT = enviromentals(
     'POSTGRESQL_DBNAME',
     'POSTGRESQL_USER',
@@ -106,7 +106,7 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
                     return results
                 conn.commit()
                 return []
-    except psycopg2.Error as e:  # catches OperationalError, ProgrammingError, IntegrityError, etc.
+    except psycopg2.Error as e:
         os.makedirs('logs', exist_ok=True)
         with open('logs/pidgeotto.log', 'a') as fp:
             fp.write(f'{e}\n{traceback.format_exc()}\n')
