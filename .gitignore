@@ -24,9 +24,6 @@ flask_sessions/
 # Logs
 logs/
 
-# Dockerfile
-Dockerfile
-
 to-do.txt
 demo*
 
