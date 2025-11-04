@@ -5,7 +5,7 @@
 /images
 
 # virtual environment
-PyPikachu
+.venv/
 
 # Python cache files
 __pycache__/
