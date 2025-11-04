@@ -56,90 +56,14 @@ def html_template(reports: list):
             )
         return f"<table>{''.join(rows)}</table>"
 
-    return ''.join((
-    """
-    <!DOCTYPE HTML>
-    <html>
-	    <head>
-		    <title>PyPikachu</title>
-		    <meta charset="utf-8"/>
-		    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-            <link rel="icon" href="https://heisodin.github.io/Pokemon/media/favicon.jpg"/>
-            <style>
-                table {
-	                border-collapse: collapse;
-	                border-spacing: 0;
-                    margin: 0 0 2rem 0;
-		            width: 100%;
-                }
-
-                table tbody tr {
-			        border: solid 1px #ffffff;
-			        border-left: 0;
-        			border-right: 0;
-		        }
-
-			    table tbody tr:nth-child(2n + 1) {
-				    background-color: rgba(255, 255, 255, 0.075);
-			    }
-
-		        table td {
-			        padding: 0.75em 0.75em;
-		        }
-
-		        table th {
-			        color: #ffffff;
-			        font-size: 0.9em;
-			        font-weight: 600;
-			        padding: 0 0.75em 0.75em 0.75em;
-			        text-align: left;
-		        }
-
-		        table thead {
-			        border-bottom: solid 2px #ffffff;
-		        }
-
-		        table tfoot {
-			        border-top: solid 2px #ffffff;
-		        }
-
-		        table.alt {
-			        border-collapse: separate;
-		        }
-
-			    table.alt tbody tr td {
-				    border: solid 1px #ffffff;
-				    border-left-width: 0;
-				    border-top-width: 0;
-			    }
-
-				table.alt tbody tr td:first-child {
-					border-left-width: 1px;
-				}
-
-			    table.alt tbody tr:first-child td {
-				    border-top-width: 1px;
-			    }
-
-			    table.alt thead {
-				    border-bottom: 0;
-			    }
-
-			    table.alt tfoot {
-				    border-top: 0;
-			    }
-            </style>
-	    </head>
-    """,
-
-    f"""
+    with open('template.html', 'r') as fp: template = fp.read()
+    return ''.join((template, f"""
 	    <body class="is-preload">
     	    <div id="task-history-container">
                 {render_table_from_data(reports)}
 		    </div>
-        </body>
-    </html>
-    """
+        </body></html>
+        """
     ))
 
 def send_email(to_email: str, subject: str, body: str):
