@@ -27,6 +27,7 @@ import numpy as np
 import os
 from sklearn.model_selection import train_test_split
 from keras import layers, models, Input
+from kagglehub.config import set_kaggle_credentials
 import rotom
 import kagglehub
 
@@ -56,6 +57,8 @@ def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str, download: boo
                     os.system(f'kaggle datasets download {author}/{dataset_name}')
             else:
                 # Use kagglehub fallback
+                set_kaggle_credentials(username=os.environ.get('KAGGLE_USERNAME', ''),
+                                        api_key=os.environ.get('KAGGLE_KEY', ''))
                 kagglehub.login()
                 os.environ["KAGGLEHUB_CACHE"] = TRAINING_DIR
             rotom.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle", 4)
