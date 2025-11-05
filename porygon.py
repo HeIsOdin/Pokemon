@@ -30,6 +30,7 @@ from keras import layers, models, Input
 from kagglehub.config import set_kaggle_credentials
 import rotom
 import kagglehub
+from dotenv import load_dotenv
 
 def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str, download: bool, use_local_storage: bool) -> str:
     """
@@ -56,10 +57,10 @@ def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str, download: boo
                 else:
                     os.system(f'kaggle datasets download {author}/{dataset_name}')
             else:
+                load_dotenv()
                 # Use kagglehub fallback
                 set_kaggle_credentials(username=os.environ.get('KAGGLE_USERNAME', ''),
                                         api_key=os.environ.get('KAGGLE_KEY', ''))
-                kagglehub.login()
                 os.environ["KAGGLEHUB_CACHE"] = TRAINING_DIR
             rotom.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle", 4)
             path = kagglehub.dataset_download(f"{author}/{dataset_name}")
