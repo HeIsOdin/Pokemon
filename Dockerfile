@@ -1,5 +1,5 @@
 # Use an official Python base image
-FROM python:3.10-slim
+FROM python:3.10-slim-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -11,6 +11,8 @@ WORKDIR /celebi
 # Install OS dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
+    libgl1 \
+    libglib2.0-0 \
     libssl-dev \
     libffi-dev \
     wget \
@@ -22,7 +24,7 @@ RUN apt-get update && apt-get install -y \
 # Clone project files into the container
 ARG REPO='https://github.com/HeIsOdin/Pokemon.git'
 ARG BRANCH='celebi'
-RUN git clone --single-branch --branch $BRANCH $REPO /pidgeotto
+RUN git clone --single-branch --branch $BRANCH $REPO /celebi
 
 # Install Python dependencies
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
