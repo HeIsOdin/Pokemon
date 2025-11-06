@@ -28,16 +28,14 @@ def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, 
                 exit()
             args.update({
                 'training_dir': porygon.get_dataset(
-                    args.get("training_dir", ""),
                     args['author'],
                     args['dataset'],
-                    download_dataset,
-                    USE_LOCAL_STORAGE
+                    download_dataset
                 )})
             attempts -= 1
             directoryCheck = rotom.directory_check(args.get("training_dir", ""))
 
-        images, labels, filenames = porygon.load_dataset_from_directory(args.get("training_dir", ""), args.get('input_shape', [128, 128]), USE_RGB)
+        images, labels, filenames = porygon.load_dataset_from_directory(args.get("training_dir", ""), args.get('input_shape', [128, 128]), USE_RGB, USE_LOCAL_STORAGE)
         if verbose: porygon.display_sample(images, labels, filenames)
         new_images, new_labels = porygon.convert_and_reshape(images, labels)
         training_images, testing_images, training_labels, testing_labels = porygon.split_dataset(new_images, new_labels)
