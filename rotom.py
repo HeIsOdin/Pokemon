@@ -22,8 +22,6 @@ be run as a standalone executable.
 
 
 import os
-import json
-import argparse
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -87,96 +85,6 @@ def pause(seconds: float):
     time.sleep(seconds)
     print("")  # Add spacing
 
-def directory_check(data_dir: str) -> bool:
-    """
-    Check if the directory contains any image files (jpg, png, jpeg).
-    
-    Args:
-        - data_dir (str): The directory path to check.
-    
-    Returns:
-    - bool: True if image files are found, False otherwise.
-    """
-    file_names = []
-    try:
-        for root, _, files in os.walk(data_dir):
-            for file in files:
-                if file.endswith((".jpg", ".png", ".jpeg")):
-                    file_names.append(os.path.join(root, file))
-    except FileNotFoundError:
-        print_with_color(f"No such directory '{data_dir}'", 1, False)
-        return False
-    else:
-        print_with_color(f"Found {len(file_names)} images in {data_dir}", 4)
-        return len(file_names) > 0
-
-def extract_zipfile(TRAINING_DIR: str) -> str:
-    """
-    Extract a ZIP file to a directory.
-    
-    Args:
-        - TRAINING_DIR (str): Path to the ZIP file.
-    
-    Returns:
-    - str: Path to the extracted directory.
-    """
-    import zipfile
-    zip_file_path = TRAINING_DIR
-    extract_to = TRAINING_DIR.replace(".zip", "")
-    print_with_color(f"Extracting compressed dataset to {extract_to}...", 4)
-    try:
-        with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
-            zip_ref.extractall(extract_to)
-    except Exception as e:
-        print_with_color(f"Unable to extract compressed dataset: {str(e)}", 1)
-    else:
-        print_with_color("Dataset Extracted Successfully.", 2)
-    return extract_to
-
-def parse_JSON_as_arguments(file: str, defect: str, arg_template: list) -> dict:
-    """
-    Parse a JSON configuration file and extract arguments for a given defect.
-    
-    Args:
-        - file (str): Path to the JSON file.
-        - defect (str): The defect key to look up.
-        - arg_template (list): List of keys to extract.
-    
-    Returns:
-    - dict: Dictionary containing argument values.
-    """
-    with open(file, 'r') as fp:
-        configs: dict = json.load(fp)[defect]
-    
-    args = {}
-    for key, value in configs.items():
-        if key in arg_template:
-            if isinstance(value, list):
-                args[key] = tuple(value)
-            elif key == "dataset":
-                if type(value) == str:
-                    args['author'], args['dataset'] = value.split("/")
-                if type(value) == list: args['author'], args['dataset'] = value
-            else:
-                args[key] = value
-    return args
-
-def pass_arguments_to_main() -> argparse.Namespace:
-    """
-    Parse command-line arguments for the main script.
-    
-    Returns:
-    - argparse.Namespace: Parsed argument object.
-    """
-    parser = argparse.ArgumentParser(description="The core of PyPikachu model")
-    parser.add_argument("--defect", type=str, help="Name of the Pokemon Card Defect", required=True)
-    parser.add_argument("--price", type=float, help="Maximum price you are willing to pay", required=True)
-    parser.add_argument("--use_local_storage", action='store_true', help="Use permanent local storage?")
-    parser.add_argument("--use_rgb", action='store_true', help="Use RGB instead of grayscale?")
-    parser.add_argument("--kaggle_download", action='store_true', help="Download Kaggle dataset")
-    parser.add_argument("--verbose", action='store_true', help='Show a verbose output')
-    return parser.parse_args()
-
 def hash_function(itemId: str, price: float) -> str:
     encoded_defect = ''.join([str(ord(char)) for char in itemId])
     hash = int(round(price)) * int(encoded_defect)
@@ -223,9 +131,3 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
                 return results
             conn.commit()
             return []
-
-def show_image(image, image_name="demo"):
-    import cv2
-    cv2.imshow(image_name, image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
