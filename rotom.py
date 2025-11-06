@@ -62,8 +62,6 @@ def enviromentals(*vars: str) -> tuple:
     Returns:
     - tuple (number of arguments passed): values of environmental variables
     """
-    import dotenv
-    dotenv.load_dotenv()
 
     values = []
     for var in vars:
