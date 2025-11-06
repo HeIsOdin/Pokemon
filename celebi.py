@@ -3,6 +3,7 @@ import arceus
 import rotom
 import json
 import datetime
+import os
 
 models = {}
 
@@ -23,7 +24,6 @@ def run_script(tasks: list[dict], AI=None):
         report(results, task.get('id', ''), task.get('username', ''))
 
 def report(results: list, id: str, username: str):
-    with open('logs/setu.log', 'a') as fp: fp.write(f'{results}\n')
     try:
         rotom.postgresql(
             "INSERT INTO tables (columns) VALUES (values)",
@@ -32,6 +32,10 @@ def report(results: list, id: str, username: str):
             {'taskid': id, 'username': username, 'body': json.dumps(results), 'creation': datetime.datetime.now(datetime.timezone.utc), 'status': 'ready'}
     )
     except Exception as e:
+        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
+        try: os.makedirs(LOGS_DIR, exist_ok=True)
+        except PermissionError as e: rotom.print_with_color(f"Permission denied when creating datasets directory: {str(e)}", 1)
+        except Exception as e: rotom.print_with_color(f"Unable to create datasets directory: {str(e)}", 1)
         with open('logs/setup.log', 'a') as fp: fp.write(f'2 {e}\n')
     else:
         try:
