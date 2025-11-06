@@ -6,10 +6,7 @@ from flask_cors import CORS
 
 import json
 import datetime
-import subprocess
-import requests
 import os
-import time
 import rotom
 import re
 import bcrypt
@@ -56,46 +53,6 @@ FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE,
     'POSTGRESQL_TABLE_FOR_TASKS',
     'POSTGRESQL_TABLE_FOR_USERS',
     )
-
-def git_commit():
-    subprocess.run(["git", "add", "docs/env.json"], check=True)
-    subprocess.run(["git", "commit", "-m", f"Update env.json {datetime.datetime.now().isoformat()}"], check=True)
-    subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
-
-def start_ngrok():
-    subprocess.run(
-        ["ngrok", "config", "add-authtoken", NGROK_TOKEN],
-        capture_output=True,
-        text=True,
-        check=True
-    )
-    return subprocess.Popen(
-        ["ngrok", "http", str(FLASK_PORT)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-
-def get_ngrok_url(retries=5):
-    for _ in range(retries):
-        time.sleep(5)
-        try:
-            response = requests.get(NGROK_API).json()
-            for tunnel in response["tunnels"]:
-                if tunnel["proto"] == "https":
-                    return tunnel["public_url"]
-        except Exception as e:
-            print({e})
-    return None
-
-def save_env_url(url, state):
-    with open("docs/env.json", "r") as p: prev_env = json.load(p)
-    if prev_env.get('url', '') == url: return
-    (REMOTE_NAME,) = rotom.enviromentals("GIT_REMOTE_NAME")
-    subprocess.run(["git", "fetch", f"{REMOTE_NAME}"], check=True)
-    subprocess.run(["git", "rebase", f"{REMOTE_NAME}/main"], check=True)
-    with open("docs/env.json", "w") as f:
-        json.dump({"url": url, "state":state}, f, indent=2)
-    git_commit()
 
 def submit_task(details: dict):
     template = ('defect', 'threshold', 'creation', 'status', 'hash', 'market', 'username')
@@ -159,19 +116,7 @@ def sanitizer(details: dict, updating: bool = False):
     return True, ""
 
 def main():
-    print("🔁 Starting Flask and Ngrok...")
-
-    ngrok_proc = start_ngrok()
-
-    print("⏳ Waiting for Ngrok tunnel...")
-    public_url = get_ngrok_url()
-
-    if public_url:
-        print(f"🌐 Ngrok URL: {public_url}")
-        save_env_url(public_url, "active")
-        print("✅ Saved env.json")
-    else:
-        print("❌ Failed to retrieve Ngrok URL")
+    print("🔁 Starting Zapdos...")
 
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
@@ -182,8 +127,6 @@ def main():
         print(f"\n Something went wrong {e}")
 
     print("\n🛑 Shutting down...")
-    save_env_url(public_url, "expired")
-    ngrok_proc.terminate()
 
 @app.route("/")
 def ping():
