@@ -1,16 +1,7 @@
 requests
-opencv-python
-numpy
-python-dotenv
-tensorflow
-matplotlib
-scikit-learn
-kaggle
 flask
 flask-cors
 flask-session
 flask-login
-gitpython
 psycopg2-binary
 bcrypt
-schedule
