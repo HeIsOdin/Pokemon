@@ -29,6 +29,7 @@ import traceback
 import cv2
 import zipfile
 import time
+import shutil
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -110,6 +111,22 @@ def directory_check(data_dir: str) -> bool:
     else:
         print_with_color(f"Found {len(file_names)} images in {data_dir}", 4)
         return len(file_names) > 0
+
+def clear_directory(data_dir: str) -> None:
+
+    # Check if the directory exists before attempting to delete it
+    if os.path.isdir(data_dir):
+        try:
+            shutil.rmtree(data_dir)
+            print(f"Directory '{data_dir}' and its contents have been deleted successfully.")
+        except FileNotFoundError:
+            print(f"Directory '{data_dir}' not found.")
+        except PermissionError:
+            print(f"Permission denied to delete the directory '{data_dir}'.")
+        except Exception as e:
+            print(f"An error occurred while deleting the directory: {e}")
+    else:
+        print(f"Directory '{data_dir}' does not exist.")
 
 def extract_zipfile(TRAINING_DIR: str) -> str:
     """
