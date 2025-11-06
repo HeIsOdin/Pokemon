@@ -41,10 +41,8 @@ class User(UserMixin):
         self.id = username
         self.name = username
 
-FLASK_PORT, NGROK_API, NGROK_TOKEN, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = rotom.enviromentals(
+FLASK_PORT, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = rotom.enviromentals(
     'FLASK_PORT',
-    'NGROK_API',
-    'NGROK_TOKEN',
     'POSTGRESQL_DBNAME',
     'POSTGRESQL_USER',
     'POSTGRESQL_PASSWD',
