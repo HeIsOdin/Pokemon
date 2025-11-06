@@ -21,8 +21,7 @@ Dependencies:
 This module is intended to be called from the main execution pipeline and
 provides essential ML components for the PyPikachu project.
 """
-from dotenv import load_dotenv
-load_dotenv()
+
 import cv2
 import numpy as np
 import os
