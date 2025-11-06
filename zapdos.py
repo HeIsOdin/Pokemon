@@ -83,6 +83,8 @@ def submit_task(details: dict):
         )
     except Exception as e:
         message = f"The task was unable to be added. Check your task fields and try again.", False
+        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
+        os.makedirs(LOGS_DIR, exist_ok=True)
         with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
     else:
         message = "Task was submitted successfully", True
@@ -124,6 +126,9 @@ def main():
     try:
         app.run(port=FLASK_PORT)
     except Exception as e:
+        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
+        os.makedirs(LOGS_DIR, exist_ok=True)
+        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
         print(f"\n Something went wrong {e}")
 
     print("\n🛑 Shutting down...")
@@ -174,7 +179,10 @@ def login():
             message = "We do not have your records"
 
     except Exception as e:
-        message = str(e)
+        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
+        os.makedirs(LOGS_DIR, exist_ok=True)
+        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
+        message = "An error occurred during login. Please try again."
 
     finally:
         return jsonify({
@@ -212,7 +220,10 @@ def register():
         )
     
     except Exception as e:
-        message = str(e)
+        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
+        os.makedirs(LOGS_DIR, exist_ok=True)
+        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
+        message = "Registration failed"
 
     else:
         success, message = True, "You've been registered successfully"
@@ -238,7 +249,10 @@ def submit():
 
     except Exception as e:
         success = False
-        message = str(e)
+        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
+        os.makedirs(LOGS_DIR, exist_ok=True)
+        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
+        message = "An error occurred while submitting the task. Please try again."
     
     finally:
         return jsonify({
@@ -304,7 +318,10 @@ def update_info():
         )
  
     except Exception as e:
-        message = str(e)
+        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
+        os.makedirs(LOGS_DIR, exist_ok=True)
+        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
+        message = "An error occurred while updating your information. Please try again."
 
     else:
         success = True
