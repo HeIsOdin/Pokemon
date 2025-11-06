@@ -211,13 +211,14 @@ def align_with_orb(img, template, out_wh):
     if len(matches) < 10: return None
     src = np.array([kp1[m.queryIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
     dst = np.array([kp2[m.trainIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
-    H, mask = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
+    H, _ = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
     if H is None: return None
     return cv2.warpPerspective(img, H, (w, h), flags=cv2.INTER_LANCZOS4)
 
-def refine_roi_by_ncc(aligned, roi_box, roi_template_path, search=8):
+def refine_roi_by_ncc(aligned, roi_box, roi_template_path: str, search=8):
     x,y,w,h = roi_box
-    roi_template = cv2.imread(roi_template_path, cv2.IMREAD_COLOR) or np.zeros((h, w, 3), dtype=np.uint8)
+    roi_template = cv2.imread(roi_template_path, cv2.IMREAD_COLOR)
+    if roi_template is None: roi_template = np.zeros((h, w, 3), dtype=np.uint8)
     best, best_off = -1.0, (0,0)
     for dy in range(-search, search+1):
         for dx in range(-search, search+1):
