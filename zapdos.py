@@ -13,7 +13,7 @@ import bcrypt
 import logging
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://heisodin.github.io"]}})
+CORS(app, supports_credentials=True, origins=["https://heisodin.github.io"])
 (app.secret_key,) = rotom.enviromentals('FLASK_SECRET_KEY')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(os.getcwd(), 'flask_sessions')
