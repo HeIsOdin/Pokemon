@@ -1,7 +1,8 @@
 const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
-const headerOptions = {
-  'ngrok-skip-browser-warning': 'true',
-  credentials: 'include'
+const fetchInit = {
+  headers: {'ngrok-skip-browser-warning': 'true'},
+  credentials: 'include',
+  method: 'OPTIONS',
 };
 
 function callHamster(url="hamster.html") {
@@ -50,7 +51,7 @@ async function init() {
   const infoUrl = BASE_URL + '/user-info';
 
   try {
-    const res = await fetch(infoUrl, {headers: headerOptions});
+    const res = await fetch(infoUrl, {...fetchInit, method: 'GET'});
     data_and_info = await res.json();
     if ('redirect' in data_and_info) return callHamster(data_and_info['redirect']);
   } catch {

@@ -5,9 +5,10 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
-const headerOptions = {
-  'ngrok-skip-browser-warning': 'true',
-  credentials: 'include'
+const fetchInit = {
+  headers: {'ngrok-skip-browser-warning': 'true'},
+  credentials: 'include',
+  method: 'OPTIONS',
 };
 
 function callHamster(url="hamster.html") {
@@ -20,7 +21,7 @@ async function load_url_into_form() {
 	
 	const url = BASE_URL + '/login';
 	try {
-	    await fetch(url, {headers: headerOptions, method: 'OPTIONS'});
+	    await fetch(url, fetchInit);
 		form.action = url
     } catch {
         callHamster();
@@ -62,7 +63,7 @@ function submit_form() {
 	
 		const formData = new FormData(form);
 	
-		fetch(form.action, {headers:headerOptions, method: 'POST', body: formData})
+		fetch(form.action, {...fetchInit, method: 'POST', body: formData})
 		.then(response => response.json())
     	.then(data => {
 			if (data.success) {

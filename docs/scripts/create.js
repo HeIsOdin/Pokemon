@@ -1,8 +1,9 @@
 let defectConfig = {};
 const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
-const headerOptions = {
-  'ngrok-skip-browser-warning': 'true',
-  credentials: 'include'
+const fetchInit = {
+  headers: {'ngrok-skip-browser-warning': 'true'},
+  credentials: 'include',
+  method: 'OPTIONS',
 };
 
 function callHamster(url="hamster.html") {
@@ -16,7 +17,7 @@ async function load_options_from_JSON() {
     form.action = BASE_URL+'/submit';
 	const url = BASE_URL + '/options';
     try {
-	    const response = await fetch(url, {headers: headerOptions});
+	    const response = await fetch(url, {...fetchInit, method: 'GET'});
         defectConfig = await response.json();
 
         if ('redirect' in defectConfig) callHamster(defectConfig['redirect']); 
@@ -64,7 +65,7 @@ function submit_form() {
 		const formData = new FormData(form);
 	
 		fetch(form.action, {
-            ...headerOptions,
+            ...fetchInit,
 			method: 'POST',
 			body: formData,
 		})

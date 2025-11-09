@@ -397,9 +397,10 @@ document.addEventListener("DOMContentLoaded", async function () {await body();})
 })(jQuery);
 
 const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
-const headerOptions = {
-  'ngrok-skip-browser-warning': 'true',
-  credentials: 'include'
+const fetchInit = {
+  headers: {'ngrok-skip-browser-warning': 'true'},
+  credentials: 'include',
+  method: 'OPTIONS',
 };
 
 function callHamster(url="hamster.html") {
@@ -420,7 +421,7 @@ async function body() {
 	const data_and_info_url = BASE_URL + '/user-info';
 	const logout_url = BASE_URL + '/logout';
     try {
-	    const response = await fetch(data_and_info_url, {headers: headerOptions});
+	    const response = await fetch(data_and_info_url, {...headerOptions, method: 'GET'});
         data_and_info = await response.json();
 		if ('redirect' in data_and_info) callHamster(data_and_info['redirect']);
     } catch {
