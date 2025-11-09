@@ -43,14 +43,10 @@ function transformInfo(list, tz='America/Chicago') {
 
 let data_and_info;
 async function init() {
-  const base = BASE_URL;
-  const infoUrl = base + '/user-info';
+  const infoUrl = BASE_URL + '/user-info';
 
   try {
     const res = await fetch(infoUrl, {
-      headers: {
-        "Content-Type": "application/json"
-      },
       credentials: "include"
     });
     data_and_info = await res.json();

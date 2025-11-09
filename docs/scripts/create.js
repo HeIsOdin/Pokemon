@@ -10,12 +10,9 @@ async function load_options_from_JSON() {
 	if (!form) return;
 	
     form.action = BASE_URL+'/submit';
-	const url = form.action.replace('submit', 'options');
+	const url = BASE_URL + '/options';
     try {
 	    const response = await fetch(url, {
-		    headers: {
-                "Content-Type": "application/json"
-            },
             credentials: "include"
 	    });
         defectConfig = await response.json();
