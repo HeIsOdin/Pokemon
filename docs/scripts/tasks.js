@@ -1,9 +1,3 @@
-document.addEventListener("DOMContentLoaded", function () {
-		load_url_into_form();
-		submit_form();
-	//else callHamster();
-});
-
 let BASE_URL = 'https://reeligible-extravagantly-jong.ngrok-free.dev/pypikachu'
 
 function callHamster(url="hamster.html") {
