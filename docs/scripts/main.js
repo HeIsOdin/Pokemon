@@ -1,3 +1,5 @@
+body()
+
 (function($) {
 
 	var	$window = $(window),
