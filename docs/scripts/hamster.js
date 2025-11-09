@@ -1,6 +1,7 @@
 const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
 const headerOptions = {
   'ngrok-skip-browser-warning': 'true',
+    credentials: 'include'
 };
 
 async function logoAnimation() {
