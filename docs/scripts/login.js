@@ -17,9 +17,6 @@ async function load_url_into_form() {
 	const url = BASE_URL;
 	try {
 	    await fetch(url, {
-		    headers: {
-				"Content-Type": "application/json"
-			},
 			credentials: "include"
 	    });
 		form.action = url + '/login'
