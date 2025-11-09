@@ -14,12 +14,12 @@ async function load_url_into_form() {
 	const form = document.querySelector('form');
 	if (!form) return;
 	
-	const url = BASE_URL;
+	const url = BASE_URL + '/login';
 	try {
 	    await fetch(url, {
 			credentials: "include"
 	    });
-		form.action = url + '/login'
+		form.action = url
     } catch {
         callHamster();
     }
