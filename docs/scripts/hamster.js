@@ -1,4 +1,12 @@
-let BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
+const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
+const headerOptions = {
+  'ngrok-skip-browser-warning': 'true',
+  credentials: 'include'
+};
+
+function callHamster(url="hamster.html") {
+    window.location.replace('/Pokemon/pages/' + url);
+}
 
 async function logoAnimation() {
     return new Promise((resolve) => {
@@ -46,7 +54,7 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function waitForCookie() {
+async function waitForActiveUrl() {
     let retries = 0;
     const maxRetries = 40;
 
@@ -73,6 +81,6 @@ async function waitForCookie() {
     window.location.replace('pages/unknown.html');
 }
 
-waitForCookie();
+waitForActiveUrl();
 
 

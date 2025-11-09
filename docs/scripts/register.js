@@ -4,7 +4,11 @@ document.addEventListener("DOMContentLoaded", function () {
 	//else callHamster();
 });
 
-let BASE_URL = 'hhttps://7fe038f5dcfd.ngrok-free.app/pypikachu'
+const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
+const headerOptions = {
+  'ngrok-skip-browser-warning': 'true',
+  credentials: 'include'
+};
 
 function callHamster(url="hamster.html") {
     window.location.replace('/Pokemon/pages/' + url);
@@ -16,12 +20,7 @@ async function load_url_into_form() {
 	
 	const url = BASE_URL;
 	try {
-	    await fetch(url, {
-		    headers: {
-				"Content-Type": "application/json"
-			},
-			credentials: "include"
-	    });
+	    await fetch(url, headerOptions);
 		form.action = url + '/login'
     } catch {
         callHamster();

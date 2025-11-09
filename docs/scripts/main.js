@@ -396,7 +396,11 @@ document.addEventListener("DOMContentLoaded", async function () {await body();})
 
 })(jQuery);
 
-let BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
+const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
+const headerOptions = {
+  'ngrok-skip-browser-warning': 'true',
+  credentials: 'include'
+};
 
 function callHamster(url="hamster.html") {
     window.location.replace('/Pokemon/pages/' + url);
@@ -413,12 +417,10 @@ async function body() {
 	if (!form) return
 	
 	form.action = BASE_URL+'/update';
-	const data_and_info_url = form.action.replace('update', 'user-info');
-	const logout_url = form.action.replace('update', 'logout');
+	const data_and_info_url = BASE_URL + '/user-info';
+	const logout_url = BASE_URL + '/logout';
     try {
-	    const response = await fetch(data_and_info_url, {
-            credentials: "include"
-	    });
+	    const response = await fetch(data_and_info_url, headerOptions);
         data_and_info = await response.json();
 		if ('redirect' in data_and_info) callHamster(data_and_info['redirect']);
     } catch {

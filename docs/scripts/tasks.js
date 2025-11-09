@@ -1,4 +1,8 @@
-let BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
+const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
+const headerOptions = {
+  'ngrok-skip-browser-warning': 'true',
+  credentials: 'include'
+};
 
 function callHamster(url="hamster.html") {
     window.location.replace('/Pokemon/pages/' + url);
@@ -46,9 +50,7 @@ async function init() {
   const infoUrl = BASE_URL + '/user-info';
 
   try {
-    const res = await fetch(infoUrl, {
-      credentials: "include"
-    });
+    const res = await fetch(infoUrl, headerOptions);
     data_and_info = await res.json();
     if ('redirect' in data_and_info) return callHamster(data_and_info['redirect']);
   } catch {
