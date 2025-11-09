@@ -1,5 +1,5 @@
 let defectConfig = {};
-let BASE_URL = 'https://reeligible-extravagantly-jong.ngrok-free.dev/pypikachu'
+let BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app'
 
 function callHamster(url="hamster.html") {
     window.location.replace('/Pokemon/pages/' + url);
