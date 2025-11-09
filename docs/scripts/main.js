@@ -1,4 +1,4 @@
-await body()
+document.addEventListener("DOMContentLoaded", async function () {await body();});
 
 (function($) {
 
