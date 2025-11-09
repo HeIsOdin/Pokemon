@@ -73,7 +73,6 @@ def submit_task(details: dict):
                 return f"The marketplace '{market}' is unavailable", False
 
     try:
-        with open('logs/app.log', 'a') as fp: fp.write(f'{details}\n')
         rotom.postgresql(
             "INSERT INTO tables (columns) VALUES (values)",
             rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
@@ -84,7 +83,7 @@ def submit_task(details: dict):
         message = f"The task was unable to be added. Check your task fields and try again.", False
         LOGS_DIR = os.path.join(os.getcwd(), 'logs')
         os.makedirs(LOGS_DIR, exist_ok=True)
-        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
+        with open('logs/app.log', 'a') as fp: fp.write(f'{e} - {details}\n')
     else:
         message = "Task was submitted successfully", True
     finally:
