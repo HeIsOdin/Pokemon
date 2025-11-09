@@ -122,7 +122,7 @@ def main():
     log.setLevel(logging.ERROR)
 
     try:
-        app.run(port=FLASK_PORT)
+        app.run(host="0.0.0.0", port=FLASK_PORT)
     except Exception as e:
         LOGS_DIR = os.path.join(os.getcwd(), 'logs')
         os.makedirs(LOGS_DIR, exist_ok=True)
