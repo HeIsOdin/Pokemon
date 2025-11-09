@@ -421,7 +421,7 @@ async function body() {
 	const data_and_info_url = BASE_URL + '/user-info';
 	const logout_url = BASE_URL + '/logout';
     try {
-	    const response = await fetch(data_and_info_url, {...headerOptions, method: 'GET'});
+	    const response = await fetch(data_and_info_url, {...fetchInit, method: 'GET'});
         data_and_info = await response.json();
 		if ('redirect' in data_and_info) callHamster(data_and_info['redirect']);
     } catch {
