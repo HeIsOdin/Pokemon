@@ -426,8 +426,8 @@ async function body() {
     } catch {
 		callHamster();
     } finally {
-		let info = data_and_info['info'];
-		let data = data_and_info['data'];
+		let info = data_and_info['info'] || [];
+		let data = data_and_info['data'] || {};
 		const table = document.querySelector("table");
   		const thead = table.querySelector("thead");
   		const tbody = table.querySelector("tbody");
