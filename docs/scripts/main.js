@@ -417,9 +417,6 @@ async function body() {
 	const logout_url = form.action.replace('update', 'logout');
     try {
 	    const response = await fetch(data_and_info_url, {
-		    headers: {
-                "Content-Type": "application/json"
-            },
             credentials: "include"
 	    });
         data_and_info = await response.json();
