@@ -1,4 +1,4 @@
-body()
+await body()
 
 (function($) {
 
