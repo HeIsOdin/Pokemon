@@ -1,8 +1,3 @@
-document.addEventListener("DOMContentLoaded", function () {
-    if (getCookie('url') && getCookie('state') === 'active') body();
-    else callHamster();
-});
-
 (function($) {
 
 	var	$window = $(window),
@@ -399,23 +394,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 })(jQuery);
 
-function getCookie(name) {
-    const cookies = document.cookie.split('; ');
-    for (let cookie of cookies) {
-        let [key, val] = cookie.split('=');
-        if (key === name) {
-            if (val !== "") return decodeURIComponent(val);
-        }
-    }
-  return null;
-}
+let BASE_URL = 'https://reeligible-extravagantly-jong.ngrok-free.dev/pypikachu'
 
-function callHamster(url='hamster.html') {
-    const currentUrl = window.location.href;
-
-	const expires = new Date(Date.now() + 6e5).toUTCString();
-    document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
-
+function callHamster(url="hamster.html") {
     window.location.replace('/Pokemon/pages/' + url);
 }
 
@@ -429,13 +410,12 @@ async function body() {
 
 	if (!form) return
 	
-	form.action = getCookie('url')+'/update';
+	form.action = BASE_URL+'/update';
 	const data_and_info_url = form.action.replace('update', 'user-info');
 	const logout_url = form.action.replace('update', 'logout');
     try {
 	    const response = await fetch(data_and_info_url, {
 		    headers: {
-                "ngrok-skip-browser-warning": "true",
                 "Content-Type": "application/json"
             },
             credentials: "include"
@@ -493,9 +473,6 @@ async function body() {
 		const formData = new FormData(form);
 	
 		fetch(form.action, {
-			headers: {
-                "ngrok-skip-browser-warning": "true"
-            },
             credentials: "include",
 			method: 'POST',
 			body: formData
@@ -505,7 +482,7 @@ async function body() {
 
     	.then(data => {
 			if (data.success) {
-				const url = getCookie('caller') || '/Pokemon';
+				const url = null || '/Pokemon';
 				window.location.replace(url)
 			} else {
 				errorDiv.style.display = "block";
@@ -527,9 +504,6 @@ async function body() {
 	
 	confirmLogout.addEventListener("click", () => {
 		fetch(logout_url, {
-			headers: {
-                "ngrok-skip-browser-warning": "true"
-            },
             credentials: "include"
 		}).then(res => res.json())
   		.then(data => window.location.replace('/Pokemon/pages/' + data.redirect));

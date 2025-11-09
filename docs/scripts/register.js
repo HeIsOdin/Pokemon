@@ -1,40 +1,28 @@
 document.addEventListener("DOMContentLoaded", function () {
-	if (getCookie('url') && getCookie('state') === 'active') {
 		load_url_into_form();
 		submit_form();
-	} else callHamster();
+	//else callHamster();
 });
 
-function getCookie(name) {
-		const cookies = document.cookie.split('; ');
-		for (let cookie of cookies) {
-			let [key, val] = cookie.split('=');
-			if (key === name) {
-				if (val !== "") return decodeURIComponent(val);
-			}
-		}
-	return null;
-}
+let BASE_URL = 'https://reeligible-extravagantly-jong.ngrok-free.dev/pypikachu'
 
-function callHamster(url='hamster.html') {
-    const currentUrl = window.location.href;
-    const expires = new Date(Date.now() + 6e5).toUTCString();
-    document.cookie = `caller=${encodeURIComponent(currentUrl)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
-    window.location.replace('pages/' + url);
+function callHamster(url="hamster.html") {
+    window.location.replace('/Pokemon/pages/' + url);
 }
 
 async function load_url_into_form() {
-	document.cookie = "caller=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 	const form = document.querySelector('form');
 	if (!form) return;
 	
-	const url = getCookie('url');
+	const url = BASE_URL;
 	try {
 	    await fetch(url, {
-		    headers: { "ngrok-skip-browser-warning": "true" },
+		    headers: {
+				"Content-Type": "application/json"
+			},
 			credentials: "include"
 	    });
-		form.action = url + '/register'
+		form.action = url + '/login'
     } catch {
         callHamster();
     }
@@ -122,7 +110,7 @@ function submit_form() {
 
     	.then(data => {
 			if (data.success) {
-				const url = getCookie('callerII') || document.querySelector("base").getAttribute("href") || '/';
+				const url = null || document.querySelector("base").getAttribute("href") || '/';
 				window.location.replace(url)
 			} else {
 				errorDiv.style.display = "block";

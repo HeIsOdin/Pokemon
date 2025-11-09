@@ -1,3 +1,5 @@
+let BASE_URL = 'https://reeligible-extravagantly-jong.ngrok-free.dev/pypikachu'
+
 async function logoAnimation() {
     return new Promise((resolve) => {
         const wah = document.querySelector('.wheel-and-hamster');
@@ -40,35 +42,6 @@ async function logoAnimation() {
     });
 }
 
-async function setCookie(hours, state='') {
-    try {
-        const response = await fetch('env.json');
-        /** @type {{ url: string, state: string }} */
-        const data = await response.json();
-
-        if (data) {
-            for (const [key, originalValue] of Object.entries(data)) {
-                const value = (key === 'state' && state !== '') ? state : originalValue;
-                const expires = new Date(Date.now() + hours * 36e5).toUTCString();
-                document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax; Secure`;
-            }
-        }
-    } catch (error) {
-        window.location.replace('pages/unknown.html');
-    }
-}
-
-function getCookie(name) {
-    const cookies = document.cookie.split('; ');
-    for (let cookie of cookies) {
-        let [key, val] = cookie.split('=');
-        if (key === name) {
-            if (val !== "") return decodeURIComponent(val);
-        }
-    }
-  return null;
-}
-
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -78,33 +51,21 @@ async function waitForCookie() {
     const maxRetries = 40;
 
     while (retries < maxRetries) {
-        const state = getCookie('state');
-        const url = getCookie('url');
+        const url = BASE_URL;
 
         if (!url) {
-            await setCookie(3);
-            await delay(5000);
-            retries++;
-            continue;
-        }
-
-        if (state === 'expired') {
-            await setCookie(3);
             await delay(5000);
             retries++;
             continue;
         }
 
         try {
-            await fetch(url, {
-                headers: { "ngrok-skip-browser-warning": "true" }
-            });
+            await fetch(url);
             await logoAnimation();
-            window.location.replace(getCookie('caller'));
+            window.location.replace('/Pokemon');
             return;
         } catch (error) {
             console.log(error)
-            await setCookie(3, 'expired');
             await delay(5000);
             retries++;
         }
