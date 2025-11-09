@@ -28,9 +28,10 @@ Session(app)
 
 @login_manager.unauthorized_handler
 def unauthorized():
-    return jsonify({
-        'redirect':'login.html'
-    })
+    if request.method == "OPTIONS":
+        return app.make_default_options_response()
+    return jsonify({"redirect": "login.html"}), 401
+
 
 @login_manager.user_loader
 def load_user(user_id):
