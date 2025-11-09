@@ -1,4 +1,4 @@
-let BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app'
+let BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
 
 async function logoAnimation() {
     return new Promise((resolve) => {

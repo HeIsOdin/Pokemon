@@ -396,7 +396,7 @@ document.addEventListener("DOMContentLoaded", async function () {await body();})
 
 })(jQuery);
 
-let BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app'
+let BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
 
 function callHamster(url="hamster.html") {
     window.location.replace('/Pokemon/pages/' + url);
