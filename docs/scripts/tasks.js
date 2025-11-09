@@ -147,3 +147,7 @@ function escapeHtml(s) {
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[c]));
 }
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await init();
+});

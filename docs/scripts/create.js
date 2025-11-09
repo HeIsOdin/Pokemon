@@ -91,3 +91,7 @@ async function body() {
 	load_options_from_JSON();
     submit_form();
 }
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await body();
+});
