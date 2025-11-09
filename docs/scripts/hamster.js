@@ -4,10 +4,6 @@ const headerOptions = {
   credentials: 'include'
 };
 
-function callHamster(url="hamster.html") {
-    window.location.replace('/Pokemon/pages/' + url);
-}
-
 async function logoAnimation() {
     return new Promise((resolve) => {
         const wah = document.querySelector('.wheel-and-hamster');
