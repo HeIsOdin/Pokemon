@@ -16,7 +16,7 @@ async function load_options_from_JSON() {
     form.action = BASE_URL+'/submit';
 	const url = BASE_URL + '/options';
     try {
-	    const response = await fetch(url, headerOptions);
+	    const response = await fetch(url, {headers: headerOptions});
         defectConfig = await response.json();
 
         if ('redirect' in defectConfig) callHamster(defectConfig['redirect']); 

@@ -20,7 +20,7 @@ async function load_url_into_form() {
 	
 	const url = BASE_URL + '/login';
 	try {
-	    await fetch(url, {...headerOptions, method: 'OPTIONS'});
+	    await fetch(url, {headers: headerOptions, method: 'OPTIONS'});
 		form.action = url
     } catch {
         callHamster();
@@ -62,7 +62,7 @@ function submit_form() {
 	
 		const formData = new FormData(form);
 	
-		fetch(form.action, {...headerOptions, method: 'POST', body: formData})
+		fetch(form.action, {headers:headerOptions, method: 'POST', body: formData})
 		.then(response => response.json())
     	.then(data => {
 			if (data.success) {

@@ -20,8 +20,7 @@ async function load_url_into_form() {
 	
 	const url = BASE_URL;
 	try {
-	    await fetch(url, headerOptions);
-		form.action = url + '/login'
+	    await fetch(url, {headers: headerOptions, method: 'OPTIONS'}).then(form.action = url + '/login', callHamster())
     } catch {
         callHamster();
     }

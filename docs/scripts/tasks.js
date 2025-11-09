@@ -50,7 +50,7 @@ async function init() {
   const infoUrl = BASE_URL + '/user-info';
 
   try {
-    const res = await fetch(infoUrl, headerOptions);
+    const res = await fetch(infoUrl, {headers: headerOptions});
     data_and_info = await res.json();
     if ('redirect' in data_and_info) return callHamster(data_and_info['redirect']);
   } catch {
