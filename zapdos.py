@@ -3,8 +3,6 @@ from flask_login import LoginManager, login_user, logout_user, login_required, U
 from flask_session import Session
 from datetime import timedelta
 from flask_cors import CORS
-from dotenv import load_dotenv
-load_dotenv()
 
 import json
 import datetime
