@@ -3,10 +3,10 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-ARG REPO=''
-ARG BRANCH='zapdos'
-
 WORKDIR /zapdos
+
+ARG REPO=""
+ARG BRANCH="zapdos"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
