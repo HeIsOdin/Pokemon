@@ -5,14 +5,15 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /zapdos
 
-ARG REPO=""
-ARG BRANCH="zapdos"
+ARG REPO='https://github.com/HeIsOdin/Pokemon.git'
+ARG BRANCH='zapdos'
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
-        git \
-    && git clone --single-branch -b ${BRANCH} ${REPO} /zapdos \
+        git
+
+RUN git clone --single-branch -b ${BRANCH} ${REPO} /zapdos \
     && pip install --no-cache-dir -r requirements.txt \
     && apt-get purge -y build-essential \
     && apt-get autoremove -y \
