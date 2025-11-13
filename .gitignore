@@ -14,23 +14,8 @@ __pycache__/
 # VSCode / IDE settings (optional)
 .vscode/
 
-# My Scripts
-my_scripts/
-setup.py
-
 # Sessions
 flask_sessions/
 
 # Logs
 logs/
-
-# Dockerfile
-Dockerfile
-
-to-do.txt
-demo*
-
-Dockerfiles/
-.DS*
-
-*.zip
