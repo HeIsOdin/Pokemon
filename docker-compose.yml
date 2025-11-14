@@ -1,0 +1,98 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgresql
+    container_name: ${POSTGRESQL_HOST}
+    environment:
+      POSTGRES_DB: ${POSTGRESQL_DBNAME}
+      POSTGRES_PASSWORD: ${ROOT_POSTGRESQL_PASSWD}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - database:/var/lib/postgresql
+    networks:
+      - myNet
+    restart: unless-stopped
+
+  pidgeotto:
+    image: pidgeotto
+    container_name: Pidgeotto
+    environment:
+      POSTGRESQL_TABLE_FOR_TASKS: ${POSTGRESQL_TABLE_FOR_TASKS}
+      POSTGRESQL_TABLE_FOR_USERS: ${POSTGRESQL_TABLE_FOR_USERS}
+      POSTGRESQL_TABLE_FOR_REPORTS: ${POSTGRESQL_TABLE_FOR_REPORTS}
+      POSTGRESQL_DBNAME: ${POSTGRESQL_DBNAME}
+      POSTGRESQL_USER: ${POSTGRESQL_USER}
+      POSTGRESQL_PASSWD: ${POSTGRESQL_PASSWD}
+      POSTGRESQL_HOST: ${POSTGRESQL_HOST}
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
+      EMAIL: ${EMAIL}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+    networks:
+      - myNet
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+  celebi:
+    image: celebi
+    container_name: Celebi
+    environment:
+      POSTGRESQL_TABLE_FOR_TASKS: ${POSTGRESQL_TABLE_FOR_TASKS}
+      POSTGRESQL_TABLE_FOR_REPORTS: ${POSTGRESQL_TABLE_FOR_REPORTS}
+      POSTGRESQL_DBNAME: ${POSTGRESQL_DBNAME}
+      POSTGRESQL_USER: ${POSTGRESQL_USER}
+      POSTGRESQL_PASSWD: ${POSTGRESQL_PASSWD}
+      POSTGRESQL_HOST: ${POSTGRESQL_HOST}
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
+      EBAY_CLIENT_ID: ${EBAY_CLIENT_ID}
+      EBAY_CLIENT_SECRET: ${EBAY_CLIENT_SECRET}
+      KAGGLE_USERNAME: ${KAGGLE_USERNAME}
+      KAGGLE_KEY: ${KAGGLE_KEY}
+    networks:
+      - myNet
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+  router:
+    image: router
+    container_name: Router
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+      NGROK_DOMAIN: ${NGROK_DOMAIN}
+      NGROK_REGION: ${NGROK_REGION}
+    ports:
+      - "4040:4040"
+    networks:
+      - myNet
+    restart: unless-stopped
+
+  zapdos:
+    image: zapdos
+    container_name: Zapdos
+    environment:
+      POSTGRESQL_TABLE_FOR_TASKS: ${POSTGRESQL_TABLE_FOR_TASKS}
+      POSTGRESQL_TABLE_FOR_USERS: ${POSTGRESQL_TABLE_FOR_USERS}
+      POSTGRESQL_DBNAME: ${POSTGRESQL_DBNAME}
+      POSTGRESQL_USER: ${POSTGRESQL_USER}
+      POSTGRESQL_PASSWD: ${POSTGRESQL_PASSWD}
+      POSTGRESQL_HOST: ${POSTGRESQL_HOST}
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
+      FLASK_PORT: ${FLASK_PORT}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
+    ports:
+    - "${FLASK_PORT:-5000}:${FLASK_PORT:-5000}"
+    networks:
+      - myNet
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+volumes:
+  database:
+
+networks:
+  myNet:
+    driver: bridge
