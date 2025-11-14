@@ -17,7 +17,6 @@ def run_script(tasks: list[dict], AI=None):
             download_dataset=True,
             AI=AI
         )
-        #with open('logs/setup.log', 'a') as fp: fp.write(f'1 {results[0]}\n')
         for result in results:
             if 'image' in result:
                 result.pop('image')
@@ -34,9 +33,9 @@ def report(results: list, id: str, username: str):
     except Exception as e:
         LOGS_DIR = os.path.join(os.getcwd(), 'logs')
         try: os.makedirs(LOGS_DIR, exist_ok=True)
-        except PermissionError as e: rotom.print_with_color(f"Permission denied when creating datasets directory: {str(e)}", 1)
-        except Exception as e: rotom.print_with_color(f"Unable to create datasets directory: {str(e)}", 1)
-        with open('logs/setup.log', 'a') as fp: fp.write(f'2 {e}\n')
+        except PermissionError as e: rotom.print_with_color(f"Permission denied when creating logs directory: {str(e)}", 1)
+        except Exception as e: rotom.print_with_color(f"Unable to create logs directory: {str(e)}", 1)
+        with open('logs/celebi.log', 'a') as fp: fp.write(f'2 {e}\n')
     else:
         try:
             rotom.postgresql(
@@ -44,7 +43,7 @@ def report(results: list, id: str, username: str):
                 rotom.enviromentals('POSTGRESQL_TABLE_FOR_TASKS')
             )
         except Exception as e:
-            with open('logs/setup.log', 'a') as fp: fp.write(f'3 {e}\n')
+            with open('logs/celebi.log', 'a') as fp: fp.write(f'3 {e}\n')
             pass
                 
 def get_tasks():
