@@ -59,7 +59,7 @@ services:
 
   router:
     image: router
-    container_name: Router
+    container_name: myNet-Router
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
       NGROK_DOMAIN: ${NGROK_DOMAIN}
