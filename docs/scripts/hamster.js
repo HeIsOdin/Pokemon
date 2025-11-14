@@ -1,9 +1,4 @@
-const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
-const fetchInit = {
-  headers: {'ngrok-skip-browser-warning': 'true'},
-  credentials: 'include',
-  method: 'OPTIONS',
-};
+import { BASE_URL, fetchInit } from './env.js';
 
 async function logoAnimation() {
     return new Promise((resolve) => {
