@@ -1,10 +1,10 @@
 volumes:
-  myDatabase:
+  database:
     name: myDatabase
 
 networks:
   myNet:
-    name: myNet 
+    name: myNet
 
 services:
   postgres:
