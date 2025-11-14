@@ -1,15 +1,10 @@
+import { BASE_URL, fetchInit } from './env.js';
+
 document.addEventListener("DOMContentLoaded", function () {
 		load_url_into_form();
 		submit_form();
 	//else callHamster();
 });
-
-const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
-const fetchInit = {
-  headers: {'ngrok-skip-browser-warning': 'true'},
-  credentials: 'include',
-  method: 'OPTIONS',
-};
 
 function callHamster(url="hamster.html") {
     window.location.replace('/Pokemon/pages/' + url);
