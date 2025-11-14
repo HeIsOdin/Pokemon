@@ -1,9 +1,8 @@
-const BASE_URL = 'https://7fe038f5dcfd.ngrok-free.app/pypikachu'
-const fetchInit = {
-  headers: {'ngrok-skip-browser-warning': 'true'},
-  credentials: 'include',
-  method: 'OPTIONS',
-};
+import { BASE_URL, fetchInit } from './env.js';
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await init();
+});
 
 function callHamster(url="hamster.html") {
     window.location.replace('/Pokemon/pages/' + url);
@@ -148,7 +147,3 @@ function escapeHtml(s) {
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[c]));
 }
-
-document.addEventListener('DOMContentLoaded', async () => {
-    await init();
-});
