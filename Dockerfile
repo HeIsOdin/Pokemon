@@ -30,4 +30,4 @@ RUN git clone --single-branch --branch $BRANCH $REPO /celebi
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 # Run the app
-CMD ["sleep", "infinity"]
+CMD ["python", "celebi.py"]
