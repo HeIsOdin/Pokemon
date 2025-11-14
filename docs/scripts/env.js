@@ -1,4 +1,4 @@
-const BASE_URL = 'https://93d55831773e.ngrok-free.app/pypikachu'
+const BASE_URL = 'https://reeligible-extravagantly-jong.ngrok-free.dev/pypikachu'
 const fetchInit = {
   headers: {'ngrok-skip-browser-warning': 'true'},
   credentials: 'include',
