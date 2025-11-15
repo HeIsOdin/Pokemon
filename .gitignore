@@ -13,6 +13,3 @@ __pycache__/
 
 # Logs
 logs/
-
-# Flask session files
-flask_sessions/
