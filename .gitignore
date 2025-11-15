@@ -1,9 +1,6 @@
 # Environment variables / secrets
 .env
 
-# Image downloads
-/images
-
 # virtual environment
 .venv/
 
@@ -13,9 +10,7 @@ __pycache__/
 
 # VSCode / IDE settings (optional)
 .vscode/
+.vs/
 
-# Sessions
-flask_sessions/
-
-# Logs
-logs/
+# Processes
+processes/
