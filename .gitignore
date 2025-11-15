@@ -1,9 +1,6 @@
 # Environment variables / secrets
 .env
 
-# Image downloads
-/images
-
 # virtual environment
 .venv/
 
@@ -13,10 +10,7 @@ __pycache__/
 
 # VSCode / IDE settings (optional)
 .vscode/
-
-# My Scripts
-my_scripts/
-setup.py
+.vs/
 
 # Sessions
 flask_sessions/
@@ -24,13 +18,5 @@ flask_sessions/
 # Logs
 logs/
 
-# Dockerfile
-Dockerfile
-
-to-do.txt
-demo*
-
-Dockerfiles/
-.DS*
 
 *.zip
