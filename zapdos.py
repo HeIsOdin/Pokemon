@@ -16,7 +16,10 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=["https://heisodin.github.io"])
 (app.secret_key,) = rotom.enviromentals('FLASK_SECRET_KEY')
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_FILE_DIR'] = os.path.join(os.getcwd(), 'flask_sessions')
+SESSION_FILE_DIR = os.path.join(os.getcwd(), 'processes', 'flask_sessions')
+if not os.path.exists(SESSION_FILE_DIR):
+    os.makedirs(SESSION_FILE_DIR)
+app.config['SESSION_FILE_DIR'] = SESSION_FILE_DIR
 app.config.update(
     SESSION_COOKIE_SAMESITE='None',
     SESSION_COOKIE_SECURE=True
