@@ -1,28 +1,14 @@
 volumes:
-  database:
-    name: myDatabase
+  Chronicle:
+    external: true
 
 networks:
-  myNet:
-    name: myNet
+  Yggdrasil:
+    external: true
 
 services:
-  postgres:
-    image: postgresql
-    container_name: ${POSTGRESQL_HOST}
-    environment:
-      POSTGRES_DB: ${POSTGRESQL_DBNAME}
-      POSTGRES_PASSWORD: ${ROOT_POSTGRESQL_PASSWD}
-    ports:
-      - "${POSTGRESQL_PORT:-5432}:5432"
-    volumes:
-      - database:/var/lib/postgresql
-    networks:
-      - myNet
-    restart: unless-stopped
-
   pidgeotto:
-    image: pidgeotto
+    image: heisodin/pidgeotto:latest
     container_name: Pidgeotto
     environment:
       POSTGRESQL_TABLE_FOR_TASKS: ${POSTGRESQL_TABLE_FOR_TASKS}
@@ -36,13 +22,11 @@ services:
       EMAIL: ${EMAIL}
       EMAIL_PASSWORD: ${EMAIL_PASSWORD}
     networks:
-      - myNet
+      - Yggdrasil
     restart: unless-stopped
-    depends_on:
-      - postgres
 
   celebi:
-    image: celebi
+    image: heisodin/celebi:latest
     container_name: Celebi
     environment:
       POSTGRESQL_TABLE_FOR_TASKS: ${POSTGRESQL_TABLE_FOR_TASKS}
@@ -58,26 +42,11 @@ services:
       KAGGLE_KEY: ${KAGGLE_KEY}
       DATASETS_DIR: ${DATASETS_DIR}
     networks:
-      - myNet
-    restart: unless-stopped
-    depends_on:
-      - postgres
-
-  router:
-    image: router
-    container_name: myNet-Router
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
-      NGROK_DOMAIN: ${NGROK_DOMAIN}
-      NGROK_REGION: ${NGROK_REGION}
-    ports:
-      - "${NGROK_PORT:-4040}:4040"
-    networks:
-      - myNet
+      - Yggdrasil
     restart: unless-stopped
 
   zapdos:
-    image: zapdos
+    image: heisodin/zapdos:latest
     container_name: Zapdos
     environment:
       POSTGRESQL_TABLE_FOR_TASKS: ${POSTGRESQL_TABLE_FOR_TASKS}
@@ -90,7 +59,5 @@ services:
       FLASK_PORT: ${FLASK_PORT}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
     networks:
-      - myNet
+      - Yggdrasil
     restart: unless-stopped
-    depends_on:
-      - postgres
