@@ -64,7 +64,7 @@ def get_dataset(author: str, dataset_name: str, download: bool) -> str:
                     username, key = rotom.enviromentals('KAGGLE_USERNAME', 'KAGGLE_KEY')
                     f.write(f'{{"username":"{username}","key":"{key}"}}')
             rotom.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle via CLI", 4)
-            os.system(f'kaggle datasets download -p ./datasets --unzip {author}/{dataset_name}')
+            os.system(f'kaggle datasets download -p {TRAINING_DIR} --unzip {author}/{dataset_name}')
         except Exception as e:
             rotom.print_with_color(f"Unable to download dataset: {str(e)}", 1)
         else:
