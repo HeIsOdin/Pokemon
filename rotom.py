@@ -24,6 +24,12 @@ be run as a standalone executable.
 import os
 import json
 import argparse
+import psycopg2
+import traceback
+import cv2
+import zipfile
+import time
+import shutil
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -64,9 +70,6 @@ def enviromentals(*vars: str) -> tuple:
     Returns:
     - tuple (number of arguments passed): values of environmental variables
     """
-    import dotenv
-    dotenv.load_dotenv()
-
     values = []
     for var in vars:
         value = os.getenv(var)
@@ -83,7 +86,6 @@ def pause(seconds: float):
     Args:
         seconds (float): Time to pause in seconds.
     """
-    import time
     time.sleep(seconds)
     print("")  # Add spacing
 
@@ -110,6 +112,22 @@ def directory_check(data_dir: str) -> bool:
         print_with_color(f"Found {len(file_names)} images in {data_dir}", 4)
         return len(file_names) > 0
 
+def clear_directory(data_dir: str) -> None:
+
+    # Check if the directory exists before attempting to delete it
+    if os.path.isdir(data_dir):
+        try:
+            shutil.rmtree(data_dir)
+            print(f"Directory '{data_dir}' and its contents have been deleted successfully.")
+        except FileNotFoundError:
+            print(f"Directory '{data_dir}' not found.")
+        except PermissionError:
+            print(f"Permission denied to delete the directory '{data_dir}'.")
+        except Exception as e:
+            print(f"An error occurred while deleting the directory: {e}")
+    else:
+        print(f"Directory '{data_dir}' does not exist.")
+
 def extract_zipfile(TRAINING_DIR: str) -> str:
     """
     Extract a ZIP file to a directory.
@@ -120,7 +138,6 @@ def extract_zipfile(TRAINING_DIR: str) -> str:
     Returns:
     - str: Path to the extracted directory.
     """
-    import zipfile
     zip_file_path = TRAINING_DIR
     extract_to = TRAINING_DIR.replace(".zip", "")
     print_with_color(f"Extracting compressed dataset to {extract_to}...", 4)
@@ -183,7 +200,6 @@ def hash_function(itemId: str, price: float) -> str:
     return str(hash)
 
 def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: dict = {}, limit: int = -1,):
-    import psycopg2
     DATABASE, USER, PASSWORD, HOST, PORT = enviromentals(
     'POSTGRESQL_DBNAME',
     'POSTGRESQL_USER',
@@ -191,41 +207,49 @@ def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: 
     'POSTGRESQL_HOST',
     'POSTGRESQL_PORT',
     )
+    try:
+        with psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT) as conn:
+            with conn.cursor() as cursor:
 
-    with psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT) as conn:
-        with conn.cursor() as cursor:
+                columns = ', '.join(template); sql = sql.replace('columns', columns)
+                values = ', '.join(['%s' for _ in template]); sql = sql.replace('values', values)
+                table_name = ', '.join(table); sql = sql.replace('tables', table_name)
 
-            columns = ', '.join(template); sql = sql.replace('columns', columns)
-            values = ', '.join(['%s' for _ in template]); sql = sql.replace('values', values)
-            table_name = ', '.join(table); sql = sql.replace('tables', table_name)
+                data = []
+                if pairs:
+                    for key in template:
+                        key = key.replace(' = %s', '') # Condition when UPDATE is in sql
+                        if key in pairs.keys(): data.append(pairs.get(key, None))
+                        else:
+                            pass
 
-            data = []
-            if pairs:
-                for key in template:
-                    key = key.replace(' = %s', '') # Condition when UPDATE is in sql
-                    if key in pairs.keys():
-                        data.append(pairs.get(key, None))
-                    else:
-                        pass
-
-            cursor.execute(sql, tuple(data))
+                cursor.execute(sql, tuple(data))
             
-            if sql.strip().lower().startswith("select"):
-                results = []
-                rows = cursor.fetchall() if limit == -1 else [cursor.fetchone()] if limit == 1 else cursor.fetchmany(limit)
-                if rows:
-                    for row in rows:
-                        if row and len(row) == len(template):
-                            result = {}
-                            for key, value in zip(template, row):
-                                result[key.replace(' = %s', '')] = value
-                            results.append(result)
-                return results
-            conn.commit()
-            return []
+                if sql.strip().lower().startswith("select"):
+                    results = []
+                    rows = cursor.fetchall() if limit == -1 else [cursor.fetchone()] if limit == 1 else cursor.fetchmany(limit)
+                    if rows:
+                        for row in rows:
+                            if row and len(row) == len(template):
+                                result = {}
+                                for key, value in zip(template, row):
+                                    result[key.replace(' = %s', '')] = value
+                                results.append(result)
+                    return results
+                conn.commit()
+                return []
+    except psycopg2.Error as e:
+        os.makedirs('logs', exist_ok=True)
+        with open('logs/pidgeotto.log', 'a') as fp:
+            fp.write(f'{e}\n{traceback.format_exc()}\n')
+        return []  # distinguish error from “no rows”
+    except Exception as e:
+        os.makedirs('logs', exist_ok=True)
+        with open('logs/pidgeotto.log', 'a') as fp:
+            fp.write(f'{e}\n{traceback.format_exc()}\n')
+        return []
 
 def show_image(image, image_name="demo"):
-    import cv2
     cv2.imshow(image_name, image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
