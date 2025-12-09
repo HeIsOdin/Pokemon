@@ -28,7 +28,6 @@ import os
 from sklearn.model_selection import train_test_split
 from keras import layers, models, Input
 import rotom
-import kaggle
 
 def get_dataset(author: str, dataset_name: str, download: bool) -> str:
     """
@@ -44,25 +43,28 @@ def get_dataset(author: str, dataset_name: str, download: bool) -> str:
     Returns:
     - str: Path to the dataset directory.
     """
-    DATASETS_DIR = os.path.join(os.getcwd(), list(rotom.enviromentals('DATASETS_DIR')).pop())
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    DATASETS_DIR = str(list(rotom.enviromentals('DATASETS_DIR')).pop())
+    DATASETS_DIR = os.path.join(script_dir, DATASETS_DIR)
+    DATASETS_DIR = os.path.expanduser(DATASETS_DIR)
     try: os.makedirs(DATASETS_DIR, exist_ok=True)
     except PermissionError as e: rotom.print_with_color(f"Permission denied when creating datasets directory: {str(e)}", 1)
     except Exception as e: rotom.print_with_color(f"Unable to create datasets directory: {str(e)}", 1)
     TRAINING_DIR = os.path.join(DATASETS_DIR, dataset_name)
+    TRAINING_DIR = os.path.expanduser(TRAINING_DIR)
     if download:
         try:
-            kaggle_dir_path = os.path.expanduser(os.environ.get("KAGGLE_CONFIG_DIR", ""))
-            if os.path.isfile(os.path.join(kaggle_dir_path, 'kaggle.json')):
-                # Use Kaggle CLI
-                os.system(f'kaggle datasets download {author}/{dataset_name} --path {TRAINING_DIR} --unzip')
-                rotom.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle via CLI", 4)
-            else:
-                # Use kagglehub API
-                rotom.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle via API", 4)
-                kaggle.api.dataset_download_files(
-                    f"{author}/{dataset_name}",
-                    path=TRAINING_DIR,
-                    unzip=True)
+            (kaggle_dir_path,) = rotom.enviromentals('KAGGLE_CRED_DIR')
+            kaggle_dir_path = os.path.expanduser(kaggle_dir_path)
+            os.makedirs(kaggle_dir_path, exist_ok=True)
+            kaggle_cred_path = os.path.join(kaggle_dir_path, 'kaggle.json')
+            kaggle_cred_path = os.path.expanduser(kaggle_cred_path)
+            if not os.path.isfile(kaggle_cred_path):
+                with open(kaggle_cred_path, 'w') as f:
+                    username, key = rotom.enviromentals('KAGGLE_USERNAME', 'KAGGLE_KEY')
+                    f.write(f'{{"username":"{username}","key":"{key}"}}')
+            rotom.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle via CLI", 4)
+            os.system(f'kaggle datasets download -p ./datasets --unzip {author}/{dataset_name}')
         except Exception as e:
             rotom.print_with_color(f"Unable to download dataset: {str(e)}", 1)
         else:
