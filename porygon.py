@@ -28,11 +28,10 @@ import os
 from sklearn.model_selection import train_test_split
 from keras import layers, models, Input
 import rotom
-import kagglehub
 
-def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str, download: bool, use_local_storage: bool) -> str:
+def get_dataset(author: str, dataset_name: str, download: bool) -> str:
     """
-    Download or extract a dataset, returning the directory path.
+    Download or extract a dataset, returning the directory path to the dataset.
 
     Args:
         - TRAINING_DIR (str): Path to save or load the dataset.
@@ -44,34 +43,39 @@ def get_dataset(TRAINING_DIR: str, author: str, dataset_name: str, download: boo
     Returns:
     - str: Path to the dataset directory.
     """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    DATASETS_DIR = str(list(rotom.enviromentals('DATASETS_DIR')).pop())
+    DATASETS_DIR = os.path.join(script_dir, DATASETS_DIR)
+    DATASETS_DIR = os.path.expanduser(DATASETS_DIR)
+    try: os.makedirs(DATASETS_DIR, exist_ok=True)
+    except PermissionError as e: rotom.print_with_color(f"Permission denied when creating datasets directory: {str(e)}", 1)
+    except Exception as e: rotom.print_with_color(f"Unable to create datasets directory: {str(e)}", 1)
+    TRAINING_DIR = os.path.join(DATASETS_DIR, dataset_name)
+    TRAINING_DIR = os.path.expanduser(TRAINING_DIR)
     if download:
-        path = ''
         try:
-            kaggle_dir_path = os.path.expanduser(os.environ.get("KAGGLE_CONFIG_DIR", ""))
-            if os.path.isfile(os.path.join(kaggle_dir_path, 'kaggle.json')):
-                # Use Kaggle CLI
-                if use_local_storage:
-                    os.system(f'kaggle datasets download {author}/{dataset_name} --path {TRAINING_DIR}')
-                else:
-                    os.system(f'kaggle datasets download {author}/{dataset_name}')
-            else:
-                # Use kagglehub fallback
-                kagglehub.login()
-                os.environ["KAGGLEHUB_CACHE"] = TRAINING_DIR
-            rotom.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle", 4)
-            path = kagglehub.dataset_download(f"{author}/{dataset_name}")
+            (kaggle_dir_path,) = rotom.enviromentals('KAGGLE_CRED_DIR')
+            kaggle_dir_path = os.path.expanduser(kaggle_dir_path)
+            os.makedirs(kaggle_dir_path, exist_ok=True)
+            kaggle_cred_path = os.path.join(kaggle_dir_path, 'kaggle.json')
+            kaggle_cred_path = os.path.expanduser(kaggle_cred_path)
+            if not os.path.isfile(kaggle_cred_path):
+                with open(kaggle_cred_path, 'w') as f:
+                    username, key = rotom.enviromentals('KAGGLE_USERNAME', 'KAGGLE_KEY')
+                    f.write(f'{{"username":"{username}","key":"{key}"}}')
+            rotom.print_with_color(f"Downloading {author}/{dataset_name} from Kaggle via CLI", 4)
+            os.system(f'kaggle datasets download -p {TRAINING_DIR} --unzip {author}/{dataset_name}')
         except Exception as e:
             rotom.print_with_color(f"Unable to download dataset: {str(e)}", 1)
         else:
             rotom.print_with_color("Dataset Download was successful!", 2)
-            TRAINING_DIR = path
     else:
         # Extract ZIP file if provided
         if os.path.isfile(TRAINING_DIR) and TRAINING_DIR.endswith('.zip'):
             TRAINING_DIR = rotom.extract_zipfile(TRAINING_DIR)
     return TRAINING_DIR
 
-def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool = True) -> tuple[list[cv2.typing.MatLike], list[int], list[str]]:
+def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool = True, USE_LOCAL_STORAGE: bool = False) -> tuple[list[cv2.typing.MatLike], list[int], list[str]]:
     """
     Load and label images from a directory.
 
@@ -88,8 +92,7 @@ def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool
     try:
         for root, _, files in os.walk(data_dir):
             for file in files:
-                if file.endswith((".jpg", ".png", ".jpeg")):
-                    file_names.append(os.path.join(root, file))
+                file_names.append(os.path.join(root, file))
     except:
         rotom.print_with_color(f"Unable to traverse through '{data_dir}'", 1)
 
@@ -115,6 +118,10 @@ def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool
             rotom.print_with_color(f"Could not extract label from filename: {file}", 3)
             X.pop()
             continue
+    if not USE_LOCAL_STORAGE:
+        rotom.print_with_color("Clearing local storage...", 4)
+        #rotom.clear_directory(data_dir)
+        
     return X, y, file_names
 
 def display_sample(X: list[cv2.typing.MatLike], y: list[int], file_names: list[str], sample_idx: int = 0) -> None:
@@ -303,21 +310,13 @@ def main(defect: str, use_local_storage: bool, use_rgb: bool, kaggle_download: b
     rotom.clear_terminal()
     TRAINING_DIR = args.get('training_dir', '')
 
-    directoryCheck = rotom.directory_check(TRAINING_DIR)
-    attempts = 3
-    while not directoryCheck:
-        if attempts < 0:
-            exit()
-        TRAINING_DIR = get_dataset(
-            TRAINING_DIR,
+    TRAINING_DIR = get_dataset(
             args.get('author', 'benjaminadedowole'),
             args.get('dataset', 'wartortle-evolution-error'),
             kaggle_download,
-            use_local_storage)
-        attempts -= 1
-        directoryCheck = rotom.directory_check(TRAINING_DIR)
+            )
 
-    images, labels, filenames = load_dataset_from_directory(TRAINING_DIR, args.get('input_shape', [128, 128]), use_rgb)
+    images, labels, filenames = load_dataset_from_directory(TRAINING_DIR, args.get('input_shape', [128, 128]), use_rgb, use_local_storage)
     if verbose: display_sample(images, labels, filenames)
     new_images, new_labels = convert_and_reshape(images, labels)
     training_images, testing_images, training_labels, testing_labels = split_dataset(new_images, new_labels)
