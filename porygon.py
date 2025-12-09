@@ -120,7 +120,7 @@ def load_dataset_from_directory(data_dir: str, input_shape: tuple, USE_RGB: bool
             continue
     if not USE_LOCAL_STORAGE:
         rotom.print_with_color("Clearing local storage...", 4)
-        #rotom.clear_directory(data_dir)
+        rotom.clear_directory(data_dir)
         
     return X, y, file_names
 
