@@ -40,6 +40,7 @@ services:
       EBAY_CLIENT_SECRET: ${EBAY_CLIENT_SECRET}
       KAGGLE_USERNAME: ${KAGGLE_USERNAME}
       KAGGLE_KEY: ${KAGGLE_KEY}
+      KAGGLE_CRED_DIR: ${KAGGLE_CRED_DIR}
       DATASETS_DIR: ${DATASETS_DIR}
     networks:
       - Yggdrasil
