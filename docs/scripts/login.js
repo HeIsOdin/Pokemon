@@ -7,7 +7,11 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function callHamster(url="hamster.html") {
-    window.location.replace('/Pokemon/pages/' + url);
+	{
+		const inPages = window.location.pathname.includes('/pages/');
+		const prefix = inPages ? '' : 'pages/';
+		window.location.replace(prefix + url);
+	}
 }
 
 async function load_url_into_form() {

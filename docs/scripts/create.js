@@ -3,7 +3,11 @@ import { BASE_URL, fetchInit } from './env.js';
 let defectConfig = {};
 
 function callHamster(url="hamster.html") {
-    window.location.replace('/Pokemon/pages/' + url);
+	{
+		const inPages = window.location.pathname.includes('/pages/');
+		const prefix = inPages ? '' : 'pages/';
+		window.location.replace(prefix + url);
+	}
 }
 
 async function load_options_from_JSON() {

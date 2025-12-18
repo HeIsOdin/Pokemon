@@ -399,7 +399,11 @@ document.addEventListener("DOMContentLoaded", async function () {await body();})
 })(jQuery);
 
 function callHamster(url="hamster.html") {
-    window.location.replace('/Pokemon/pages/' + url);
+	{
+		const inPages = window.location.pathname.includes('/pages/');
+		const prefix = inPages ? '' : 'pages/';
+		window.location.replace(prefix + url);
+	}
 }
 
 let data_and_info;
@@ -503,7 +507,11 @@ async function body() {
 		fetch(logout_url, {
             credentials: "include"
 		}).then(res => res.json())
-  		.then(data => window.location.replace('/Pokemon/pages/' + data.redirect));
+  		.then(data => {
+			const inPages = window.location.pathname.includes('/pages/');
+			const prefix = inPages ? '' : 'pages/';
+			window.location.replace(prefix + data.redirect);
+		});
 	});
 }
 

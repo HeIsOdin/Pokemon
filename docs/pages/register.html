@@ -2,36 +2,20 @@
 <html lang="en">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <head>
-		<script>
-		(function() {
-	  		const isGithub = window.location.hostname.split(".")[1] === "github";
-      		let base = "/";
-			if (isGithub) {
-        		const pathParts = window.location.pathname.split("/");
-        		if (pathParts.length > 1 && pathParts[1]) base = "/" + pathParts[1] + "/";
-      		}
-      		let baseEl = document.querySelector("base");
-      		if (!baseEl) {
-        		baseEl = document.createElement("base");
-        		document.head.prepend(baseEl);
-      		}
-      		baseEl.setAttribute("href", base);
-    	})();
-		</script>
 	    <meta name="description" content="Pokemon defects register,  find, search, error, cards">
-		<meta name="keywords" content="pokemon, defects">
+	    <meta name="keywords" content="pokemon, defects">
         <title>PyPikachu</title>
-        <link rel="icon" href="/Pokemon/media/favicon.png">
-        <link rel="stylesheet" href="/Pokemon/styles/register.css">
+        <link rel="icon" href="../media/favicon.png">
+        <link rel="stylesheet" href="../styles/register.css">
     </head>
-	<script type="module" src="/Pokemon/scripts/register.js"></script>
+	<script type="module" src="../scripts/register.js"></script>
 	<body>
 		<div class="card">
 			<div class="card2">
 				<form class="form" method="post" action="">
 					<fieldset>
 						<legend>
-							<img src="/Pokemon/media/pikachu.png" alt="pikachu logo" class="logo"/>
+							<img src="../media/pikachu.png" alt="pikachu logo" class="logo"/>
 						</legend>
 						<div class="field">
 							<svg xmlns="http://www.w3.org/2000/svg" class="input-icon" viewBox="0 0 16 16">
@@ -105,7 +89,7 @@
 								<path fill-rule="evenodd" clip-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.28 10.28a.75.75 0 000-1.06l-3-3a.75.75 0 10-1.06 1.06l1.72 1.72H8.25a.75.75 0 000 1.5h5.69l-1.72 1.72a.75.75 0 101.06 1.06l3-3z"/>
 							</svg>
 						</button>
-						<p class="p">Already have an account? <a class="span" href="/Pokemon/pages/login.html">Sign In</a>
+						<p class="p">Already have an account? <a class="span" href="login.html">Sign In</a>
 						<p class="p line">Or Continue With</p>
 						<div class="flex-row">
 							<button class="btn google">
