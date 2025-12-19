@@ -20,7 +20,8 @@ services:
       POSTGRESQL_HOST: ${POSTGRESQL_HOST}
       POSTGRESQL_PORT: ${POSTGRESQL_PORT}
       EMAIL: ${EMAIL}
-      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY}
+      MAILGUN_BASE_URL: ${MAILGUN_BASE_URL}
     networks:
       - Yggdrasil
     restart: unless-stopped
