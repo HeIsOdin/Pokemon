@@ -66,7 +66,7 @@ function submit_form() {
 		.then(response => response.json())
     	.then(data => {
 			if (data.success) {
-				const url = null || document.querySelector("base").getAttribute("href") || '/';
+				const url =  '/';
 				window.location.replace(url);
 			} else {
 				errorDiv.style.display = "block";
