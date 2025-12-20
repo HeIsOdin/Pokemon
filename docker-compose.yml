@@ -5,6 +5,8 @@ volumes:
 networks:
   Yggdrasil:
     external: true
+  PyPikachu:
+    external: true
 
 services:
   pidgeotto:
@@ -23,7 +25,7 @@ services:
       MAILGUN_API_KEY: ${MAILGUN_API_KEY}
       MAILGUN_BASE_URL: ${MAILGUN_BASE_URL}
     networks:
-      - Yggdrasil
+      - PyPikachu
     restart: unless-stopped
 
   celebi:
@@ -44,7 +46,7 @@ services:
       KAGGLE_CRED_DIR: ${KAGGLE_CRED_DIR}
       DATASETS_DIR: ${DATASETS_DIR}
     networks:
-      - Yggdrasil
+      - PyPikachu
     restart: unless-stopped
 
   zapdos:
@@ -61,5 +63,5 @@ services:
       FLASK_PORT: ${FLASK_PORT}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
     networks:
-      - Yggdrasil
+      - PyPikachu
     restart: unless-stopped
