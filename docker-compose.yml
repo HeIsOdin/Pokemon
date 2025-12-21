@@ -1,12 +1,8 @@
-volumes:
-  Chronicle:
-    external: true
-
 networks:
-  Yggdrasil:
+  Mine:
     external: true
   PyPikachu:
-    external: true
+    name: PyPikachu
 
 services:
   pidgeotto:
@@ -19,13 +15,14 @@ services:
       POSTGRESQL_DBNAME: ${POSTGRESQL_DBNAME}
       POSTGRESQL_USER: ${POSTGRESQL_USER}
       POSTGRESQL_PASSWD: ${POSTGRESQL_PASSWD}
-      POSTGRESQL_HOST: ${POSTGRESQL_HOST}
-      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
+      POSTGRESQL_HOST: ${POSTGRESQL_HOST:-localhost}
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT:-5432}
       EMAIL: ${EMAIL}
       MAILGUN_API_KEY: ${MAILGUN_API_KEY}
       MAILGUN_BASE_URL: ${MAILGUN_BASE_URL}
     networks:
       - PyPikachu
+      - Mine
     restart: unless-stopped
 
   celebi:
@@ -37,8 +34,8 @@ services:
       POSTGRESQL_DBNAME: ${POSTGRESQL_DBNAME}
       POSTGRESQL_USER: ${POSTGRESQL_USER}
       POSTGRESQL_PASSWD: ${POSTGRESQL_PASSWD}
-      POSTGRESQL_HOST: ${POSTGRESQL_HOST}
-      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
+      POSTGRESQL_HOST: ${POSTGRESQL_HOST:-localhost}
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT:-5432}
       EBAY_CLIENT_ID: ${EBAY_CLIENT_ID}
       EBAY_CLIENT_SECRET: ${EBAY_CLIENT_SECRET}
       KAGGLE_USERNAME: ${KAGGLE_USERNAME}
@@ -47,6 +44,7 @@ services:
       DATASETS_DIR: ${DATASETS_DIR}
     networks:
       - PyPikachu
+      - Mine
     restart: unless-stopped
 
   zapdos:
@@ -58,10 +56,11 @@ services:
       POSTGRESQL_DBNAME: ${POSTGRESQL_DBNAME}
       POSTGRESQL_USER: ${POSTGRESQL_USER}
       POSTGRESQL_PASSWD: ${POSTGRESQL_PASSWD}
-      POSTGRESQL_HOST: ${POSTGRESQL_HOST}
-      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
-      FLASK_PORT: ${FLASK_PORT}
+      POSTGRESQL_HOST: ${POSTGRESQL_HOST:-localhost}
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT:-5432}
+      FLASK_PORT: ${FLASK_PORT:-5000}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
     networks:
       - PyPikachu
+      - Mine
     restart: unless-stopped
