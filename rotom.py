@@ -24,6 +24,7 @@ be run as a standalone executable.
 import os
 import json
 import argparse
+import re
 import psycopg2
 import traceback
 import cv2
@@ -59,6 +60,31 @@ def clear_terminal():
     Clear the terminal screen on Windows or Unix systems.
     """
     os.system('cls' if os.name == 'nt' else 'clear')
+
+def env(vars: str, defaults: str = '', delimiter: str = ",") -> tuple:
+    """
+    Retrieve environment variables.
+
+    Args:
+        vars      (str): variables set in the environment
+        defaults  (str): default values for the variables, separated by the specified delimiter
+        delimiter (str): the character used to separate default values in the defaults string
+    
+    Returns:
+        tuple (number of arguments passed): values of environmental variables
+    """
+    values = []
+    l_vars = vars.split(delimiter); l_defaults = defaults.split(delimiter)
+    while len(l_defaults) < len(l_vars): l_defaults.append('') # Pad defaults with empty strings if not enough provided
+    for var, default in zip(l_vars, l_defaults):
+        value = os.getenv(var)
+        if value: values.append(value)
+        else: values.append(default)
+    
+    if len(values) != len(l_vars):
+        raise Exception(f"Some or all values in {vars} not set in environment without defaults.")
+
+    return tuple(values)
 
 def enviromentals(*vars: str) -> tuple:
     """
@@ -194,60 +220,42 @@ def pass_arguments_to_main() -> argparse.Namespace:
     parser.add_argument("--verbose", action='store_true', help='Show a verbose output')
     return parser.parse_args()
 
-def hash_function(itemId: str, price: float) -> str:
-    encoded_defect = ''.join([str(ord(char)) for char in itemId])
-    hash = int(round(price)) * int(encoded_defect)
-    return str(hash)
+def postgresql(sql: str, table: tuple, template : tuple[str, ...] = (), pairs: dict = {}, limit: int = -1,):
+    HOST, PORT = env('POSTGRESQL_HOST,POSTGRESQL_PORT', 'localhost,5432')
+    DATABASE, USER, PASSWORD = env('POSTGRESQL_DBNAME,POSTGRESQL_USER,POSTGRESQL_PASSWD')
+    
+    with psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT) as conn:
+        with conn.cursor() as cursor:
 
-def postgresql(sql: str,  table: tuple, template : tuple[str, ...] = (), pairs: dict = {}, limit: int = -1,):
-    DATABASE, USER, PASSWORD, HOST, PORT = enviromentals(
-    'POSTGRESQL_DBNAME',
-    'POSTGRESQL_USER',
-    'POSTGRESQL_PASSWD',
-    'POSTGRESQL_HOST',
-    'POSTGRESQL_PORT',
-    )
-    try:
-        with psycopg2.connect(database=DATABASE, user=USER, password=PASSWORD, host=HOST, port=PORT) as conn:
-            with conn.cursor() as cursor:
+            keyword = sql.split()[0].upper()
 
-                columns = ', '.join(template); sql = sql.replace('columns', columns)
-                values = ', '.join(['%s' for _ in template]); sql = sql.replace('values', values)
-                table_name = ', '.join(table); sql = sql.replace('tables', table_name)
+            table_names = ', '.join(table); sql = sql.replace('{{tables}}', table_names)
+            filters = ' AND '.join([k+' = %s' for k in pairs.keys() if k not in template]); sql = sql.replace('{{filters}}', filters)
+            data = tuple(pairs.values())
 
-                data = []
-                if pairs:
-                    for key in template:
-                        key = key.replace(' = %s', '') # Condition when UPDATE is in sql
-                        if key in pairs.keys(): data.append(pairs.get(key, None))
-                        else:
-                            pass
-
-                cursor.execute(sql, tuple(data))
+            columns = ', '.join(template); sql = sql.replace('{{columns}}', columns)
+            values = ', '.join(['%s' for _ in template]); sql = sql.replace('{{values}}', values)
+            cols_and_vals = ', '.join([f"{k} = %s" for k in template]); sql = sql.replace('{{cols_and_vals}}', cols_and_vals)
             
-                if sql.strip().lower().startswith("select"):
-                    results = []
-                    rows = cursor.fetchall() if limit == -1 else [cursor.fetchone()] if limit == 1 else cursor.fetchmany(limit)
-                    if rows:
-                        for row in rows:
-                            if row and len(row) == len(template):
-                                result = {}
-                                for key, value in zip(template, row):
-                                    result[key.replace(' = %s', '')] = value
-                                results.append(result)
-                    return results
+            if keyword == "UPDATE" or keyword == "INSERT" or keyword == "DELETE":
+                cursor.execute(sql, data)
                 conn.commit()
                 return []
-    except psycopg2.Error as e:
-        os.makedirs('logs', exist_ok=True)
-        with open('logs/pidgeotto.log', 'a') as fp:
-            fp.write(f'{e}\n{traceback.format_exc()}\n')
-        return []  # distinguish error from “no rows”
-    except Exception as e:
-        os.makedirs('logs', exist_ok=True)
-        with open('logs/pidgeotto.log', 'a') as fp:
-            fp.write(f'{e}\n{traceback.format_exc()}\n')
-        return []
+            
+            if keyword == "SELECT":
+                cursor.execute(sql, data)
+                results = []
+                rows = cursor.fetchall() if limit == -1 else [cursor.fetchone()] if limit == 1 else cursor.fetchmany(limit)
+                if rows:
+                    for row in rows:
+                        if row and len(row) == len(template):
+                            result = {}
+                            for key, value in zip(template, row):
+                                result[key.replace(' = %s', '')] = value
+                            results.append(result)
+                return results
+
+            else: raise ValueError("Only SELECT, UPDATE, INSERT, DELETE are allowed.")
 
 def show_image(image, image_name="demo"):
     cv2.imshow(image_name, image)

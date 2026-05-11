@@ -1,33 +1,58 @@
+"""
+(remake)
+# Zapdos
+> Behold, the elegant Zapdos, the face of PyPikachu!  
+
+This is a Flask-based web application that serves as the backend for PyPikachu. The application handles user authentication.
+
+## Routes
+- `GET    /`       : Collection of listings the system is trained to detect.
+- `GET    /health` : Provides a health check for the application.
+- `GET    /token`  : Provides token to use to connect to Discord bot.
+- `POST   /token` : Revokes the token to disconnect from Discord bot. (To be refactored)
+- `POST   /login`  : Authenticates users and establishes a session.
+- `POST   /me`     : Registers new users with the system.
+- `PATCH  /me`     : Allows users to reset their creds or delete their account. (To be refactored)
+- `DELETE /me`     : Deletes the user's account. (To be refactored)
+"""
+
+import dis
+
 from flask import Flask, request, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from flask_session import Session
-from datetime import timedelta
 from flask_cors import CORS
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
-import json
-import datetime
 import os
+import sys
 import rotom
-import re
 import bcrypt
 import logging
+import requests
+import secrets
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins=["https://heisodin.github.io", "https://pypikachu.oluwajuwon.dev"])
-(app.secret_key,) = rotom.enviromentals('FLASK_SECRET_KEY')
+CORS(app, supports_credentials=True,
+    origins=list(rotom.env('CORS_ORIGIN', 'http://localhost:3000')))
+(app.secret_key,) = rotom.env('FLASK_SECRET_KEY')
+
 app.config['SESSION_TYPE'] = 'filesystem'
-SESSION_FILE_DIR = os.path.join(os.getcwd(), 'processes', 'flask_sessions')
-if not os.path.exists(SESSION_FILE_DIR):
-    os.makedirs(SESSION_FILE_DIR)
+SESSION_FILE_DIR = os.path.join(os.getcwd(), 'flask_sessions')
+if not os.path.exists(SESSION_FILE_DIR): os.makedirs(SESSION_FILE_DIR)
 app.config['SESSION_FILE_DIR'] = SESSION_FILE_DIR
 app.config.update(
     SESSION_COOKIE_SAMESITE='None',
     SESSION_COOKIE_SECURE=True
 )
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=100)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 Session(app)
+
+TOKENS = {}
 
 @login_manager.unauthorized_handler
 def unauthorized():
@@ -42,296 +67,399 @@ def load_user(user_id):
 class User(UserMixin):
     def __init__(self, username):
         self.id = username
-        self.name = username
 
-FLASK_PORT, DATABASE, USER, PASSWORD, HOST, PORT, TABLE, USERS = rotom.enviromentals(
-    'FLASK_PORT',
-    'POSTGRESQL_DBNAME',
-    'POSTGRESQL_USER',
-    'POSTGRESQL_PASSWD',
-    'POSTGRESQL_HOST',
-    'POSTGRESQL_PORT',
-    'POSTGRESQL_TABLE_FOR_TASKS',
-    'POSTGRESQL_TABLE_FOR_USERS',
-    )
+def __logoutHelper__():
+    logout_user()
+    session.clear()
+    session.modified = True
 
-def submit_task(details: dict):
-    template = ('defect', 'threshold', 'creation', 'status', 'hash', 'market', 'username')
-    defect = details.get('defect', ''); price = details.get('threshold', 0)
-    details['hash'] = rotom.hash_function(defect, price)
-    details['status'] = "submitted"
+def __logout_helper_response__():
+    __logoutHelper__()
+    return {'redirect':'login.html'}
 
-    if price <= 0 or price >= 500:
-        return "Price should lie between 0 and 500", False
+def __hashPassword__(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return (bcrypt.hashpw(password.encode(), salt)).decode()
+
+def __getValidCredentials__() -> dict[str, str]:
+    url = rotom.env('USERNAME_GENERATOR_URL')[0]
+    req = requests.get(url)
+    req.raise_for_status()
+    data: dict = req.json()
+    results = data.get('results', [])
+    result = results[0] if results else {}
+    credentials: dict[str, str] = result.get('login', {})
     
-    config = json.loads(fetch_options().get_data(as_text=True))
-    if defect not in config:
-        return f"Unable to access configuration for the defect {details['defect']}", False
-    else:
-        markets = details.get('market', ['eBay'])
-        marketplaces = config.get(defect).get('marketplace', [])
-        for market in markets:
-            if market not in marketplaces:
-                return f"The marketplace '{market}' is unavailable", False
+    if not credentials:
+        app.logger.error(f"[Username Generation]: Received response {req.text} from {url}")
+        app.logger.error(f"[Username Generation]: Received username '{credentials}' from {data}")
+        raise ValueError("Failed to generate username. Please try again.")
+    return credentials
 
+def __login_helper__(username: str, password: str, remembrance: bool = False):
+    resp = {}
     try:
-        with open('logs/app.log', 'a') as fp: fp.write(f'{details}\n')
-        rotom.postgresql(
-            "INSERT INTO tables (columns) VALUES (values)",
-            rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
-            template,
-            details
-        )
-    except Exception as e:
-        message = f"The task was unable to be added. Check your task fields and try again.", False
-        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
-        os.makedirs(LOGS_DIR, exist_ok=True)
-        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
-    else:
-        message = "Task was submitted successfully", True
-    finally:
-        return message
+        app.logger.info(f"[Login Info]: user={username}, passwd={password}, rem={remembrance}")
 
-def sanitizer(details: dict, updating: bool = False):
-    name = details.get('name', 'Pikachu'); mail = details.get("email", ''); discord = details.get('discord', '')
-    user = details.get('username', ''); pwd = details.get('password', '')
-    
-    if not updating and not bool(re.fullmatch(r"\w{1,15}", user)):
-        return False, "Invalid username. Try again."
-    if not updating and len(pwd) < 8:
-        return False, "Password must be at least 8 characters."
-    if not updating and not re.search(r"[A-Z]", pwd):
-        return False, "Include at least one uppercase letter."
-    if not updating and not re.search(r"[a-z]", pwd):
-        return False, "Include at least one lowercase letter."
-    if not updating and not re.search(r"\d", pwd):
-        return False, "Include at least one digit."
-    if not updating and not re.search(r"[!@#$%^&*(),.?\":{}|<>]", pwd):
-        return False, "Include at least one special character."
-    if not updating and pwd.strip() != pwd:
-        return False, "No leading or trailing whitespace."
-    if mail and not bool(re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", mail)):
-        return False, "Invalid Email. Try again."
-    if discord and not (bool(re.match(r"^[\w]{2,32}#\d{4}$", discord)) or bool(re.match(r"^[a-z0-9_.]{2,32}$", discord))):
-        return False, "Invalid Discord. Try again."
-    if name and not bool(re.fullmatch(r"[ \w.'@-]{1,32}", name.strip())):
-        return False, "Invalid display name. Try again."
-    return True, ""
-
-def main():
-    print("🔁 Starting Zapdos...")
-
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)
-
-    try:
-        app.run(host="0.0.0.0", port=FLASK_PORT)
-    except Exception as e:
-        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
-        os.makedirs(LOGS_DIR, exist_ok=True)
-        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
-        print(f"\n Something went wrong {e}")
-
-    print("\n🛑 Shutting down...")
-
-@app.route("/")
-def ping():
-    return "<p>OK</p>"
-
-@app.route("/options")
-@login_required
-def fetch_options():
-        response = {}
-        with open("config.json") as config:
-            options = json.load(config)
-        for key, val in options.items():
-            response[key] = {
-                "title": val["title"],
-                "marketplace": val["marketplace"]
-        }
-        return jsonify(response)
-
-@app.route("/login", methods=["POST"])
-def login():
-    success = False; message = ""
-    try:
-        username = request.form.get("username", "")
-        password = request.form.get("password", "")
-        remembrance = request.form.get("remember-me", "") == "on"
-
-        results = rotom.postgresql(
-            'SELECT columns FROM credentials WHERE username = %s',
-            rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
-            ('username', 'password'),
+        records = rotom.postgresql(
+            'SELECT {{columns}} FROM {{tables}} WHERE {{filters}}',
+            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            ('password',),
             {'username': username},
             1
         )
+        if not records: raise ValueError("The credentials are incorrect.")
 
-        if results:
-            result = results.pop()
-            if result and bcrypt.checkpw(password.encode(), str(result['password']).encode()):
-                user = User(username)
-                if remembrance: session.permanent = True
-                login_user(user)
-                success, message = True, ""
-            else:
-                message = "The credentials are incorrect"
-        else:
-            message = "We do not have your records"
+        record: dict[str, str] = records[0]
+        actual_password = record.get('password', '')
+        if not actual_password: raise ValueError("The credentials are incorrect.")
+        if bcrypt.checkpw(password.encode(), actual_password.encode()):
+            user = User(username)
+            if remembrance: session.permanent = True
+            login_user(user)
+            resp = {'redirect':'dashboard.html', 'success': True}
+        else: raise ValueError("The credentials are incorrect.")
+
+    except ValueError as ve:
+        app.logger.debug(f"[Login Debug]: {ve}")
+        resp = {'message': str(ve), 'success': False}
 
     except Exception as e:
-        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
-        os.makedirs(LOGS_DIR, exist_ok=True)
-        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
-        message = "An error occurred during login. Please try again."
+        app.logger.exception(f"[Login Error]: {e}")
+        resp = {'message': "An error occurred during login. Please try again.", 'success': False}
 
-    finally:
-        return jsonify({
-            "success": success,
-            "message": message
-        })
-    
-@app.route("/register", methods=["POST"])
-def register():
-    success = False; message = ""
+    return resp
+
+def __register_helper__(username: str, password: str):
+    resp = {}
     try:
+        if not username: raise ValueError("Failed to generate username. Please try again.")
         credentials = {
-            'name': 'Pikachu',
-            'username': request.form.get("username", ""),
-            'password': request.form.get("password", ""),
-            'email': request.form.get("email", ""),
-            'discord': request.form.get("discord", "")
+            'username': username,
+            'password': password,
         }
 
-        goodOrBad, message = sanitizer(credentials)
-
-        if not goodOrBad:
-            return jsonify({"success": False, "message": message})
-        
-        message = f"{' '.join(credentials.values())}"
-
-        salt = bcrypt.gensalt()
-        credentials['password'] = (bcrypt.hashpw((credentials['password']).encode(), salt)).decode()
+        credentials['password'] = __hashPassword__(credentials['password'])
 
         rotom.postgresql(
-            "INSERT INTO tables (columns) VALUES (values)",
-            rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
-            ("username", "password", "email", "discord", "name"),
+            "INSERT INTO {{tables}} ({{columns}}) VALUES ({{values}})",
+            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            ("username", "password",),
             credentials
         )
-    
+        resp = {'message':"Registration successful!", 'redirect':'login.html', 'success':True, 'username': username}
+
+    # # catch unique violation error for username and return a user-friendly message
+    # except rotom.psycopg2.errors.UniqueViolation:
+    #     app.logger.debug(f"[Registration Debug]: Username '{username}' already exists.")
+    #     resp = {'message': "Username already exists. Please try again.", 'success': False}
+
+    except ValueError as ve:
+        app.logger.debug(f"[Registration Debug]: {ve}")
+        resp = {'message':str(ve), 'success':False}
+
     except Exception as e:
-        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
-        os.makedirs(LOGS_DIR, exist_ok=True)
-        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
-        message = "Registration failed"
+        app.logger.exception(f"[Registration Error]: {e}")
+        resp = {'message':"An error occurred. Please try again", 'success':False}
 
-    else:
-        success, message = True, "You've been registered successfully"
-    
-    finally:
-        return jsonify({
-            "success": success,
-            "message": message
-        })
+    return resp
 
-@app.route("/submit", methods=["POST"])
-@login_required
-def submit():
-    message = ""; success = False
+def __update_info_helper__(username: str, details: dict):
+    resp = {}
     try:
-        message, success = submit_task({
-            "defect": request.form.get("defect", "wartortle_evolution_error"),
-            "threshold": float(request.form.get("price", 0)),
-            "creation": datetime.datetime.now(datetime.timezone.utc),
-            "market": [request.form.get("marketplace", "eBay")],
-            "username": current_user.id
-        })
+        reg_password = details.get('password', '')
+        if not reg_password: details.pop('password', None)
+        else: details['password'] = __hashPassword__(reg_password)
+
+        rotom.postgresql(
+            "UPDATE {{tables}} SET {{cols_and_vals}} WHERE {{filters}}",
+            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            tuple(details.keys()),
+            {**details, 'username': username}
+        )
+        __logoutHelper__()
+        resp = {'message':"Update successful!", 'redirect':'login.html', 'success':True}
+
+    except ValueError as ve:
+        app.logger.debug(f"[Update Debug]: {ve}")
+        resp = {'message':str(ve), 'success':False}
 
     except Exception as e:
-        success = False
-        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
-        os.makedirs(LOGS_DIR, exist_ok=True)
-        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
-        message = "An error occurred while submitting the task. Please try again."
+        app.logger.exception(f"[Update Error]: {e}")
+        resp = {'message':"An error occurred. Please try again", 'success':False}
+
+    return resp
+
+def __delete_account_helper__(username: str):
+    resp = {}
+    try:
+        rotom.postgresql(
+            "DELETE FROM {{tables}} WHERE {{filters}}",
+            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            (),
+            {'username': username}
+        )
+        __logoutHelper__()
+        resp = {'message':"Account deleted successfully.", 'redirect':'login.html', 'success':True}
+    except Exception as e:
+        app.logger.exception(f"[Account Deletion Error]: {e}")
+        resp = {'message':"An error occurred. Please try again.", 'success':False}
+    return resp
+
+def __get_token_helper__(username: str):
+    resp = {}
+    try:
+        token = secrets.token_urlsafe(32)
+        app.logger.info(f"[Generating Token]: {token} for user {username}")
+        TOKENS[username] = (token, datetime.now() + timedelta(minutes=5))
+        resp = {'token': token, 'success': True}
+    except Exception as e:
+        app.logger.exception(f"[Token Generation Error]: {e}")
+        resp = {'message': "An error occurred. Please try again.", 'success': False}
+    return resp
+
+def __revoke_token_helper__(username: str, token: str, discord_id: str):
+    resp = {}
+    try:
+        if not token: raise ValueError("Token is required.")
+        app.logger.info(f"[Revoking Token]: {token} for user {username}")
+        if not any(token == t[0] and t[1] > datetime.now() and i == username
+                   for i, t in TOKENS.items()): raise ValueError("Invalid or expired token.")
+        TOKENS.pop(username, None)
+        rotom.postgresql(
+            "UPDATE {{tables}} SET {{cols_and_vals}} WHERE {{filters}}",
+            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            ("discord",),
+            {'discord': discord_id, 'username': username}
+        )
+        resp = {'message': "Token revoked successfully.", 'success': True}
+    except Exception as e:
+        app.logger.exception(f"[Token Revocation Error]: {e}")
+        resp = {'message': "An error occurred. Please try again.", 'success': False}
+    return resp
+
+@app.get("/")
+def home():
+    resp = {}
+    try:
+        records = rotom.postgresql(
+            'SELECT {{columns}} FROM {{tables}}',
+            rotom.env('POSTGRESQL_TABLE_FOR_LISTINGS'),
+            ('id', 'url', 'image', 'misprint', 'certainty')
+        )
+        if not records: raise ValueError("No listings found.")
     
-    finally:
-        return jsonify({
-            "success": success,
-            "message": message
-        })
+    except ValueError as ve:
+        app.logger.debug(f"[Listing Debug]: {ve}")
+        return jsonify({'message': str(ve), 'success': False})
+    
+    except Exception as e:
+        app.logger.exception(f"[Listing Error]: {e}")
+        return jsonify({'message': "An error occurred. Please try again later.", 'success': False})
+    finally: return jsonify(resp)
+
+@app.route("/login")
+def login():
+    username = request.form.get("username", "")
+    password = request.form.get("password", "")
+    remembrance = request.form.get("remember-me", "") == "on"
+    resp = __login_helper__(username, password, remembrance)
+    return jsonify(resp)
+    
+@app.post("/me")
+def register():
+    username = __getValidCredentials__().get('username', '')
+    password = request.form.get("password", "")
+    resp = __register_helper__(username, password)
+    return jsonify(resp)
+
+@app.post('/me')
+@login_required
+def update_info():
+    details = {
+        'password': request.form.get("password", ""),
+    }
+    resp = __update_info_helper__(current_user.id, details)
+    return jsonify(resp)
+
+@app.delete('/me')
+@login_required
+def delete_account():
+    resp = __delete_account_helper__(current_user.id)
+    return jsonify(resp)
+    
+@app.get('/token')
+@login_required
+def get_token():
+    resp = __get_token_helper__(current_user.id)
+    return jsonify(resp)
+
+@app.post('/token')
+def revoke_token():
+    req: dict[str, str] = request.get_json()
+    token = req.get('token', '')
+    discord_id = req.get('discord_id', '')
+    resp = __revoke_token_helper__(current_user.id, token, discord_id)
+    return jsonify(resp)
 
 @app.route('/logout')
 @login_required
 def logout():
-    logout_user()
-    session.clear()
-    session.modified = True
-    return jsonify({'redirect':'login.html'})
+    app.logger.info(f"[User Logout]: {current_user.id}")
+    resp = __logout_helper_response__()
+    return jsonify(resp)
 
-@app.route('/user-info')
-@login_required
-def send_info():
-    username = current_user.id
+@app.route("/health")
+def ping():
+    checklist = []
+    checks = []
+    username = reg_password = token_for_revocation = ''
+    discord_id = '1234567890123456789'
 
-    data = rotom.postgresql(
-        f"SELECT columns FROM tables WHERE username = '{username}'",
-        rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
-        ('name', 'email', 'discord'),
-        limit=1
-    )
+    checklist.append('PyPikachu is reachable.')
+    checks.append(True)
+    app.logger.info(f"PyPikachu is reachable. { 'Success' if checks[-1] else 'Failure' }")
 
-    user_data = data.pop() if data else {}
-
-    info_data = rotom.postgresql(
-        f"SELECT columns FROM tables WHERE username = '{username}'",
-        rotom.enviromentals("POSTGRESQL_TABLE_FOR_TASKS"),
-        ('defect', 'threshold', 'creation', 'status', 'market')
-    )
-
-    return jsonify({
-        "data": user_data,
-        "info": info_data
-    })
-
-@app.route('/update', methods=['POST'])
-@login_required
-def update_info():
-    success, message = False, ""
+    checklist.append('Database connection is healthy.')
     try:
-        details = {
-            'name': request.form.get("name", ""),
-            'email': request.form.get("email", ""),
-            'discord': request.form.get("discord", "")
-        }
-        goodOrBad, message = sanitizer(details, True)
-        if not goodOrBad:
-            return jsonify({
-                "success": False,
-                "message": message
-            })
-        
-        rotom.postgresql(
-            f"UPDATE tables SET columns WHERE username = '{current_user.id}'",
-            rotom.enviromentals('POSTGRESQL_TABLE_FOR_USERS'),
-            tuple([key+' = %s' for key in ("name", "email", "discord")]),
-            details
-        )
- 
+        rotom.postgresql('SELECT 1', rotom.env('POSTGRESQL_TABLE_FOR_USERS'))
+        checks.append(True)
     except Exception as e:
-        LOGS_DIR = os.path.join(os.getcwd(), 'logs')
-        os.makedirs(LOGS_DIR, exist_ok=True)
-        with open('logs/app.log', 'a') as fp: fp.write(f'{e}\n')
-        message = "An error occurred while updating your information. Please try again."
-
-    else:
-        success = True
+        app.logger.exception(f"[Database Connection Error]: {e}")
+        checks.append(False)
+    app.logger.info(f"Database connection is healthy. { 'Success' if checks[-1] else 'Failure' }")
     
-    finally:
-        return jsonify({
-            "success": success,
-            "message": message
-        })
+    checklist.append('User registration is functional.')
+    try:
+        credentials = __getValidCredentials__()
+        username = credentials.get('username', '')
+        reg_password = credentials.get('password', '')
+        resp: dict[str, str | bool] = __register_helper__(username, reg_password)
+        username = str(resp.get('username', '') if resp.get('success') else '')
+        if resp.get('success'): checks.append(True)
+        else: checks.append(False)
+    except Exception as e:
+        app.logger.exception(f"[Registration Error]: {e}")
+        username = ''
+        checks.append(False)
+    app.logger.info(f"User registration is functional. { 'Success' if checks[-1] else 'Failure' }")
+    
+    checklist.append('User login is functional.')
+    try:
+        if not username:
+            checks.append(False)
+        else:
+            resp = __login_helper__(username, reg_password, False)
+            if resp.get('success'): checks.append(True)
+            else: checks.append(False)
+    except Exception as e:
+        app.logger.exception(f"[Login Error]: {e}")
+        checks.append(False)
+    app.logger.info(f"User login is functional. { 'Success' if checks[-1] else 'Failure' }")
+
+    checklist.append('User info update is functional.')
+    try:
+        if not username:
+            checks.append(False)
+        else:
+            new_password = __getValidCredentials__().get('password', '')
+            resp_1: dict[str, str | bool] = __update_info_helper__(username, {'password': new_password})
+            resp_2: dict[str, str | bool] = __login_helper__(username, new_password, False)
+            resp_1_success = resp_1.get('success', False)
+            resp_2_success = resp_2.get('success', False)
+            resp = {'success': resp_1_success and resp_2_success}
+            if resp.get('success'): checks.append(True)
+            else: checks.append(False)
+    except Exception as e:
+        app.logger.exception(f"[Info Update Error]: {e}")
+        checks.append(False)
+    app.logger.info(f"User info update is functional. { 'Success' if checks[-1] else 'Failure' }")
+
+    checklist.append('Token generation is functional.')
+    try:
+        if not username:
+            checks.append(False)
+        else:
+            resp = __get_token_helper__(username)
+            if resp.get('success') and resp.get('token'):
+                token_for_revocation = str(resp.get('token', ''))
+                checks.append(True)
+            else:
+                token_for_revocation = ''
+                checks.append(False)
+    except Exception as e:
+        app.logger.exception(f"[Token Generation Error]: {e}")
+        token_for_revocation = ''
+        checks.append(False)
+    app.logger.info(f"Token generation is functional. { 'Success' if checks[-1] else 'Failure' }")
+
+    checklist.append('Token revocation is functional.')
+    try:
+        if not username or not token_for_revocation:
+            checks.append(False)
+        else:
+            resp = __revoke_token_helper__(username, token_for_revocation, discord_id)
+            if resp.get('success'): checks.append(True)
+            else: checks.append(False)
+    except Exception as e:
+        app.logger.exception(f"[Token Revocation Error]: {e}")
+        checks.append(False)
+    app.logger.info(f"Token revocation is functional. { 'Success' if checks[-1] else 'Failure' }")
+    
+    checklist.append('User logout is functional.')
+    try:
+        resp = {k:str(v) for k,v in __logout_helper_response__().items()}
+        if resp.get('redirect') == 'login.html': checks.append(True)
+        else: checks.append(False)
+    except Exception as e:
+        app.logger.exception(f"[Logout Error]: {e}")
+        checks.append(False)
+    app.logger.info(f"User logout is functional. { 'Success' if checks[-1] else 'Failure' }")
+    
+    checklist.append('User deletion is functional.')
+    try:
+        if not username:
+            checks.append(False)
+        else:
+            resp = __delete_account_helper__(username)
+            if resp.get('success'): checks.append(True)
+            else: checks.append(False)
+    except Exception as e:
+        app.logger.exception(f"[User Deletion Error]: {e}")
+        checks.append(False)
+    app.logger.info(f"User deletion is functional. { 'Success' if checks[-1] else 'Failure' }")
+    
+    if len(checklist) != len(checks):
+        app.logger.exception(f"[Health Check Error]: Checklist and checks length mismatch.")
+        return jsonify({'message': "An error occurred.", 'success': False})
+    return jsonify({'checklist': checklist, 'checks': checks, 'success': all(checks)})
+
+def main():
+    debug = len(sys.argv) > 1 and sys.argv[1] == "debug"
+    log = logging.getLogger('werkzeug')
+    if debug:
+        log.setLevel(logging.INFO)
+        open('logs/zapdos.log', 'w').close()  # Ensure log file exists
+        handler = logging.FileHandler('logs/zapdos.log')
+        HOST = '127.0.0.1'
+        PORT = 5000
+    else:
+        load_dotenv()
+        log.setLevel(logging.ERROR)
+        handler = logging.StreamHandler(sys.stdout)
+        HOST = '0.0.0.0'
+        PORT = int(rotom.env('PORT')[0])
+        # docker prefers logs to be sent to stdout
+
+    formatter = logging.Formatter('[Zapdos] %(asctime)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    log.addHandler(handler)
+
+    print("Starting Zapdos...")
+    try:
+        app.run(host=HOST, port=PORT, debug=debug)
+    except Exception as e:
+        app.logger.exception(f"[Server Error]: {e}")
 
 if __name__ == "__main__":
     main()
