@@ -3,7 +3,8 @@
 # Zapdos
 > Behold, the elegant Zapdos, the face of PyPikachu!  
 
-This is a Flask-based web application that serves as the backend for PyPikachu. The application handles user authentication.
+This is a Flask-based web application that serves as the backend for PyPikachu.
+The application handles user authentication.
 
 ## Routes
 - `GET    /`       : Collection of listings the system is trained to detect.
@@ -16,27 +17,28 @@ This is a Flask-based web application that serves as the backend for PyPikachu. 
 - `DELETE /me`     : Deletes the user's account. (To be refactored)
 """
 
-import dis
-
 from flask import Flask, request, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from flask_session import Session
 from flask_cors import CORS
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from rotom import env, postgresql
+from spinarak import health as spinarak_health
 
 import os
 import sys
-import rotom
 import bcrypt
 import logging
 import requests
 import secrets
 
+import spinarak
+
 app = Flask(__name__)
 CORS(app, supports_credentials=True,
-    origins=list(rotom.env('CORS_ORIGIN', 'http://localhost:3000')))
-(app.secret_key,) = rotom.env('FLASK_SECRET_KEY')
+    origins=list(env('CORS_ORIGIN', 'http://localhost:3000')))
+(app.secret_key,) = env('FLASK_SECRET_KEY')
 
 app.config['SESSION_TYPE'] = 'filesystem'
 SESSION_FILE_DIR = os.path.join(os.getcwd(), 'flask_sessions')
@@ -53,6 +55,7 @@ login_manager.init_app(app)
 Session(app)
 
 TOKENS = {}
+NAME = 'Zapdos'
 
 @login_manager.unauthorized_handler
 def unauthorized():
@@ -82,7 +85,7 @@ def __hashPassword__(password: str) -> str:
     return (bcrypt.hashpw(password.encode(), salt)).decode()
 
 def __getValidCredentials__() -> dict[str, str]:
-    url = rotom.env('USERNAME_GENERATOR_URL')[0]
+    url = env('USERNAME_GENERATOR_URL')[0]
     req = requests.get(url)
     req.raise_for_status()
     data: dict = req.json()
@@ -99,11 +102,11 @@ def __getValidCredentials__() -> dict[str, str]:
 def __login_helper__(username: str, password: str, remembrance: bool = False):
     resp = {}
     try:
-        app.logger.info(f"[Login Info]: user={username}, passwd={password}, rem={remembrance}")
+        app.logger.debug(f"[Login Info]: user={username}, passwd={password}, rem={remembrance}")
 
-        records = rotom.postgresql(
+        records = postgresql(
             'SELECT {{columns}} FROM {{tables}} WHERE {{filters}}',
-            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            env('POSTGRESQL_TABLE_FOR_USERS'),
             ('password',),
             {'username': username},
             1
@@ -141,13 +144,18 @@ def __register_helper__(username: str, password: str):
 
         credentials['password'] = __hashPassword__(credentials['password'])
 
-        rotom.postgresql(
+        postgresql(
             "INSERT INTO {{tables}} ({{columns}}) VALUES ({{values}})",
-            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            env('POSTGRESQL_TABLE_FOR_USERS'),
             ("username", "password",),
             credentials
         )
-        resp = {'message':"Registration successful!", 'redirect':'login.html', 'success':True, 'username': username}
+        resp = {
+            'message':"Registration successful!",
+            'redirect':'login.html',
+            'success':True,
+            'username': username
+        }
 
     # # catch unique violation error for username and return a user-friendly message
     # except rotom.psycopg2.errors.UniqueViolation:
@@ -171,9 +179,9 @@ def __update_info_helper__(username: str, details: dict):
         if not reg_password: details.pop('password', None)
         else: details['password'] = __hashPassword__(reg_password)
 
-        rotom.postgresql(
+        postgresql(
             "UPDATE {{tables}} SET {{cols_and_vals}} WHERE {{filters}}",
-            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            env('POSTGRESQL_TABLE_FOR_USERS'),
             tuple(details.keys()),
             {**details, 'username': username}
         )
@@ -193,9 +201,9 @@ def __update_info_helper__(username: str, details: dict):
 def __delete_account_helper__(username: str):
     resp = {}
     try:
-        rotom.postgresql(
+        postgresql(
             "DELETE FROM {{tables}} WHERE {{filters}}",
-            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            env('POSTGRESQL_TABLE_FOR_USERS'),
             (),
             {'username': username}
         )
@@ -210,7 +218,7 @@ def __get_token_helper__(username: str):
     resp = {}
     try:
         token = secrets.token_urlsafe(32)
-        app.logger.info(f"[Generating Token]: {token} for user {username}")
+        app.logger.debug(f"[Generating Token]: {token} for user {username}")
         TOKENS[username] = (token, datetime.now() + timedelta(minutes=5))
         resp = {'token': token, 'success': True}
     except Exception as e:
@@ -222,13 +230,13 @@ def __revoke_token_helper__(username: str, token: str, discord_id: str):
     resp = {}
     try:
         if not token: raise ValueError("Token is required.")
-        app.logger.info(f"[Revoking Token]: {token} for user {username}")
+        app.logger.debug(f"[Revoking Token]: {token} for user {username}")
         if not any(token == t[0] and t[1] > datetime.now() and i == username
                    for i, t in TOKENS.items()): raise ValueError("Invalid or expired token.")
         TOKENS.pop(username, None)
-        rotom.postgresql(
+        postgresql(
             "UPDATE {{tables}} SET {{cols_and_vals}} WHERE {{filters}}",
-            rotom.env('POSTGRESQL_TABLE_FOR_USERS'),
+            env('POSTGRESQL_TABLE_FOR_USERS'),
             ("discord",),
             {'discord': discord_id, 'username': username}
         )
@@ -242,9 +250,9 @@ def __revoke_token_helper__(username: str, token: str, discord_id: str):
 def home():
     resp = {}
     try:
-        records = rotom.postgresql(
+        records = postgresql(
             'SELECT {{columns}} FROM {{tables}}',
-            rotom.env('POSTGRESQL_TABLE_FOR_LISTINGS'),
+            env('POSTGRESQL_TABLE_FOR_LISTINGS'),
             ('id', 'url', 'image', 'misprint', 'certainty')
         )
         if not records: raise ValueError("No listings found.")
@@ -305,7 +313,7 @@ def revoke_token():
 @app.route('/logout')
 @login_required
 def logout():
-    app.logger.info(f"[User Logout]: {current_user.id}")
+    app.logger.debug(f"[User Logout]: {current_user.id}")
     resp = __logout_helper_response__()
     return jsonify(resp)
 
@@ -318,16 +326,16 @@ def ping():
 
     checklist.append('PyPikachu is reachable.')
     checks.append(True)
-    app.logger.info(f"PyPikachu is reachable. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"PyPikachu is reachable. {'Success' if checks[-1] else 'Failure'}")
 
     checklist.append('Database connection is healthy.')
     try:
-        rotom.postgresql('SELECT 1', rotom.env('POSTGRESQL_TABLE_FOR_USERS'))
+        postgresql('SELECT 1', env('POSTGRESQL_TABLE_FOR_USERS'))
         checks.append(True)
     except Exception as e:
         app.logger.exception(f"[Database Connection Error]: {e}")
         checks.append(False)
-    app.logger.info(f"Database connection is healthy. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"Database connection is healthy. {'Success' if checks[-1] else 'Failure'}")
     
     checklist.append('User registration is functional.')
     try:
@@ -342,7 +350,7 @@ def ping():
         app.logger.exception(f"[Registration Error]: {e}")
         username = ''
         checks.append(False)
-    app.logger.info(f"User registration is functional. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"User registration is functional. {'Success' if checks[-1] else 'Failure'}")
     
     checklist.append('User login is functional.')
     try:
@@ -355,7 +363,7 @@ def ping():
     except Exception as e:
         app.logger.exception(f"[Login Error]: {e}")
         checks.append(False)
-    app.logger.info(f"User login is functional. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"User login is functional. {'Success' if checks[-1] else 'Failure'}")
 
     checklist.append('User info update is functional.')
     try:
@@ -363,8 +371,8 @@ def ping():
             checks.append(False)
         else:
             new_password = __getValidCredentials__().get('password', '')
-            resp_1: dict[str, str | bool] = __update_info_helper__(username, {'password': new_password})
-            resp_2: dict[str, str | bool] = __login_helper__(username, new_password, False)
+            resp_1 = __update_info_helper__(username, {'password': new_password})
+            resp_2 = __login_helper__(username, new_password, False)
             resp_1_success = resp_1.get('success', False)
             resp_2_success = resp_2.get('success', False)
             resp = {'success': resp_1_success and resp_2_success}
@@ -373,7 +381,7 @@ def ping():
     except Exception as e:
         app.logger.exception(f"[Info Update Error]: {e}")
         checks.append(False)
-    app.logger.info(f"User info update is functional. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"User info update is functional. {'Success' if checks[-1] else 'Failure'}")
 
     checklist.append('Token generation is functional.')
     try:
@@ -391,7 +399,7 @@ def ping():
         app.logger.exception(f"[Token Generation Error]: {e}")
         token_for_revocation = ''
         checks.append(False)
-    app.logger.info(f"Token generation is functional. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"Token generation is functional. {'Success' if checks[-1] else 'Failure'}")
 
     checklist.append('Token revocation is functional.')
     try:
@@ -404,7 +412,7 @@ def ping():
     except Exception as e:
         app.logger.exception(f"[Token Revocation Error]: {e}")
         checks.append(False)
-    app.logger.info(f"Token revocation is functional. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"Token revocation is functional. {'Success' if checks[-1] else 'Failure'}")
     
     checklist.append('User logout is functional.')
     try:
@@ -414,7 +422,7 @@ def ping():
     except Exception as e:
         app.logger.exception(f"[Logout Error]: {e}")
         checks.append(False)
-    app.logger.info(f"User logout is functional. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"User logout is functional. {'Success' if checks[-1] else 'Failure'}")
     
     checklist.append('User deletion is functional.')
     try:
@@ -427,7 +435,11 @@ def ping():
     except Exception as e:
         app.logger.exception(f"[User Deletion Error]: {e}")
         checks.append(False)
-    app.logger.info(f"User deletion is functional. { 'Success' if checks[-1] else 'Failure' }")
+    app.logger.debug(f"User deletion is functional. {'Success' if checks[-1] else 'Failure'}")
+
+    spinarak_checklist, spinarak_checks = spinarak_health(app.logger)
+    checklist.extend(spinarak_checklist)
+    checks.extend(spinarak_checks)
     
     if len(checklist) != len(checks):
         app.logger.exception(f"[Health Check Error]: Checklist and checks length mismatch.")
@@ -436,26 +448,29 @@ def ping():
 
 def main():
     debug = len(sys.argv) > 1 and sys.argv[1] == "debug"
-    log = logging.getLogger('werkzeug')
+    os.makedirs('logs', exist_ok=True)
+
     if debug:
-        log.setLevel(logging.INFO)
-        open('logs/zapdos.log', 'w').close()  # Ensure log file exists
-        handler = logging.FileHandler('logs/zapdos.log')
+        load_dotenv() # docker-compose will set env vars, so no need to load them in production
+        app.logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler(sys.stdout)
         HOST = '127.0.0.1'
         PORT = 5000
     else:
-        load_dotenv()
-        log.setLevel(logging.ERROR)
-        handler = logging.StreamHandler(sys.stdout)
+        app.logger.setLevel(logging.WARNING)
+        LOG_DIR = env('LOG_DIR', 'logs')[0]
+        LOG_FILE = f'{LOG_DIR}/{NAME}.log'
+        open(LOG_FILE, 'w').close()  # Ensure log file exists
+        handler = logging.FileHandler(LOG_FILE)
         HOST = '0.0.0.0'
-        PORT = int(rotom.env('PORT')[0])
+        PORT = int(env('PORT')[0])
         # docker prefers logs to be sent to stdout
 
-    formatter = logging.Formatter('[Zapdos] %(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('[%(name)s] %(asctime)s - %(message)s')
     handler.setFormatter(formatter)
-    log.addHandler(handler)
+    app.logger.addHandler(handler)
 
-    print("Starting Zapdos...")
+    app.logger.debug("Starting Zapdos...")
     try:
         app.run(host=HOST, port=PORT, debug=debug)
     except Exception as e:

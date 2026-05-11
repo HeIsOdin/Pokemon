@@ -31,6 +31,7 @@ import cv2
 import zipfile
 import time
 import shutil
+import logging
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -77,9 +78,9 @@ def env(vars: str, defaults: str = '', delimiter: str = ",") -> tuple:
     l_vars = vars.split(delimiter); l_defaults = defaults.split(delimiter)
     while len(l_defaults) < len(l_vars): l_defaults.append('') # Pad defaults with empty strings if not enough provided
     for var, default in zip(l_vars, l_defaults):
-        value = os.getenv(var)
+        value = os.getenv(var.strip())
         if value: values.append(value)
-        else: values.append(default)
+        else: values.append(default.strip())
     
     if len(values) != len(l_vars):
         raise Exception(f"Some or all values in {vars} not set in environment without defaults.")
@@ -261,3 +262,19 @@ def show_image(image, image_name="demo"):
     cv2.imshow(image_name, image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+# def logger(name: str, debug: bool = False) -> logging.Logger:
+#     logger = logging.Logger(name)
+#     os.makedirs('logs', exist_ok=True)
+#     if debug:
+#         load_dotenv() # docker-compose will set env vars, so no need to load them in production
+#         logger.setLevel(logging.DEBUG)
+#         handler = logging.StreamHandler(sys.stdout)
+#     else:
+#         logger.setLevel(logging.WARNING)
+#         open(f'logs/{name}.log', 'w').close()  # Ensure log file exists
+#         handler = logging.FileHandler(f'logs/{name}.log')
+#     formatter = logging.Formatter('[%(name)s] %(asctime)s - %(levelname)s - %(message)s')
+#     handler.setFormatter(formatter)
+#     logger.addHandler(handler)
+#     return logger
