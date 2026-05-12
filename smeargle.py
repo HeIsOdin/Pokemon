@@ -23,12 +23,19 @@ import sys
 import logging
 
 NAME         = 'Smeargle'
-CARD_DIM     = (480, 680)  # Target dimensions for aligned card images
 ROI_BOX      = (40, 45, 60, 60)  # Example ROI box (x, y, width, height)
-ROI_TEMPLATE = 'roi_templates/wartortle_evolution_error.jpg'  # Template for NCC refinement
+CARD_DIM     = (480, 680)  # Target dimensions for aligned card images
 INPUT_DIR    = os.path.join('images', 'input')   # Directory for input images
 OUTPUT_DIR   = os.path.join('images', 'output')  # Directory for debug outputs
 DATASET_DIR  = os.path.join('images', 'dataset') # Directory for final processed dataset
+ROI_TEMPLATE = 'roi_templates/wartortle_evolution_error.jpg'  # Template for NCC refinement
+
+ID                     = 0
+MIN_ASPECT_RATIO       = 0.45
+MAX_ASPECT_RATIO       = 0.90
+MIN_BOX_AREA_RATIO     = 0.20
+MAX_BOX_AREA_RATIO     = 0.98
+MIN_CONTOUR_AREA_RATIO = 0.10
 
 def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
     """
@@ -56,12 +63,6 @@ def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
         log.error(f"Failed to save image '{path}': {e}")
         return ""
 
-def __showImageAndKeypress__(image, image_name="demo") -> int:
-    cv2.imshow(image_name, image)
-    ch = cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    return ch
-
 def __saveForYOLO__(img: IMG, label: str, filename: str, log: LOGGER) -> str:
     """
     Save a YOLO label to disk with error handling.
@@ -76,11 +77,20 @@ def __saveForYOLO__(img: IMG, label: str, filename: str, log: LOGGER) -> str:
         log.warning(f"Save path '{path}' does not exist. Creating directory.")
         os.makedirs(path, exist_ok=True)
     try:
+        cv2.imwrite(os.path.join(path, "image.jpg"), img)
+        cv2.imshow(label, img)
+        ch = cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        if ch == 27:
+            log.info(f"User exited during review of '{filename}'")
+            sys.exit(0)
+        if ch != 13:
+            log.warning(f"User rejected YOLO label for '{filename}'")
+            return ""
         label_path = os.path.join(path, "label.txt")
         with open(label_path, "w", encoding="utf-8") as f:
             f.write(label + "\n")
         log.debug(f"Saved label to {label_path}")
-        cv2.imwrite(os.path.join(path, "image.jpg"), img)
         return path
     except Exception as e:
         log.error(f"Failed to save label '{path}': {e}")
@@ -220,24 +230,31 @@ def __detectContours__(img: IMG, edges: IMG, log: LOGGER) -> IMG:
             return np.array(box, dtype=np.int32)
     return np.empty((0, 2), dtype=np.int32)
 
-def __exportYOLOLabelFromContour__(image: IMG, approx: np.ndarray, log: LOGGER,
-    class_id: int = 0,
-    min_contour_area_ratio: float = 0.10,
-    min_box_area_ratio: float = 0.20,
-    max_box_area_ratio: float = 0.98,
-    min_aspect_ratio: float = 0.45,
-    max_aspect_ratio: float = 0.90,
-):
+def __contourToYOLO__(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str, float] = {}):
     """
     Convert a 4-point contour into a YOLO axis-aligned bounding-box label.
 
-    YOLO txt format:
-        class_id x_center y_center width height
-    where all coordinates are normalized to [0, 1].
+    Args:
+        - image (MatLike): Original image for reference dimensions.
+        - approx (np.ndarray): Approximated contour points (should be 4 points).
+        - log (Logger): Logger for debug messages.
+        - class_id (int): Class ID for YOLO label (default 0).
+        - min_contour_area_ratio (float): Minimum contour area ratio to image area to consider valid.
+        - min_box_area_ratio (float): Minimum bounding box area ratio to image area to consider valid.
+        - max_box_area_ratio (float): Maximum bounding box area ratio to image area to consider valid.
+        - min_aspect_ratio (float): Minimum aspect ratio (width/height) to consider valid.
+        - max_aspect_ratio (float): Maximum aspect ratio (width/height) to consider valid.
 
     Returns:
-        (accepted: bool, metadata: dict)
+        tuple: (image with drawn contours, YOLO label string) or (None, '') if invalid
     """
+    id = int(ratios.get("class_id", ID))
+    min_aspect_ratio       = ratios.get("min_aspect_ratio", MIN_ASPECT_RATIO)
+    max_aspect_ratio       = ratios.get("max_aspect_ratio", MAX_ASPECT_RATIO)
+    min_box_area_ratio     = ratios.get("min_box_area_ratio", MIN_BOX_AREA_RATIO)
+    max_box_area_ratio     = ratios.get("max_box_area_ratio", MAX_BOX_AREA_RATIO)
+    min_contour_area_ratio = ratios.get("min_contour_area_ratio", MIN_CONTOUR_AREA_RATIO)
+    
     if image is None or getattr(image, "size", 0) == 0:
         log.error("Image is None or empty.")
         return None, ''
@@ -283,7 +300,7 @@ def __exportYOLOLabelFromContour__(image: IMG, approx: np.ndarray, log: LOGGER,
     cv2.drawContours(image, [pts.astype(np.int32)], -1, (0, 255, 0), 3)
     cv2.rectangle(image, (x, y), (x + bw, y + bh), (255, 0, 0), 2)
 
-    return image, f"{class_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
+    return image, f"{id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
 
 def __drawContours__(img: IMG, approx: IMG, log: LOGGER) -> tuple[IMG, IMG]:
     """
@@ -452,7 +469,9 @@ def main():
     logger.debug(f"Starting {NAME}...")
     queries = ["pokemon tcg card", "pokemon card vintage", "pokemon card lot", "pokemon card"]
     threshold = float('inf')
-    spinarak_main(debug=debug, queries=queries, threshold=threshold)
+    if not os.path.isdir(INPUT_DIR) or len([f for f in os.listdir(INPUT_DIR)]) < 5:
+        logger.warning(f"{INPUT_DIR} has too few images. Running Spinarak to populate it...")
+        spinarak_main(debug=True, queries=queries, threshold=threshold)
 
     if not INPUT_DIR or not os.path.isdir(INPUT_DIR):
         raise Exception(f"Input directory '{INPUT_DIR}' does not exist or is not a directory.")
@@ -461,6 +480,7 @@ def main():
         file for file in os.listdir(INPUT_DIR)
         if str(file).lower().endswith((".jpg", ".jpeg", ".png"))
     )
+    logger.debug(f"Found {len(image_files)} image files in '{INPUT_DIR}'")
 
     if not image_files: raise Exception(f"No image files found in directory '{INPUT_DIR}'")
 
@@ -486,20 +506,10 @@ def main():
                 logger.warning(f"Skipping '{file}' because card corners could not be detected.")
                 continue
 
-            yolo_img, label = __exportYOLOLabelFromContour__(image.copy(), approx, logger)
+            yolo_img, label = __contourToYOLO__(image.copy(), approx, logger)
 
             if yolo_img is not None and label:
-                # Enter: accept and save. Esc: quit without saving. Any other key: reject and skip.
-                ch = __showImageAndKeypress__(yolo_img, file)
-                if ch == 13:
-                    yolo_path = __saveForYOLO__(yolo_img, label, file, logger)
-                    logger.debug(f"Exported YOLO label for '{file}' to '{yolo_path}'")
-                elif ch == 27:
-                    logger.info(f"User exited during review of '{file}'")
-                    sys.exit(0)
-                else:
-                    logger.warning(f"User rejected YOLO label for '{file}'")
-                    continue
+                __saveForYOLO__(yolo_img, label, file, logger)
             else:
                 logger.warning(f"Failed to export YOLO label for '{file}'")
 

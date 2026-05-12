@@ -21,12 +21,10 @@ pipeline, enabling automated gathering of card listings and images
 for defect detection.
 """
 
-from venv import logger
-
 from dotenv import load_dotenv
 from time import sleep
 
-from rotom import env
+from rotom import env, clear_directory
 import requests
 import os
 import sys
@@ -35,13 +33,13 @@ import logging
 NAME                = 'Spinarak'
 DELAY               = 0.25  # seconds between API calls to respect rate limits
 TIMEOUT             = 10  # seconds
+DOWNLOAD_DIR        = os.path.join('images', 'input') # ensure it agrees with Smeargle
 EBAY_SORTING        = "newlyListed"
 EBAY_PAGE_SIZE      = 50
 EBAY_ITEM_LIMIT     = 100  # Max total items to fetch across all queries
 EBAY_CATEGORY_ID    = '183454'  # eBay category ID for Pokémon Cards
 EBAY_CONDITION_IDS  = "1000|3000|4000"
 EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
-DOWNLOAD_DIR        = os.path.join('images', 'input')
 
 ITEM_IDS = set()  # To track unique item IDs and avoid duplicates
 
@@ -261,6 +259,7 @@ def main(**kwargs):
         load_dotenv() # docker-compose will set env vars, so no need to load them in production
         logger.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(sys.stdout)
+        clear_directory(DOWNLOAD_DIR)
     else:
         logger.setLevel(logging.WARNING)
         LOG_DIR = env('LOG_DIR', 'logs')[0]
