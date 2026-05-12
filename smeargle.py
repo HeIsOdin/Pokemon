@@ -30,7 +30,6 @@ OUTPUT_DIR   = os.path.join('images', 'output')  # Directory for debug outputs
 DATASET_DIR  = os.path.join('images', 'dataset') # Directory for final processed dataset
 ROI_TEMPLATE = os.path.join('roi_templates', 'wartortle_evolution_error.jpg')  # for NCC refinement
 
-YOLO_CLASS_ID          = 0
 MIN_ASPECT_RATIO       = 0.45
 MAX_ASPECT_RATIO       = 0.90
 MIN_BOX_AREA_RATIO     = 0.20
@@ -63,7 +62,7 @@ def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
         log.error(f"Failed to save image '{path}': {e}")
         return ""
 
-def __saveForYOLO__(img: IMG, label: str, filename: str, log: LOGGER) -> str:
+def __saveForYOLO__(orig_img: IMG, yolo_img: IMG, label: str, filename: str, log: LOGGER) -> str:
     """
     Save a YOLO label to disk with error handling.
 
@@ -77,8 +76,8 @@ def __saveForYOLO__(img: IMG, label: str, filename: str, log: LOGGER) -> str:
         log.warning(f"Save path '{path}' does not exist. Creating directory.")
         os.makedirs(path, exist_ok=True)
     try:
-        cv2.imwrite(os.path.join(path, "image.jpg"), img)
-        cv2.imshow(label, img)
+        cv2.imwrite(os.path.join(path, "image.jpg"), orig_img)
+        cv2.imshow(label, yolo_img)
         ch = cv2.waitKey(0)
         cv2.destroyAllWindows()
         if ch == 27:
@@ -242,7 +241,6 @@ def __contourToYOLO__(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[
     Returns:
         tuple: (image with drawn contours, YOLO label string) or (None, '') if invalid
     """
-    id = int(ratios.get("class_id", YOLO_CLASS_ID))
     min_aspect_ratio       = ratios.get("min_aspect_ratio", MIN_ASPECT_RATIO)
     max_aspect_ratio       = ratios.get("max_aspect_ratio", MAX_ASPECT_RATIO)
     min_box_area_ratio     = ratios.get("min_box_area_ratio", MIN_BOX_AREA_RATIO)
@@ -294,7 +292,7 @@ def __contourToYOLO__(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[
     cv2.drawContours(image, [pts.astype(np.int32)], -1, (0, 255, 0), 3)
     cv2.rectangle(image, (x, y), (x + bw, y + bh), (255, 0, 0), 2)
 
-    return image, f"{id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
+    return image, f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
 
 def __drawContours__(img: IMG, approx: IMG, log: LOGGER) -> tuple[IMG, IMG]:
     """
@@ -504,7 +502,7 @@ def main():
             yolo_img, label = __contourToYOLO__(image.copy(), approx, logger)
 
             if yolo_img is not None and label:
-                __saveForYOLO__(yolo_img, label, file, logger)
+                __saveForYOLO__(image, yolo_img, label, file, logger)
             else:
                 logger.warning(f"Failed to export YOLO label for '{file}'")
 
