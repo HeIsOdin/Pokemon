@@ -28,9 +28,9 @@ CARD_DIM     = (480, 680)  # Target dimensions for aligned card images
 INPUT_DIR    = os.path.join('images', 'input')   # Directory for input images
 OUTPUT_DIR   = os.path.join('images', 'output')  # Directory for debug outputs
 DATASET_DIR  = os.path.join('images', 'dataset') # Directory for final processed dataset
-ROI_TEMPLATE = 'roi_templates/wartortle_evolution_error.jpg'  # Template for NCC refinement
+ROI_TEMPLATE = os.path.join('roi_templates', 'wartortle_evolution_error.jpg')  # for NCC refinement
 
-ID                     = 0
+YOLO_CLASS_ID          = 0
 MIN_ASPECT_RATIO       = 0.45
 MAX_ASPECT_RATIO       = 0.90
 MIN_BOX_AREA_RATIO     = 0.20
@@ -51,7 +51,7 @@ def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
         log.warning(f"Save path '{path}' does not exist. Creating directory.")
         os.makedirs(path, exist_ok=True)
     try:
-        if stage == 1: path = os.path.join(path, "1_original.jpg")
+        if   stage == 1: path = os.path.join(path, "1_original.jpg")
         elif stage == 2: path = os.path.join(path, "2_edges.jpg")
         elif stage == 3: path = os.path.join(path, "3_contours.jpg")
         elif stage == 4: path = os.path.join(path, "4_aligned.jpg")
@@ -248,7 +248,7 @@ def __contourToYOLO__(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[
     Returns:
         tuple: (image with drawn contours, YOLO label string) or (None, '') if invalid
     """
-    id = int(ratios.get("class_id", ID))
+    id = int(ratios.get("class_id", YOLO_CLASS_ID))
     min_aspect_ratio       = ratios.get("min_aspect_ratio", MIN_ASPECT_RATIO)
     max_aspect_ratio       = ratios.get("max_aspect_ratio", MAX_ASPECT_RATIO)
     min_box_area_ratio     = ratios.get("min_box_area_ratio", MIN_BOX_AREA_RATIO)
