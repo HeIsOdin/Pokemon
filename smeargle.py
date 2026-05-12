@@ -238,13 +238,7 @@ def __contourToYOLO__(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[
         - image (MatLike): Original image for reference dimensions.
         - approx (np.ndarray): Approximated contour points (should be 4 points).
         - log (Logger): Logger for debug messages.
-        - class_id (int): Class ID for YOLO label (default 0).
-        - min_contour_area_ratio (float): Minimum contour area ratio to image area to consider valid.
-        - min_box_area_ratio (float): Minimum bounding box area ratio to image area to consider valid.
-        - max_box_area_ratio (float): Maximum bounding box area ratio to image area to consider valid.
-        - min_aspect_ratio (float): Minimum aspect ratio (width/height) to consider valid.
-        - max_aspect_ratio (float): Maximum aspect ratio (width/height) to consider valid.
-
+        - ratios (dict): thresholds for filtering contours based on aspect ratio and area ratios.
     Returns:
         tuple: (image with drawn contours, YOLO label string) or (None, '') if invalid
     """
@@ -342,7 +336,7 @@ def __alignWithOrb__(img: IMG, template, out_wh, log: LOGGER) -> IMG | None:
         return None
     src = np.array([kp1[m.queryIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
     dst = np.array([kp2[m.trainIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
-    H, mask = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
+    H, _ = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
     if H is None:
         log.warning("Homography could not be computed")
         return None
@@ -373,6 +367,7 @@ def __refineROIByNCC__(aligned: IMG, log: LOGGER, search: int = 8):
             xe, ye = xs + w, ys + h
 
             if xs < 0 or ys < 0 or xe > aligned_w or ye > aligned_h:
+                log.warning(f"Skipping offset ({dx},{dy}) due to out-of-bounds: ({xs},{ys}) to ({xe},{ye}) in image of size ({aligned_w}, {aligned_h})")
                 continue
 
             patch = aligned[ys:ye, xs:xe]
