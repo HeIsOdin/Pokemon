@@ -1,36 +1,92 @@
 """
+(remake)
 # Smeargle
-Image alignment and Region of Interest(ROI) extraction module for PokéPrint Inspector.
+> Behold, the unrelentless artist of the Pokémon world, Smeargle!
 
-This module processes Pokémon card images by:
-- Detecting card edges and contours
-- Applying perspective correction to deskew the card
-- Extracting the evolution portrait region (ROI) in the top-left
-- Saving debug images (original, edges, aligned, ROI) to structured folders
-
-Inputs:
-- Local image files from directory
-- Bytearray image data from online sources
-
-Outputs:
-- Debug and processed images saved in 'adjusted_images/<image-name>/'
-
-Dependencies:
-- OpenCV (cv2)
-- NumPy
-- miscellaneous.py (for colored console logging)
-
-This module is a core component of the PokéPrint Inspector pipeline,
-which analyzes card images to detect known Pokémon card defects.
+This is a utility module for image processing and region of interest (ROI) extraction
+It is designed to handle the alignment and cropping of Pokémon card images for defect detection.
+It includes functions for loading images, detecting edges and contours.
+It is also used in applying perspective transforms, and refining ROIs using template matching.
+The module is structured to facilitate debugging by saving intermediate results at each step of the process.
 """
+
+from dotenv import load_dotenv
+from rotom import env
+from spinarak import main as spinarak_main
+from cv2.typing import MatLike as IMG # for type hinting only, not an actual import
+from logging import Logger as LOGGER  # for type hinting only, not an actual import
 
 import cv2
 import numpy as np
 import os
-from pathlib import Path
-import rotom
+import sys
+import logging
 
-def order_points(pts: np.ndarray) -> np.ndarray:
+NAME         = 'Smeargle'
+CARD_DIM     = (480, 680)  # Target dimensions for aligned card images
+ROI_BOX      = (40, 45, 60, 60)  # Example ROI box (x, y, width, height)
+ROI_TEMPLATE = 'roi_templates/wartortle_evolution_error.jpg'  # Template for NCC refinement
+INPUT_DIR    = os.path.join('images', 'input')   # Directory for input images
+OUTPUT_DIR   = os.path.join('images', 'output')  # Directory for debug outputs
+DATASET_DIR  = os.path.join('images', 'dataset') # Directory for final processed dataset
+
+def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
+    """
+    Save an image to disk with error handling.
+
+    Args:
+        - img (MatLike): Image matrix to save.
+        - filename (str): Name of the file to save.
+        - log (Logger): Logger for debug messages.
+    """
+    path = os.path.join(OUTPUT_DIR, os.path.splitext(filename)[0])
+    if not os.path.isdir(path):
+        log.warning(f"Save path '{path}' does not exist. Creating directory.")
+        os.makedirs(path, exist_ok=True)
+    try:
+        if stage == 1: path = os.path.join(path, "1_original.jpg")
+        elif stage == 2: path = os.path.join(path, "2_edges.jpg")
+        elif stage == 3: path = os.path.join(path, "3_contours.jpg")
+        elif stage == 4: path = os.path.join(path, "4_aligned.jpg")
+        elif stage == 5: path = os.path.join(path, "5_roi.jpg")
+        cv2.imwrite(path, img)
+        log.debug(f"Saved image to {path}")
+        return path
+    except Exception as e:
+        log.error(f"Failed to save image '{path}': {e}")
+        return ""
+
+def __showImageAndKeypress__(image, image_name="demo") -> int:
+    cv2.imshow(image_name, image)
+    ch = cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    return ch
+
+def __saveForYOLO__(img: IMG, label: str, filename: str, log: LOGGER) -> str:
+    """
+    Save a YOLO label to disk with error handling.
+
+    Args:
+        - label (str): Label string to save.
+        - filename (str): Name of the file to save.
+        - log (Logger): Logger for debug messages.
+    """
+    path = os.path.join(DATASET_DIR, os.path.splitext(filename)[0])
+    if not os.path.isdir(path):
+        log.warning(f"Save path '{path}' does not exist. Creating directory.")
+        os.makedirs(path, exist_ok=True)
+    try:
+        label_path = os.path.join(path, "label.txt")
+        with open(label_path, "w", encoding="utf-8") as f:
+            f.write(label + "\n")
+        log.debug(f"Saved label to {label_path}")
+        cv2.imwrite(os.path.join(path, "image.jpg"), img)
+        return path
+    except Exception as e:
+        log.error(f"Failed to save label '{path}': {e}")
+        return ""
+
+def __orderPoints__(pts: np.ndarray, log: LOGGER) -> np.ndarray:
     """
     Reorder corner points into a consistent top-left, top-right, bottom-right, bottom-left order.
 
@@ -47,43 +103,40 @@ def order_points(pts: np.ndarray) -> np.ndarray:
     diff = np.diff(pts, axis=1)
     rect[1] = pts[np.argmin(diff)]   # Top-right
     rect[3] = pts[np.argmax(diff)]   # Bottom-left
+    log.debug(f"Ordered points: {rect}")
     return rect
 
-def load_file_from_directory(file: str, INPUT_DIR: str = 'images', OUTPUT_DIR: str = 'adjusted_images'):
+def __loadFileFromDirectory__(filepath: str, log: LOGGER) -> IMG | None:
     """
     Load an image from a directory and prepare a save path for debug outputs.
 
     Args:
         - file (str): Filename of the image.
-        - INPUT_DIR (str): Input directory path.
-        - OUTPUT_DIR (str): Output directory for debug images.
+        - log (Logger): Logger for debug messages.
 
     Returns:
     - tuple: (image matrix, save path string)
     """
-    file = file[:40].replace(' ', '_').replace('/', '-') + '.jpg'
-    image_path = os.path.join(INPUT_DIR, file)
-    image_name = Path(file).stem
-    save_path = os.path.join(OUTPUT_DIR, image_name)
-    os.makedirs(save_path, exist_ok=True)
+
+    image_path = os.path.join(INPUT_DIR, filepath)
 
     if not os.path.isfile(image_path):
-        rotom.print_with_color(f"File '{image_path}' does not exist", 1)
+        log.warning(f"Image file '{image_path}' does not exist.")
+        return None
 
     img = cv2.imread(image_path)
     if img is None:
-        rotom.print_with_color(f"Could not load image: {image_path}", 1)
+        log.warning(f"Failed to load image '{image_path}'")
         img = np.zeros((100, 100, 3), dtype=np.uint8)
-    cv2.imwrite(filename=os.path.join(save_path, "1_original.jpg"), img=img)
-    return img, save_path
+    return img
 
-def load_file_from_bytearray(file: bytearray, save_path: str):
+def __loadFileFromBytearray__(file: bytearray, log: LOGGER):
     """
     Load an image from a bytearray (typically from web sources).
 
     Args:
         - file (bytearray): Raw image bytes.
-        - save_path (str): Directory path to save debug outputs.
+        - log (Logger): Logger for debug messages.
 
     Returns:
     - tuple: (image matrix, save path string)
@@ -91,10 +144,11 @@ def load_file_from_bytearray(file: bytearray, save_path: str):
     image_bytes = np.frombuffer(file, dtype=np.uint8)
     img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
     if img is None:
-        rotom.print_with_color("Could not load image as bytes", 1)
-    return img, save_path
+        log.warning(f"Failed to decode image from byte array")
+        img = np.zeros((100, 100, 3), dtype=np.uint8)
+    return img
 
-def detect_edges(img: cv2.typing.MatLike, path: str) -> cv2.typing.MatLike:
+def __detectEdges__(img: IMG) -> IMG:
     """
     Convert an image to grayscale, apply blur, and detect edges using Canny.
 
@@ -108,17 +162,16 @@ def detect_edges(img: cv2.typing.MatLike, path: str) -> cv2.typing.MatLike:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blur, 50, 150)
-
-    if path: cv2.imwrite(os.path.join(path, "2_edges.jpg"), edges)
     return edges
 
-def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.typing.MatLike:
+def __detectContours__(img: IMG, edges: IMG, log: LOGGER) -> IMG:
     """
     Detect the largest external contour in an edge image.
     
     Args:
         - img (MatLike): Image to be processed.
         - edges (MatLike): Binary edge map.
+        - log (Logger): Logger for debug messages.
 
     Returns:
     - np.ndarray: Approximated polygon contour points.
@@ -148,7 +201,7 @@ def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.t
     # Use fallback box if not exactly 4 points
     if len(approx) == 4:
         return approx
-    edges = detect_edges(img, '')
+    edges = __detectEdges__(img)
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contours:
         card_contour = max(contours, key=cv2.contourArea)
@@ -160,15 +213,79 @@ def detect_contours(img: cv2.typing.MatLike, edges: cv2.typing.MatLike) -> cv2.t
             hull = cv2.convexHull(card_contour)
             approx = cv2.approxPolyDP(hull, 0.02 * cv2.arcLength(hull, True), True)
             if len(approx) == 4:
-                rotom.print_with_color("[3] Using convex hull fallback", 3)
+                log.warning("[3] Using convex hull fallback")
                 return approx
             rect = cv2.minAreaRect(card_contour)
             box = cv2.boxPoints(rect)
             return np.array(box, dtype=np.int32)
     return np.empty((0, 2), dtype=np.int32)
 
+def __exportYOLOLabelFromContour__(image: IMG, approx: np.ndarray, log: LOGGER,
+    class_id: int = 0,
+    min_contour_area_ratio: float = 0.10,
+    min_box_area_ratio: float = 0.20,
+    max_box_area_ratio: float = 0.98,
+    min_aspect_ratio: float = 0.45,
+    max_aspect_ratio: float = 0.90,
+):
+    """
+    Convert a 4-point contour into a YOLO axis-aligned bounding-box label.
 
-def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path: str, CARD_DIM: tuple[int, int]):
+    YOLO txt format:
+        class_id x_center y_center width height
+    where all coordinates are normalized to [0, 1].
+
+    Returns:
+        (accepted: bool, metadata: dict)
+    """
+    if image is None or getattr(image, "size", 0) == 0:
+        log.error("Image is None or empty.")
+        return None, ''
+
+    if approx is None or len(approx) != 4:
+        log.error(f"Expected 4 points, got {'None' if approx is None else len(approx)}")
+        return None, ''
+
+    h, w = image.shape[:2]
+    if h <= 0 or w <= 0:
+        log.error(f"Invalid image dimensions: width={w}, height={h}")
+        return None, ''
+
+    pts = approx.reshape(-1, 2).astype(np.float32)
+
+    contour_area = float(cv2.contourArea(pts))
+    image_area = float(w * h)
+    contour_area_ratio = contour_area / image_area if image_area else 0.0
+
+    x, y, bw, bh = cv2.boundingRect(pts.astype(np.int32))
+    box_area = float(bw * bh)
+    box_area_ratio = box_area / image_area if image_area else 0.0
+    aspect_ratio = (bw / float(bh)) if bh else 0.0
+
+    # Reject tiny contours, nearly full-frame weird boxes, or square-ish icon boxes
+    if contour_area_ratio < min_contour_area_ratio:
+        log.debug(f"Contour area ratio {contour_area_ratio:.4f} is below threshold")
+        return None, ''
+
+    if box_area_ratio < min_box_area_ratio or box_area_ratio > max_box_area_ratio:
+        log.debug(f"Box area ratio {box_area_ratio:.4f} is out of range")
+        return None, ''
+
+    if not (min_aspect_ratio <= aspect_ratio <= max_aspect_ratio):
+        log.debug(f"Aspect ratio {aspect_ratio:.4f} is out of range")
+        return None, ''
+
+    x_center = (x + bw / 2.0) / w
+    y_center = (y + bh / 2.0) / h
+    width = bw / float(w)
+    height = bh / float(h)
+
+    cv2.drawContours(image, [pts.astype(np.int32)], -1, (0, 255, 0), 3)
+    cv2.rectangle(image, (x, y), (x + bw, y + bh), (255, 0, 0), 2)
+
+    return image, f"{class_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
+
+def __drawContours__(img: IMG, approx: IMG, log: LOGGER) -> tuple[IMG, IMG]:
     """
     Apply a perspective transform to align and deskew the card.
 
@@ -187,19 +304,15 @@ def draw_contours(img: cv2.typing.MatLike, approx: cv2.typing.MatLike, save_path
     # Save contour overlay
     debug_img = img.copy()
     cv2.drawContours(debug_img, [approx], -1, (0, 255, 0), 3)
-    if save_path:
-        cv2.imwrite(os.path.join(save_path, "3_contour.jpg"), debug_img)
 
     # Apply perspective warp
-    rect = order_points(pts)
+    rect = __orderPoints__(pts, log)
     dst = np.array([[0, 0], [CARD_WIDTH - 1, 0], [CARD_WIDTH - 1, CARD_HEIGHT - 1], [0, CARD_HEIGHT - 1]], dtype="float32")
     M = cv2.getPerspectiveTransform(rect, dst)
     aligned = cv2.warpPerspective(img, M, (CARD_WIDTH, CARD_HEIGHT), flags=cv2.INTER_LANCZOS4)
-    if save_path:
-        cv2.imwrite(os.path.join(save_path, "4_aligned.jpg"), aligned)
-    return aligned
+    return debug_img, aligned
 
-def align_with_orb(img, template, out_wh):
+def __alignWithOrb__(img: IMG, template, out_wh, log: LOGGER) -> IMG | None:
     h, w = out_wh[1], out_wh[0]
     orb = cv2.ORB.create(1500)
     kp1, des1 = orb.detectAndCompute(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), np.array([]))
@@ -207,34 +320,71 @@ def align_with_orb(img, template, out_wh):
     if des1 is None or des2 is None: return None
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
     matches = sorted(bf.match(des1, des2), key=lambda m: m.distance)[:200]
-    if len(matches) < 10: return None
+    if len(matches) < 10:
+        log.warning(f"Not enough ORB matches found: {len(matches)}")
+        return None
     src = np.array([kp1[m.queryIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
     dst = np.array([kp2[m.trainIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
     H, mask = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
-    if H is None: return None
+    if H is None:
+        log.warning("Homography could not be computed")
+        return None
     return cv2.warpPerspective(img, H, (w, h), flags=cv2.INTER_LANCZOS4)
 
-def refine_roi_by_ncc(aligned, roi_box, roi_template_path, search=8):
-    x,y,w,h = roi_box
-    roi_template = cv2.imread(roi_template_path, cv2.IMREAD_COLOR) or np.zeros((h, w, 3), dtype=np.uint8)
-    best, best_off = -1.0, (0,0)
-    for dy in range(-search, search+1):
-        for dx in range(-search, search+1):
-            xs, ys = x+dx, y+dy
-            patch = aligned[ys:ys+h, xs:xs+w]
-            if patch.shape[:2] != (h,w): continue
-            res = cv2.matchTemplate(cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY),
-                                    cv2.cvtColor(roi_template, cv2.COLOR_BGR2GRAY),
-                                    cv2.TM_CCOEFF_NORMED)
-            score = float(res.max())
-            if score > best:
-                best, best_off = score, (dx,dy)
-    dx,dy = best_off
-    return (x+dx, y+dy, w, h), best
+def __refineROIByNCC__(aligned: IMG, log: LOGGER, search: int = 8):
+    x, y, w, h = ROI_BOX
 
-def robust_roi(aligned, path, ROI_BOX, ROI_TEMPLATE, search=8):
+    roi_template = cv2.imread(ROI_TEMPLATE, cv2.IMREAD_COLOR)
+    if roi_template is None:
+        log.warning(f"Could not load ROI template '{ROI_TEMPLATE}'. Using a blank fallback template.")
+        roi_template = np.zeros((h, w, 3), dtype=np.uint8)
+    else:
+        try:
+            roi_template = cv2.resize(roi_template, (w, h), interpolation=cv2.INTER_AREA)
+        except Exception as e:
+            log.warning(f"Could not resize ROI template '{ROI_TEMPLATE}': {e}. Using blank fallback template.")
+            roi_template = np.zeros((h, w, 3), dtype=np.uint8)
+
+    best = -1.0
+    best_off = (0, 0)
+
+    aligned_h, aligned_w = aligned.shape[:2]
+
+    for dy in range(-search, search + 1):
+        for dx in range(-search, search + 1):
+            xs, ys = x + dx, y + dy
+            xe, ye = xs + w, ys + h
+
+            if xs < 0 or ys < 0 or xe > aligned_w or ye > aligned_h:
+                continue
+
+            patch = aligned[ys:ye, xs:xe]
+            if patch.shape[:2] != (h, w):
+                log.warning(
+                    f"Skipping patch at ({dx},{dy}) due to size mismatch: {patch.shape[:2]} vs {(h, w)}"
+                )
+                continue
+
+            try:
+                patch_gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+                template_gray = cv2.cvtColor(roi_template, cv2.COLOR_BGR2GRAY)
+                res = cv2.matchTemplate(patch_gray, template_gray, cv2.TM_CCOEFF_NORMED)
+                score = float(res.max())
+            except Exception as e:
+                log.warning(f"NCC failed at offset ({dx},{dy}): {e}")
+                continue
+
+            if score > best:
+                log.debug(f"New best NCC score: {score:.4f} at offset ({dx},{dy})")
+                best = score
+                best_off = (dx, dy)
+
+    dx, dy = best_off
+    return (x + dx, y + dy, w, h), best
+
+def __robustROI__(aligned: IMG, log: LOGGER, search=8):
     # 1) optional local refinement
-    box_refined, score = refine_roi_by_ncc(aligned, ROI_BOX, ROI_TEMPLATE, search)
+    box_refined, score = __refineROIByNCC__(aligned, log, search)
     x,y,w,h = box_refined
     roi = aligned[y:y+h, x:x+w]
 
@@ -247,31 +397,23 @@ def robust_roi(aligned, path, ROI_BOX, ROI_TEMPLATE, search=8):
 
     # 3) quality gates (simple examples)
     if cv2.Laplacian(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var() < 20:
-        if path:
-            cv2.imwrite(os.path.join(path, "6_roi_blurry.jpg"), roi)
         return roi, score, "blurry"
-    if score < 0.6:
-        if path:
-            cv2.imwrite(os.path.join(path, "6_roi_low_template_match.jpg"), roi)
-        return roi, score, "low_template_match"
-    if path:
-            cv2.imwrite(os.path.join(path, "6_roi.jpg"), roi)
+    if score < 0.6: return roi, score, "low_template_match"
     return roi, score, "ok"
 
-def roi_extraction(aligned: np.ndarray, path: str, ROI_BOX: tuple[int, int, int, int], ROI_TEMPLATE: str = 'roi_templates/wartortle_evolution_error.jpg', search: int = 8):
+def __roiExtraction__(aligned: np.ndarray, log: LOGGER, search: int = 8):
     """
     Extract the defined region of interest (ROI) from an aligned image.
 
     Args:
         - aligned (MatLike): Aligned card image.
-        - save_path (str): Directory to save ROI and debug image.
         - ROI_BOX (tuple): (x, y, width, height) of the region to crop.
 
     Returns:
     - MatLike: Cropped ROI image.
     """
     # 1) optional local refinement
-    box_refined, score = refine_roi_by_ncc(aligned, ROI_BOX, ROI_TEMPLATE, search)
+    box_refined, score = __refineROIByNCC__(aligned, log, search)
     x,y,w,h = box_refined
     roi = aligned[y:y+h, x:x+w]
 
@@ -284,32 +426,121 @@ def roi_extraction(aligned: np.ndarray, path: str, ROI_BOX: tuple[int, int, int,
 
     # 3) quality gates (simple examples)
     if cv2.Laplacian(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var() < 20:
-        if path:
-            cv2.imwrite(os.path.join(path, "6_roi_blurry.jpg"), roi)
         return roi, score, "blurry"
-    if score < 0.6:
-        if path:
-            cv2.imwrite(os.path.join(path, "6_roi_low_template_match.jpg"), roi)
-        return roi, score, "low_template_match"
-    if path:
-            cv2.imwrite(os.path.join(path, "6_roi.jpg"), roi)
+    if score < 0.6: return roi, score, "low_template_match"
     return roi, score, "ok"
 
 def main():
-    args = {
-        "title": "demo",
-        "input_dir": "",
-        "debugging_dir": "",
-        "dimensions": [480, 680],
-        "roi": [40, 45, 60, 60]
-    }
-    image, path = load_file_from_directory(args.get('title', ''), args.get('input_dir', ''), args.get('debugging_dir', ''))
-    image_edges = detect_edges(image, path)
-    approx = detect_contours(image, image_edges)
-    aligned = draw_contours(image, approx, path, args.get('dimensions', [480, 680]))
-    roi, score, status = roi_extraction(aligned, path, args.get('roi', [40, 45, 60, 60]))
-    rotom.show_image(roi, f"Score: {score}, Status: {status}")
-    return
+    debug = len(sys.argv) > 1 and sys.argv[1] == "debug"
+
+    logger = LOGGER(NAME)
+    os.makedirs('logs', exist_ok=True)
+    if debug:
+        load_dotenv() # docker-compose will set env vars, so no need to load them in production
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler(sys.stdout)
+    else:
+        logger.setLevel(logging.WARNING)
+        LOG_DIR = env('LOG_DIR', 'logs')[0]
+        LOG_FILE = f'{LOG_DIR}/{NAME}.log'
+        open(LOG_FILE, 'w').close()  # Ensure log file exists
+        handler = logging.FileHandler(LOG_FILE)
+    formatter = logging.Formatter('[%(name)s] %(asctime)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    logger.debug(f"Starting {NAME}...")
+    queries = ["pokemon tcg card", "pokemon card vintage", "pokemon card lot", "pokemon card"]
+    threshold = float('inf')
+    spinarak_main(debug=debug, queries=queries, threshold=threshold)
+
+    if not INPUT_DIR or not os.path.isdir(INPUT_DIR):
+        raise Exception(f"Input directory '{INPUT_DIR}' does not exist or is not a directory.")
+
+    image_files = sorted(
+        file for file in os.listdir(INPUT_DIR)
+        if str(file).lower().endswith((".jpg", ".jpeg", ".png"))
+    )
+
+    if not image_files: raise Exception(f"No image files found in directory '{INPUT_DIR}'")
+
+    for file in image_files:
+        try:
+            image = __loadFileFromDirectory__(file, logger)
+            if image is None:
+                logger.warning(f"Skipping '{file}' due to load failure.")
+                continue
+
+            if debug: __saveImage__(image, file, 1, logger)
+
+            if image is None or image.size == 0:
+                logger.warning(f"Skipping '{file}' because it is empty or could not be loaded.")
+                continue
+
+            image_edges = __detectEdges__(image)
+            if debug: __saveImage__(image_edges, file, 2, logger)
+
+            approx = __detectContours__(image, image_edges, logger)
+
+            if len(approx) != 4:
+                logger.warning(f"Skipping '{file}' because card corners could not be detected.")
+                continue
+
+            yolo_img, label = __exportYOLOLabelFromContour__(image.copy(), approx, logger)
+
+            if yolo_img is not None and label:
+                # Enter: accept and save. Esc: quit without saving. Any other key: reject and skip.
+                ch = __showImageAndKeypress__(yolo_img, file)
+                if ch == 13:
+                    yolo_path = __saveForYOLO__(yolo_img, label, file, logger)
+                    logger.debug(f"Exported YOLO label for '{file}' to '{yolo_path}'")
+                elif ch == 27:
+                    logger.info(f"User exited during review of '{file}'")
+                    sys.exit(0)
+                else:
+                    logger.warning(f"User rejected YOLO label for '{file}'")
+                    continue
+            else:
+                logger.warning(f"Failed to export YOLO label for '{file}'")
+
+            # debug_img, aligned = __drawContours__(image, approx, logger)
+            # if debug: __saveImage__(debug_img, file, 3, logger)
+            # if debug: __saveImage__(aligned, file, 4, logger)
+
+            # roi, score, status = __roiExtraction__(aligned, logger)
+            # if roi is None or roi.size == 0:
+            #     logger.warning(f"ROI extraction failed for '{file}'")
+            #     results.append({
+            #         "file": file,
+            #         "status": "roi_extraction_failed",
+            #         "score": None,
+            #     })
+            #     continue
+
+            # if debug:
+            #     if status == "ok":
+            #         logger.info(f"ROI extraction successful for '{file}' with score {score:.4f}")
+            #     elif status == "blurry":
+            #         logger.warning(f"ROI for '{file}' is blurry. Score: {score:.4f}")
+            #     elif status == "low_template_match":
+            #         logger.warning(f"ROI for '{file}' has low template match score. Score: {score:.4f}")
+
+            # if debug: __saveImage__(roi, file, 5, logger)
+
+            # results.append({
+            #     "file": file,
+            #     "status": status,
+            #     "score": float(score),
+            #     "accepted": status == "ok",
+            # })
+
+            # if status == "ok":
+            #     logger.info(f"Processed '{file}' successfully. Score: {score:.4f}")
+            # else:
+            #     logger.warning(f"ROI status for {file} was '{status}'. Score: {score:.4f}",)
+
+        except Exception as e:
+            logger.warning(f"Failed to process '{file}': {e}")
 
 if __name__ == "__main__":
     main()

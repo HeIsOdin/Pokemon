@@ -464,7 +464,6 @@ def main():
         handler = logging.FileHandler(LOG_FILE)
         HOST = '0.0.0.0'
         PORT = int(env('PORT')[0])
-        # docker prefers logs to be sent to stdout
 
     formatter = logging.Formatter('[%(name)s] %(asctime)s - %(message)s')
     handler.setFormatter(formatter)

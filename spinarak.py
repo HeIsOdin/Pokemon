@@ -21,8 +21,11 @@ pipeline, enabling automated gathering of card listings and images
 for defect detection.
 """
 
+from venv import logger
+
 from dotenv import load_dotenv
 from time import sleep
+
 from rotom import env
 import requests
 import os
@@ -38,7 +41,9 @@ EBAY_ITEM_LIMIT     = 100  # Max total items to fetch across all queries
 EBAY_CATEGORY_ID    = '183454'  # eBay category ID for Pokémon Cards
 EBAY_CONDITION_IDS  = "1000|3000|4000"
 EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
+DOWNLOAD_DIR        = os.path.join('images', 'input')
 
+ITEM_IDS = set()  # To track unique item IDs and avoid duplicates
 
 def __geteBayToken__(id: str, secret: str, log: logging.Logger) -> str:
     """
@@ -91,8 +96,10 @@ def __searchPokemonCards__(token: str, q: str, price: float, log: logging.Logger
     filters = {
         'price': f'[0..{price}]',
         'buyingOptions': f'{{{EBAY_BUYING_OPTIONS}}}',
-        'conditionIds': f'{{{EBAY_CONDITION_IDS}}}'
+        'conditionIds': f'{{{EBAY_CONDITION_IDS}}}',
+        'priceCurrency': 'USD',
     }
+    if price == float('inf'): del filters['price']  # Remove price filter if no max price is set
     params = {
         'q'            : q,
         'sort'         : EBAY_SORTING,
@@ -117,7 +124,7 @@ def __searchPokemonCards__(token: str, q: str, price: float, log: logging.Logger
 
         response.raise_for_status()
 
-        data = response.json()
+        data: dict = response.json()
         items = data.get('itemSummaries', [])
         if not items:
             log.debug(f"No more items found for query '{q}' after fetching {total_fetched} items.")
@@ -162,9 +169,10 @@ def __downloadImage__(url: str, log: logging.Logger, title: str,) -> bytes:
     response.raise_for_status()
 
     if title:
-        os.makedirs('images', exist_ok=True)
+        os.makedirs(DOWNLOAD_DIR, exist_ok=True)
         # Sanitize filename
-        filepath = f"images/{title[:40].replace(' ', '_').replace('/', '-')}.jpg"
+        filename = f"{title[:40].replace(' ', '_').replace('/', '-')}.jpg"
+        filepath = os.path.join(DOWNLOAD_DIR, filename)
         with open(filepath, 'wb') as f:
             f.write(response.content)
             log.debug(f"Saved image to {filepath}")
@@ -182,16 +190,24 @@ def __getCardDetails__(items: dict, log: logging.Logger, debug: bool = False) ->
     """
     details = []
     for item in items.get('itemSummaries', []):
+            item_id = item.get('itemId', '')
             title: str = item.get('title', '')
             product_url: str = item.get('itemWebUrl', '')
             image_url: str = item.get('image', {}).get('imageUrl', '')
 
+            if not item_id:
+                log.warning(f"No item ID found for listing: {title} - {product_url}")
+                continue
+            if item_id in ITEM_IDS:
+                log.debug(f"Skipping duplicate item ID {item_id} for listing: {title} - {product_url}")
+                continue
+            ITEM_IDS.add(item_id)
             if not image_url:
                 log.warning(f"No image URL found for {title} - {product_url}")
                 continue
 
             img = bytearray(__downloadImage__(image_url, log, title if debug else ''))
-            details.append({'title': title,'url': product_url,'image': img})
+            details.append({'title': title,'url': product_url,'image': img, 'itemId': item_id})
     return details
 
 def health(log: logging.Logger) -> tuple[list[str], list[bool]]:
@@ -231,10 +247,15 @@ def health(log: logging.Logger) -> tuple[list[str], list[bool]]:
     
     return checklist, checks
 
-def main():
-    queries = ["Wartortle 42/102", "Wartortle base set"]
-    debug = len(sys.argv) > 1 and sys.argv[1] == "debug"
-    logger = logging.Logger('Spinarak')
+def main(**kwargs):
+    debug = kwargs.get('debug', False) or len(sys.argv) > 1 and sys.argv[1] == "debug"
+    queries = kwargs.get('queries', ["Wartortle 42/102"])
+    if not isinstance(queries, list) or not all(isinstance(q, str) for q in queries):
+        raise ValueError("Queries must be a list of strings")
+    threshold = kwargs.get('threshold', 20.0)
+    if not isinstance(threshold, float): raise ValueError("Threshold must be a number")
+
+    logger = logging.Logger(NAME)
     os.makedirs('logs', exist_ok=True)
     if debug:
         load_dotenv() # docker-compose will set env vars, so no need to load them in production
@@ -250,8 +271,8 @@ def main():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    logger.debug("Starting Spinarak...")
-    threshold = 20.0
+    logger.debug(f"Starting {NAME}...")
+    
     CLIENT_ID, CLIENT_SECRET = env('EBAY_CLIENT_ID,EBAY_CLIENT_SECRET')
 
     logger.debug("Authenticating with eBay...")
