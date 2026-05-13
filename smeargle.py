@@ -479,6 +479,11 @@ def main():
 
     for file in image_files:
         try:
+            # skip if already processed
+            save_path = os.path.join(DATASET_DIR, os.path.splitext(file)[0])
+            if os.path.isdir(save_path) and os.path.isfile(os.path.join(save_path, "image.jpg")):
+                logger.info(f"Skipping '{file}' because it has already been processed.")
+                continue
             image = __loadFileFromDirectory__(file, logger)
             if image is None:
                 logger.warning(f"Skipping '{file}' due to load failure.")

@@ -18,5 +18,6 @@ flask_sessions/
 # Logs
 logs/
 
-
+# Database files
 *.zip
+images/
