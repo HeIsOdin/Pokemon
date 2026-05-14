@@ -21,6 +21,7 @@ import numpy as np
 import os
 import sys
 import logging
+import random
 
 NAME         = 'Smeargle'
 ROI_BOX      = (40, 45, 60, 60)  # Example ROI box (x, y, width, height)
@@ -28,13 +29,42 @@ CARD_DIM     = (480, 680)  # Target dimensions for aligned card images
 INPUT_DIR    = os.path.join('images', 'input')   # Directory for input images
 OUTPUT_DIR   = os.path.join('images', 'output')  # Directory for debug outputs
 DATASET_DIR  = os.path.join('images', 'dataset') # Directory for final processed dataset
+SAMPLE_SIZE  = 50  # Number of images to sample for QA review
 ROI_TEMPLATE = os.path.join('roi_templates', 'wartortle_evolution_error.jpg')  # for NCC refinement
+MAX_FAILURES = 5
 
 MIN_ASPECT_RATIO       = 0.45
 MAX_ASPECT_RATIO       = 0.90
 MIN_BOX_AREA_RATIO     = 0.20
 MAX_BOX_AREA_RATIO     = 0.98
 MIN_CONTOUR_AREA_RATIO = 0.10
+
+def __showImage__(img: IMG, log: LOGGER) -> bool:
+    """
+    Display an image in a window with error handling.
+
+    Args:
+        - img (MatLike): Image matrix to display.
+        - log (Logger): Logger for debug messages.
+    """
+    title = "Smeargle - Review Detected Contour"
+    try:
+        cv2.namedWindow(title, cv2.WINDOW_NORMAL)
+
+        cv2.resizeWindow(title, 1400, 1000)
+        cv2.moveWindow(title, 50, 50)
+
+        cv2.imshow(title, img)
+        ch = cv2.waitKey(0)
+        cv2.destroyWindow(title)
+        if ch == 27:
+            raise SystemExit("User requested exit.")
+        if ch != 13:
+            return False
+    except Exception as e:
+        log.error(f"Failed to display image '{title}': {e}")
+        return False
+    return True
 
 def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
     """
@@ -62,7 +92,7 @@ def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
         log.error(f"Failed to save image '{path}': {e}")
         return ""
 
-def __saveForYOLO__(orig_img: IMG, yolo_img: IMG, label: str, filename: str, log: LOGGER) -> str:
+def __saveForYOLO__(img: IMG, label: str, filename: str, log: LOGGER) -> str:
     """
     Save a YOLO label to disk with error handling.
 
@@ -71,26 +101,17 @@ def __saveForYOLO__(orig_img: IMG, yolo_img: IMG, label: str, filename: str, log
         - filename (str): Name of the file to save.
         - log (Logger): Logger for debug messages.
     """
-    path = os.path.join(DATASET_DIR, os.path.splitext(filename)[0])
-    if not os.path.isdir(path):
-        log.warning(f"Save path '{path}' does not exist. Creating directory.")
-        os.makedirs(path, exist_ok=True)
+    filename = os.path.splitext(filename)[0]
+    path = os.path.join(DATASET_DIR, filename)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     try:
-        cv2.imwrite(os.path.join(path, "image.jpg"), orig_img)
-        cv2.imshow(label, yolo_img)
-        ch = cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        if ch == 27:
-            log.info(f"User exited during review of '{filename}'")
-            sys.exit(0)
-        if ch != 13:
-            log.warning(f"User rejected YOLO label for '{filename}'")
-            return ""
-        label_path = os.path.join(path, "label.txt")
-        with open(label_path, "w", encoding="utf-8") as f:
-            f.write(label + "\n")
-        log.debug(f"Saved label to {label_path}")
+        cv2.imwrite(f"{path}.jpg", img)
+        if not label: return ""
+        with open(f"{path}.txt", "w", encoding="utf-8") as f: f.write(label + "\n")
         return path
+    except SystemExit:
+        log.info(f"User requested exit. Stopping processing.")
+        sys.exit(0)
     except Exception as e:
         log.error(f"Failed to save label '{path}': {e}")
         return ""
@@ -115,7 +136,7 @@ def __orderPoints__(pts: np.ndarray, log: LOGGER) -> np.ndarray:
     log.debug(f"Ordered points: {rect}")
     return rect
 
-def __loadFileFromDirectory__(filepath: str, log: LOGGER) -> IMG | None:
+def __loadFileFromDirectory__(input_dir: str, filepath: str, log: LOGGER) -> IMG | None:
     """
     Load an image from a directory and prepare a save path for debug outputs.
 
@@ -127,7 +148,7 @@ def __loadFileFromDirectory__(filepath: str, log: LOGGER) -> IMG | None:
     - tuple: (image matrix, save path string)
     """
 
-    image_path = os.path.join(INPUT_DIR, filepath)
+    image_path = os.path.join(input_dir, filepath)
 
     if not os.path.isfile(image_path):
         log.warning(f"Image file '{image_path}' does not exist.")
@@ -440,9 +461,38 @@ def __roiExtraction__(aligned: np.ndarray, log: LOGGER, search: int = 8):
     if score < 0.6: return roi, score, "low_template_match"
     return roi, score, "ok"
 
-def main():
-    debug = len(sys.argv) > 1 and sys.argv[1] == "debug"
+def __qualityAssurance__(log: LOGGER) -> bool:
+    total = 50
+    allowed_failures = 5
+    data = [os.path.join(root, dir) for root, dirs, _ in os.walk(OUTPUT_DIR) for dir in dirs]
+    samples = random.sample(data, min(total, len(data)))
+    for dir in samples:
+        image_path = os.path.join(dir, "image.jpg")
+        label_path = os.path.join(dir, "label.txt")
+        if not os.path.isfile(image_path): continue
+        accepted = os.path.isfile(label_path)
+        img = cv2.imread(image_path)
+        if img is None: continue
+        if not (accepted and __showImage__(img, log)): allowed_failures -= 1
+        if allowed_failures < 0: return False     
+    return True
 
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "progress":
+        accepted = rejected = 0
+        if not os.path.isdir(DATASET_DIR): raise Exception(f"'{DATASET_DIR}' does not exist")
+        files = [f for f in os.listdir(DATASET_DIR)
+                if os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
+        for file in files:
+            label_file = os.path.join(DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
+            if os.path.isfile(label_file): accepted += 1
+            else: rejected += 1
+        print(f"Progress: {accepted} accepted, {rejected} rejected, {rejected + accepted} total")
+        return
+    
+    qa = len(sys.argv) > 1 and sys.argv[1] == "qa"
+    
+    debug = len(sys.argv) > 1 and "debug" in sys.argv
     logger = LOGGER(NAME)
     os.makedirs('logs', exist_ok=True)
     if debug:
@@ -462,29 +512,34 @@ def main():
     logger.debug(f"Starting {NAME}...")
     queries = ["pokemon tcg card", "pokemon card vintage", "pokemon card lot", "pokemon card"]
     threshold = float('inf')
-    if not os.path.isdir(INPUT_DIR) or len([f for f in os.listdir(INPUT_DIR)]) < 5:
-        logger.warning(f"{INPUT_DIR} has too few images. Running Spinarak to populate it...")
+
+    input_dir = DATASET_DIR if qa else INPUT_DIR
+    if not os.path.isdir(input_dir) or len([f for f in os.listdir(input_dir)]) < 5:
+        logger.warning(f"{input_dir} has too few images. Running Spinarak to populate it...")
         spinarak_main(debug=True, queries=queries, threshold=threshold)
 
-    if not INPUT_DIR or not os.path.isdir(INPUT_DIR):
-        raise Exception(f"Input directory '{INPUT_DIR}' does not exist or is not a directory.")
+    if not input_dir or not os.path.isdir(input_dir):
+        raise Exception(f"Input directory '{input_dir}' does not exist or is not a directory.")
 
-    image_files = sorted(
-        file for file in os.listdir(INPUT_DIR)
-        if str(file).lower().endswith((".jpg", ".jpeg", ".png"))
-    )
-    logger.debug(f"Found {len(image_files)} image files in '{INPUT_DIR}'")
+    files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and
+            os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
+    if not files: raise Exception(f"No files found in input directory '{input_dir}'")
 
-    if not image_files: raise Exception(f"No image files found in directory '{INPUT_DIR}'")
+    image_files = random.sample(files, min(SAMPLE_SIZE, len(files))) if qa else sorted(files)
+    if not image_files: raise Exception(f"No image files found in directory '{input_dir}'")
 
+    logger.debug(f"Found {len(image_files)} image files in '{input_dir}'")
+
+    rejects = []
     for file in image_files:
         try:
             # skip if already processed
-            save_path = os.path.join(DATASET_DIR, os.path.splitext(file)[0])
-            if os.path.isdir(save_path) and os.path.isfile(os.path.join(save_path, "image.jpg")):
+            save_path = os.path.join(DATASET_DIR, file)
+            if os.path.isfile(save_path) and not qa:
                 logger.info(f"Skipping '{file}' because it has already been processed.")
                 continue
-            image = __loadFileFromDirectory__(file, logger)
+
+            image = __loadFileFromDirectory__(input_dir, file, logger)
             if image is None:
                 logger.warning(f"Skipping '{file}' due to load failure.")
                 continue
@@ -506,10 +561,28 @@ def main():
 
             yolo_img, label = __contourToYOLO__(image.copy(), approx, logger)
 
-            if yolo_img is not None and label:
-                __saveForYOLO__(image, yolo_img, label, file, logger)
+            if yolo_img is None:
+                logger.warning(f"Skipping '{file}' because YOLO image could not be generated.")
+                continue
+
+            choice = __showImage__(yolo_img, logger)
+            label_exist = os.path.isfile(os.path.splitext(save_path)[0] + ".txt")
+            if not choice:
+                logger.debug(f"User rejected '{file}'")
+                if label_exist:
+                    rejects.append((file, label))
+                    __saveImage__(yolo_img, file, 3, logger)  # save rejected image for debugging
+                label = ''
             else:
-                logger.warning(f"Failed to export YOLO label for '{file}'")
+                logger.debug(f"User accepted '{file}'")
+                if not label_exist:
+                    rejects.append((file, label))
+                    __saveImage__(yolo_img, file, 3, logger)  # save accepted image for debugging
+
+            if not qa: __saveForYOLO__(image, label, file, logger)
+            elif len(rejects) >= MAX_FAILURES:
+                logger.warning("Too many rejections during QA. Stopping process.")
+                break
 
             # debug_img, aligned = __drawContours__(image, approx, logger)
             # if debug: __saveImage__(debug_img, file, 3, logger)
@@ -547,8 +620,11 @@ def main():
             # else:
             #     logger.warning(f"ROI status for {file} was '{status}'. Score: {score:.4f}",)
 
-        except Exception as e:
-            logger.warning(f"Failed to process '{file}': {e}")
+        except Exception as e: logger.warning(f"Failed to process '{file}': {e}")
+    logger.debug(f"Processed {len(image_files)} files.")
+    if qa:
+        print(f"QA results: {len(image_files)-len(rejects)} accepted, {len(rejects)} rejected.")
+        print("Rejected files: " + ", ".join(f"{file} (label: '{label}')" for file, label in rejects))
 
 if __name__ == "__main__":
     main()
