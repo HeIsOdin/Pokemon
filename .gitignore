@@ -18,6 +18,12 @@ flask_sessions/
 # Logs
 logs/
 
-# Database files
+# Dataset files
 *.zip
-images/
+dataset*/*
+input/*
+output/*
+
+# Weights
+*.pt
+runs/*
