@@ -23,8 +23,9 @@ for defect detection.
 
 from dotenv import load_dotenv
 from time import sleep
+from logging import Logger as LOGGER  # for type hinting only, not an actual import
 
-from rotom import env, clear_directory
+from rotom import env, clear_directory, sanitize_filename
 import requests
 import os
 import sys
@@ -33,7 +34,7 @@ import logging
 NAME                = 'Spinarak'
 DELAY               = 0.25  # seconds between API calls to respect rate limits
 TIMEOUT             = 10  # seconds
-DOWNLOAD_DIR        = os.path.join('images', 'input') # ensure it agrees with Smeargle
+DOWNLOAD_DIR        = os.path.join('.', 'input') # ensure it agrees with Smeargle
 EBAY_SORTING        = "newlyListed"
 EBAY_PAGE_SIZE      = 50
 EBAY_ITEM_LIMIT     = 100  # Max total items to fetch across all queries
@@ -41,9 +42,7 @@ EBAY_CATEGORY_ID    = '183454'  # eBay category ID for Pokémon Cards
 EBAY_CONDITION_IDS  = "1000|3000|4000"
 EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
 
-ITEM_IDS = set()  # To track unique item IDs and avoid duplicates
-
-def _geteBayToken(id: str, secret: str, log: logging.Logger) -> str:
+def _geteBayToken(id: str, secret: str, log: LOGGER) -> str:
     """
     Fetch an OAuth2 access token from the eBay API using client credentials.
 
@@ -70,7 +69,7 @@ def _geteBayToken(id: str, secret: str, log: logging.Logger) -> str:
     if not 'access_token' in data: raise Exception(f"Missing access_token: {data}")
     return data['access_token']
 
-def _searchPokemonCards(token: str, q: str, price: float, log: logging.Logger, offset: int = 0, limit: int = EBAY_ITEM_LIMIT) -> dict:
+def _searchPokemonCards(token: str, q: str, price: float, log: LOGGER, offset: int = 0, limit: int = EBAY_ITEM_LIMIT) -> dict:
     """
     Fetches up to `limit` Pokémon card listings from eBay, starting at `offset`, combining paginated results.
 
@@ -113,12 +112,16 @@ def _searchPokemonCards(token: str, q: str, price: float, log: logging.Logger, o
     # 4000 = Very Good; for trading cards, this means ungraded
     while total_fetched < limit:
         batch_limit = min(EBAY_PAGE_SIZE, limit - total_fetched)
-        params.update({
-            'limit'       : str(batch_limit),
-            'offset'      : str(offset + total_fetched),
-        })
+        params = {
+        'q'            : q,
+        'sort'         : EBAY_SORTING,
+        'filter'       : f'{','.join([f"{k}:{v}" for k, v in filters.items()])}',
+        'category_ids' : EBAY_CATEGORY_ID,
+        'limit'       : str(batch_limit),
+        'offset'      : str(offset + total_fetched),
+        }
 
-        response = requests.get(search_url, headers=headers, params=params)
+        response = requests.get(search_url, headers=headers, params=params, timeout=TIMEOUT)
 
         response.raise_for_status()
 
@@ -138,7 +141,7 @@ def _searchPokemonCards(token: str, q: str, price: float, log: logging.Logger, o
     return {'itemSummaries': all_items}
 
 
-def _downloadImage(url: str, log: logging.Logger, title: str,) -> bytes:
+def _downloadImage(url: str, log: LOGGER, title: str,) -> bytes:
     """
     Download an image from eBay and optionally save it locally.
 
@@ -151,33 +154,24 @@ def _downloadImage(url: str, log: logging.Logger, title: str,) -> bytes:
     Returns:
     - bytes: Image content as raw bytes.
     """
-    resolution_versions = ("1600",)
-    # Try fetching high-resolution version first
+    resolution_versions = ("1600", "800")
     for res in resolution_versions:
         high_res_url = url.replace("s-l225.jpg", f"s-l{res}.jpg")
-        response = requests.head(high_res_url)
-        if response.status_code == 200:
-            url = high_res_url
-            log.debug(f"Found high-quality image at {url}")
-            break
-        else:
-            log.warning(f"High-quality image not found at {high_res_url} (status code: {response.status_code})")
+        response = requests.get(high_res_url, timeout=TIMEOUT)
+        if response.status_code != 200:
+            log.debug(f"Failed to fetch at {res} resolution. Status code: {response.status_code}")
+            continue
+    
+        if title:
+            os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+            # Enforce strict Kaggle-compliant sanitization
+            filename = sanitize_filename(f"{title}.jpg", max_len=64)
+            filepath = os.path.join(DOWNLOAD_DIR, filename)
 
-    response = requests.get(url, timeout=TIMEOUT)
-    response.raise_for_status()
+        return response.content
+    raise Exception(f"Failed to download image from {url}")
 
-    if title:
-        os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-        # Sanitize filename
-        filename = f"{title[:40].replace(' ', '_').replace('/', '-')}.jpg"
-        filepath = os.path.join(DOWNLOAD_DIR, filename)
-        with open(filepath, 'wb') as f:
-            f.write(response.content)
-            log.debug(f"Saved image to {filepath}")
-
-    return response.content
-
-def _getCardDetails(items: dict, log: logging.Logger, debug: bool = False) -> list[dict]:
+def _getCardDetails(items: dict, item_ids: set, log: LOGGER, debug: bool = False) -> list[dict]:
     """
     Extract relevant card details from an eBay item summary.
 
@@ -188,29 +182,32 @@ def _getCardDetails(items: dict, log: logging.Logger, debug: bool = False) -> li
     """
     details = []
     for item in items.get('itemSummaries', []):
-            item_id = item.get('itemId', '')
-            title: str = item.get('title', '')
-            product_url: str = item.get('itemWebUrl', '')
-            image_url: str = item.get('image', {}).get('imageUrl', '')
+            
+            title       = str(item.get('title', ''))
+            item_id     = str(item.get('itemId', ''))
+            prod_url = str(item.get('itemWebUrl', ''))
+            image_url   = str(item.get('image', {}).get('imageUrl', ''))
 
             if not item_id:
-                log.warning(f"No item ID found for listing: {title} - {product_url}")
+                log.warning(f"No item ID found for listing: {title} - {prod_url}")
                 continue
-            if item_id in ITEM_IDS:
-                log.debug(f"Skipping duplicate item ID {item_id} for listing: {title} - {product_url}")
+            if item_id in item_ids:
+                log.debug(f"Skipping duplicate item ID {item_id} for listing: {title} - {prod_url}")
                 continue
-            ITEM_IDS.add(item_id)
+
+            item_ids.add(item_id)
             if not image_url:
-                log.warning(f"No image URL found for {title} - {product_url}")
+                log.warning(f"No image URL found for {title} - {prod_url}")
                 continue
 
             img = bytearray(_downloadImage(image_url, log, title if debug else ''))
-            details.append({'title': title,'url': product_url,'image': img, 'itemId': item_id})
+            details.append({'title': title,'url': prod_url,'image': img, 'itemId': item_id})
     return details
 
-def health(log: logging.Logger) -> tuple[list[str], list[bool]]:
+def health(log: LOGGER) -> tuple[list[str], list[bool]]:
     checklist: list[str] = []
     checks: list[bool] = []
+    item_ids = set()
 
     checklist.append("eBay API Authentication")
     try:
@@ -233,7 +230,7 @@ def health(log: logging.Logger) -> tuple[list[str], list[bool]]:
     
     checklist.append("eBay Listing Image Download")
     try:
-        details = _getCardDetails(results, log)
+        details = _getCardDetails(results, item_ids, log)
         if len(details) > 0 and 'image' in details[0]:
             checks.append(True)
         else:
@@ -253,7 +250,7 @@ def main(**kwargs):
     threshold = kwargs.get('threshold', 20.0)
     if not isinstance(threshold, float): raise ValueError("Threshold must be a number")
 
-    logger = logging.Logger(NAME)
+    logger = logging.getLogger(NAME)
     os.makedirs('logs', exist_ok=True)
     if debug:
         load_dotenv() # docker-compose will set env vars, so no need to load them in production
@@ -278,16 +275,18 @@ def main(**kwargs):
     token = _geteBayToken(CLIENT_ID, CLIENT_SECRET, logger)
 
     items = []
+    item_ids = set()  # To track unique item IDs and avoid duplicates
 
     for query in queries:
         logger.debug(f"Searching eBay for query: {query} with price threshold: {threshold}")
         results = _searchPokemonCards(token, price=threshold, q=query, log=logger)
 
         logger.debug("Downloading listing images...")
-        details = _getCardDetails(results, logger, debug)
+        details = _getCardDetails(results, item_ids, logger, debug)
         items.extend(details)
             
         logger.debug(f"Total items fetched: {len(items)}")
+    return items
 
 if __name__ == "__main__":
     main()

@@ -13,6 +13,7 @@ The module is structured to facilitate debugging by saving intermediate results 
 from dotenv import load_dotenv
 from rotom import env
 from spinarak import main as spinarak_main
+from datetime import datetime
 from cv2.typing import MatLike as IMG # for type hinting only, not an actual import
 from logging import Logger as LOGGER  # for type hinting only, not an actual import
 
@@ -22,15 +23,19 @@ import os
 import sys
 import logging
 import random
+import shutil
+import yaml
 
 NAME         = 'Smeargle'
 ROI_BOX      = (40, 45, 60, 60)  # Example ROI box (x, y, width, height)
 CARD_DIM     = (480, 680)  # Target dimensions for aligned card images
-INPUT_DIR    = os.path.join('images', 'input')   # Directory for input images
-OUTPUT_DIR   = os.path.join('images', 'output')  # Directory for debug outputs
-DATASET_DIR  = os.path.join('images', 'dataset') # Directory for final processed dataset
+INPUT_DIR    = os.path.join('.', 'input')   # Directory for input images
+OUTPUT_DIR   = os.path.join('.', 'output')  # Directory for debug outputs
+DATASET_DIR  = os.path.join('.', 'dataset') # Directory for final processed dataset
 SAMPLE_SIZE  = 50  # Number of images to sample for QA review
+SPLIT_RATIO  = (0.8, 0.1, 0.1)  # Train/Val/Test split ratios
 ROI_TEMPLATE = os.path.join('roi_templates', 'wartortle_evolution_error.jpg')  # for NCC refinement
+DATASET_NAME = "pokemon-tcg-cards"
 MAX_FAILURES = 5
 
 MIN_ASPECT_RATIO       = 0.45
@@ -413,25 +418,6 @@ def _refineROIByNCC(aligned: IMG, log: LOGGER, search: int = 8):
     dx, dy = best_off
     return (x + dx, y + dy, w, h), best
 
-def _robustROI(aligned: IMG, log: LOGGER, search=8):
-    # 1) optional local refinement
-    box_refined, score = _refineROIByNCC(aligned, log, search)
-    x,y,w,h = box_refined
-    roi = aligned[y:y+h, x:x+w]
-
-    # 2) normalize (helps classifier)
-    lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
-    l,a,b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4,4))
-    l = clahe.apply(l)
-    roi = cv2.cvtColor(cv2.merge([l,a,b]), cv2.COLOR_LAB2BGR)
-
-    # 3) quality gates (simple examples)
-    if cv2.Laplacian(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var() < 20:
-        return roi, score, "blurry"
-    if score < 0.6: return roi, score, "low_template_match"
-    return roi, score, "ok"
-
 def _roiExtraction(aligned: np.ndarray, log: LOGGER, search: int = 8):
     """
     Extract the defined region of interest (ROI) from an aligned image.
@@ -461,21 +447,99 @@ def _roiExtraction(aligned: np.ndarray, log: LOGGER, search: int = 8):
     if score < 0.6: return roi, score, "low_template_match"
     return roi, score, "ok"
 
-def _qualityAssurance(log: LOGGER) -> bool:
-    total = 50
-    allowed_failures = 5
-    data = [os.path.join(root, dir) for root, dirs, _ in os.walk(OUTPUT_DIR) for dir in dirs]
-    samples = random.sample(data, min(total, len(data)))
-    for dir in samples:
-        image_path = os.path.join(dir, "image.jpg")
-        label_path = os.path.join(dir, "label.txt")
-        if not os.path.isfile(image_path): continue
-        accepted = os.path.isfile(label_path)
-        img = cv2.imread(image_path)
-        if img is None: continue
-        if not (accepted and _showImage(img, log)): allowed_failures -= 1
-        if allowed_failures < 0: return False     
-    return True
+def _splitDataset(image_files: list[str]):
+    """
+    This function splits the dataset (train, val, test) based on SPLIT_RATIO.
+    It assumes that DATASET_DIR contains all the processed images and labels.
+    It moves files into subdirectories for each split.
+    """
+    # Get all image files
+    random.shuffle(image_files)
+    
+    total = len(image_files)
+    train_end = int(total * SPLIT_RATIO[0])
+    val_end = train_end + int(total * SPLIT_RATIO[1])
+
+    splits = {
+        "train": image_files[:train_end],
+        "val": image_files[train_end:val_end],
+        "test": image_files[val_end:]
+    }
+
+    for split, files in splits.items():
+        for file in files:
+            label_file = os.path.join(DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
+            shutil.move(os.path.join(DATASET_DIR, file), os.path.join(DATASET_DIR, "images", split, file))
+            if os.path.isfile(label_file):
+                shutil.move(label_file, os.path.join(DATASET_DIR, "labels", split, os.path.basename(label_file)))
+
+def _createYAML(remote_dataset_path: str):
+    """
+    This function creates a YAML file for the dataset configuration.
+    It assumes that the dataset has been split into train, val, and test directories.
+    """
+    config = {
+        "path": remote_dataset_path,
+        "train": "images/train",
+        "val": "images/val",
+        "test": "images/test",
+        "names": {"0": "pokemon_card"}
+    }
+    yaml_path = os.path.join(DATASET_DIR, "dataset.yaml")
+    with open(yaml_path, "w") as f: yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+def _pushToKaggle():
+    """
+    This function pushes the dataset to Kaggle using the Kaggle API.
+    It assumes that the Kaggle API is configured and authenticated properly.
+    """
+    # check if kaggle CLI is available
+    if shutil.which("kaggle") is None: raise Exception("Please install the Kaggle API")
+
+    # check if kaggle.json exists
+    kaggle_json = os.path.join(os.path.expanduser("~"), ".kaggle", "kaggle.json")
+    if not os.path.isfile(kaggle_json): raise Exception(f"Put your Kaggle API key at {kaggle_json}")
+
+    # check if images, labels, and yaml exist
+    if not os.path.isdir(os.path.join(DATASET_DIR, "images")):
+        raise Exception("Images directory is missing")
+    if not os.path.isdir(os.path.join(DATASET_DIR, "labels")):
+        raise Exception("Labels directory is missing")
+    if not os.path.isfile(os.path.join(DATASET_DIR, "dataset.yaml")):
+        raise Exception("dataset.yaml is missing")
+    
+    # check if dataset_metadata.json exists (created by kaggle CLI on first push)
+    metadata_path = os.path.join(DATASET_DIR, "dataset-metadata.json")
+    if not os.path.isfile(metadata_path):
+        raise Exception(f"Missing Kaggle dataset metadata. Initialize or download the dataset")
+
+    # push to Kaggle
+    message = f"Updated dataset with new cards at {datetime.now().isoformat()}"
+    os.system(f"kaggle datasets version -p {DATASET_DIR} -m '{message}' -r zip")
+
+def push(remote_dataset_path: str = DATASET_DIR):
+    """
+    This function splits the dataset (train, val, test), creates a YAML file and pushes to Kaggle.
+    """
+    # load dataset files
+    if not os.path.isdir(DATASET_DIR): raise Exception(f"'{DATASET_DIR}' does not exist")
+    for m in ("images", "labels"):
+        for s in ("train", "val", "test"):
+            path = os.path.join(DATASET_DIR, m, s)
+            os.makedirs(path, exist_ok=True)
+    
+    positives = []
+    negatives = []
+    for file in os.listdir(DATASET_DIR):
+        if os.path.splitext(file)[1].lower() in (".jpg", ".jpeg", ".png"):
+            label_file = os.path.join(DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
+            if os.path.isfile(label_file): positives.append(file)
+            else: negatives.append(file)
+    _splitDataset(positives)
+    _splitDataset(negatives)
+    
+    _createYAML(remote_dataset_path)
+    _pushToKaggle()
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "progress":
@@ -490,10 +554,14 @@ def main():
         print(f"Progress: {accepted} accepted, {rejected} rejected, {rejected + accepted} total")
         return
     
+    if len(sys.argv) > 1 and sys.argv[1] == "push":
+        path = sys.argv[2] if len(sys.argv) > 2 else DATASET_DIR
+        return push(path)
+    
     qa = len(sys.argv) > 1 and sys.argv[1] == "qa"
     
     debug = len(sys.argv) > 1 and "debug" in sys.argv
-    logger = LOGGER(NAME)
+    logger = logging.getLogger(NAME)
     os.makedirs('logs', exist_ok=True)
     if debug:
         load_dotenv() # docker-compose will set env vars, so no need to load them in production

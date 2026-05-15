@@ -24,14 +24,13 @@ be run as a standalone executable.
 import os
 import json
 import argparse
-import re
 import psycopg2
-import traceback
 import cv2
 import zipfile
 import time
 import shutil
 import logging
+import re
 
 def print_with_color(string: str, mode: int, quit: bool = True) -> None:
     """
@@ -221,7 +220,7 @@ def pass_arguments_to_main() -> argparse.Namespace:
     parser.add_argument("--verbose", action='store_true', help='Show a verbose output')
     return parser.parse_args()
 
-def postgresql(sql: str, table: tuple, template : tuple[str, ...] = (), pairs: dict = {}, limit: int = -1,):
+def postgresql(sql: str, table: tuple, template : tuple[str, ...] = (), pairs: dict | None = None, limit: int = -1,):
     HOST, PORT = env('POSTGRESQL_HOST,POSTGRESQL_PORT', 'localhost,5432')
     DATABASE, USER, PASSWORD = env('POSTGRESQL_DBNAME,POSTGRESQL_USER,POSTGRESQL_PASSWD')
     
@@ -229,6 +228,7 @@ def postgresql(sql: str, table: tuple, template : tuple[str, ...] = (), pairs: d
         with conn.cursor() as cursor:
 
             keyword = sql.split()[0].upper()
+            if pairs is None: pairs = {}
 
             table_names = ', '.join(table); sql = sql.replace('{{tables}}', table_names)
             filters = ' AND '.join([k+' = %s' for k in pairs.keys() if k not in template]); sql = sql.replace('{{filters}}', filters)
@@ -262,6 +262,17 @@ def show_image(image, image_name="demo"):
     cv2.imshow(image_name, image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+def sanitize_filename(raw_name: str, max_len: int = 60) -> str:
+    """
+    Sanitize a raw string into a filesystem-safe filename.
+    Replaces all non-alphanumeric characters (except ., _, -) with underscores,
+    collapses consecutive underscores, and enforces a maximum length.
+    """
+    stem, ext = os.path.splitext(raw_name)
+    clean = re.compile(r'[^a-zA-Z0-9._-]').sub('_', stem)[:max_len]
+    clean = re.sub(r'_+', '_', clean).strip('_')
+    return f"{clean or 'unnamed'}{ext}"
 
 # def logger(name: str, debug: bool = False) -> logging.Logger:
 #     logger = logging.Logger(name)
