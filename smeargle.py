@@ -25,6 +25,7 @@ import logging
 import random
 import shutil
 import yaml
+import subprocess
 
 NAME         = 'Smeargle'
 ROI_BOX      = (40, 45, 60, 60)  # Example ROI box (x, y, width, height)
@@ -121,26 +122,6 @@ def _saveForYOLO(img: IMG, label: str, filename: str, log: LOGGER) -> str:
         log.error(f"Failed to save label '{path}': {e}")
         return ""
 
-def _orderPoints(pts: np.ndarray, log: LOGGER) -> np.ndarray:
-    """
-    Reorder corner points into a consistent top-left, top-right, bottom-right, bottom-left order.
-
-    Args:
-        - pts (np.ndarray): Array of shape (4, 2) with unordered points.
-
-    Returns:
-    - np.ndarray: Array of shape (4, 2) with ordered points.
-    """
-    rect = np.zeros((4, 2), dtype="float32")
-    s = pts.sum(axis=1)
-    rect[0] = pts[np.argmin(s)]      # Top-left
-    rect[2] = pts[np.argmax(s)]      # Bottom-right
-    diff = np.diff(pts, axis=1)
-    rect[1] = pts[np.argmin(diff)]   # Top-right
-    rect[3] = pts[np.argmax(diff)]   # Bottom-left
-    log.debug(f"Ordered points: {rect}")
-    return rect
-
 def _loadFileFromDirectory(input_dir: str, filepath: str, log: LOGGER) -> IMG | None:
     """
     Load an image from a directory and prepare a save path for debug outputs.
@@ -162,25 +143,7 @@ def _loadFileFromDirectory(input_dir: str, filepath: str, log: LOGGER) -> IMG | 
     img = cv2.imread(image_path)
     if img is None:
         log.warning(f"Failed to load image '{image_path}'")
-        img = np.zeros((100, 100, 3), dtype=np.uint8)
-    return img
-
-def _loadFileFromBytearray(file: bytearray, log: LOGGER):
-    """
-    Load an image from a bytearray (typically from web sources).
-
-    Args:
-        - file (bytearray): Raw image bytes.
-        - log (Logger): Logger for debug messages.
-
-    Returns:
-    - tuple: (image matrix, save path string)
-    """
-    image_bytes = np.frombuffer(file, dtype=np.uint8)
-    img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
-    if img is None:
-        log.warning(f"Failed to decode image from byte array")
-        img = np.zeros((100, 100, 3), dtype=np.uint8)
+        return None
     return img
 
 def _detectEdges(img: IMG) -> IMG:
@@ -236,8 +199,8 @@ def _detectContours(img: IMG, edges: IMG, log: LOGGER) -> IMG:
     # Use fallback box if not exactly 4 points
     if len(approx) == 4:
         return approx
-    edges = _detectEdges(img)
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    fallback_edges = _detectEdges(img)
+    contours, _ = cv2.findContours(fallback_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contours:
         card_contour = max(contours, key=cv2.contourArea)
         peri = cv2.arcLength(card_contour, True)
@@ -255,7 +218,7 @@ def _detectContours(img: IMG, edges: IMG, log: LOGGER) -> IMG:
             return np.array(box, dtype=np.int32)
     return np.empty((0, 2), dtype=np.int32)
 
-def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str, float] = {}):
+def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str, float]|None = None) -> tuple[IMG|None, str]:
     """
     Convert a 4-point contour into a YOLO axis-aligned bounding-box label.
 
@@ -267,6 +230,7 @@ def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str
     Returns:
         tuple: (image with drawn contours, YOLO label string) or (None, '') if invalid
     """
+    if ratios is None: ratios = {}
     min_aspect_ratio       = ratios.get("min_aspect_ratio", MIN_ASPECT_RATIO)
     max_aspect_ratio       = ratios.get("max_aspect_ratio", MAX_ASPECT_RATIO)
     min_box_area_ratio     = ratios.get("min_box_area_ratio", MIN_BOX_AREA_RATIO)
@@ -319,133 +283,6 @@ def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str
     cv2.rectangle(image, (x, y), (x + bw, y + bh), (255, 0, 0), 2)
 
     return image, f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
-
-def _drawContours(img: IMG, approx: IMG, log: LOGGER) -> tuple[IMG, IMG]:
-    """
-    Apply a perspective transform to align and deskew the card.
-
-    Args:
-        - img (MatLike): Input image matrix.
-        - approx (MatLike): Approximated contour points.
-        - save_path (str): Directory to save aligned image.
-        - CARD_DIM (tuple): Target card dimensions (width, height).
-
-    Returns:
-    - MatLike: Aligned, deskewed image.
-    """
-    pts = approx.reshape(4, 2)
-    CARD_WIDTH, CARD_HEIGHT = CARD_DIM
-
-    # Save contour overlay
-    debug_img = img.copy()
-    cv2.drawContours(debug_img, [approx], -1, (0, 255, 0), 3)
-
-    # Apply perspective warp
-    rect = _orderPoints(pts, log)
-    dst = np.array([[0, 0], [CARD_WIDTH - 1, 0], [CARD_WIDTH - 1, CARD_HEIGHT - 1], [0, CARD_HEIGHT - 1]], dtype="float32")
-    M = cv2.getPerspectiveTransform(rect, dst)
-    aligned = cv2.warpPerspective(img, M, (CARD_WIDTH, CARD_HEIGHT), flags=cv2.INTER_LANCZOS4)
-    return debug_img, aligned
-
-def _alignWithOrb(img: IMG, template, out_wh, log: LOGGER) -> IMG | None:
-    h, w = out_wh[1], out_wh[0]
-    orb = cv2.ORB.create(1500)
-    kp1, des1 = orb.detectAndCompute(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), np.array([]))
-    kp2, des2 = orb.detectAndCompute(cv2.cvtColor(template, cv2.COLOR_BGR2GRAY),  np.array([]))
-    if des1 is None or des2 is None: return None
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
-    matches = sorted(bf.match(des1, des2), key=lambda m: m.distance)[:200]
-    if len(matches) < 10:
-        log.warning(f"Not enough ORB matches found: {len(matches)}")
-        return None
-    src = np.array([kp1[m.queryIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
-    dst = np.array([kp2[m.trainIdx].pt for m in matches], dtype=np.float32).reshape(-1,1,2)
-    H, _ = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
-    if H is None:
-        log.warning("Homography could not be computed")
-        return None
-    return cv2.warpPerspective(img, H, (w, h), flags=cv2.INTER_LANCZOS4)
-
-def _refineROIByNCC(aligned: IMG, log: LOGGER, search: int = 8):
-    x, y, w, h = ROI_BOX
-
-    roi_template = cv2.imread(ROI_TEMPLATE, cv2.IMREAD_COLOR)
-    if roi_template is None:
-        log.warning(f"Could not load ROI template '{ROI_TEMPLATE}'. Using a blank fallback template.")
-        roi_template = np.zeros((h, w, 3), dtype=np.uint8)
-    else:
-        try:
-            roi_template = cv2.resize(roi_template, (w, h), interpolation=cv2.INTER_AREA)
-        except Exception as e:
-            log.warning(f"Could not resize ROI template '{ROI_TEMPLATE}': {e}. Using blank fallback template.")
-            roi_template = np.zeros((h, w, 3), dtype=np.uint8)
-
-    best = -1.0
-    best_off = (0, 0)
-
-    aligned_h, aligned_w = aligned.shape[:2]
-
-    for dy in range(-search, search + 1):
-        for dx in range(-search, search + 1):
-            xs, ys = x + dx, y + dy
-            xe, ye = xs + w, ys + h
-
-            if xs < 0 or ys < 0 or xe > aligned_w or ye > aligned_h:
-                log.warning(f"Skipping offset ({dx},{dy}) due to out-of-bounds: ({xs},{ys}) to ({xe},{ye}) in image of size ({aligned_w}, {aligned_h})")
-                continue
-
-            patch = aligned[ys:ye, xs:xe]
-            if patch.shape[:2] != (h, w):
-                log.warning(
-                    f"Skipping patch at ({dx},{dy}) due to size mismatch: {patch.shape[:2]} vs {(h, w)}"
-                )
-                continue
-
-            try:
-                patch_gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
-                template_gray = cv2.cvtColor(roi_template, cv2.COLOR_BGR2GRAY)
-                res = cv2.matchTemplate(patch_gray, template_gray, cv2.TM_CCOEFF_NORMED)
-                score = float(res.max())
-            except Exception as e:
-                log.warning(f"NCC failed at offset ({dx},{dy}): {e}")
-                continue
-
-            if score > best:
-                log.debug(f"New best NCC score: {score:.4f} at offset ({dx},{dy})")
-                best = score
-                best_off = (dx, dy)
-
-    dx, dy = best_off
-    return (x + dx, y + dy, w, h), best
-
-def _roiExtraction(aligned: np.ndarray, log: LOGGER, search: int = 8):
-    """
-    Extract the defined region of interest (ROI) from an aligned image.
-
-    Args:
-        - aligned (MatLike): Aligned card image.
-        - ROI_BOX (tuple): (x, y, width, height) of the region to crop.
-
-    Returns:
-    - MatLike: Cropped ROI image.
-    """
-    # 1) optional local refinement
-    box_refined, score = _refineROIByNCC(aligned, log, search)
-    x,y,w,h = box_refined
-    roi = aligned[y:y+h, x:x+w]
-
-    # 2) normalize (helps classifier)
-    lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
-    l,a,b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4,4))
-    l = clahe.apply(l)
-    roi = cv2.cvtColor(cv2.merge([l,a,b]), cv2.COLOR_LAB2BGR)
-
-    # 3) quality gates (simple examples)
-    if cv2.Laplacian(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var() < 20:
-        return roi, score, "blurry"
-    if score < 0.6: return roi, score, "low_template_match"
-    return roi, score, "ok"
 
 def _splitDataset(image_files: list[str]):
     """
@@ -515,7 +352,8 @@ def _pushToKaggle():
 
     # push to Kaggle
     message = f"Updated dataset with new cards at {datetime.now().isoformat()}"
-    os.system(f"kaggle datasets version -p {DATASET_DIR} -m '{message}' -r zip")
+    args = ["kaggle", "datasets", "version", "-p", DATASET_DIR, "-m", message, "-r", "zip"]
+    subprocess.run(args, check=True)
 
 def push(remote_dataset_path: str = DATASET_DIR):
     """
@@ -614,10 +452,6 @@ def main():
 
             if debug: _saveImage(image, file, 1, logger)
 
-            if image is None or image.size == 0:
-                logger.warning(f"Skipping '{file}' because it is empty or could not be loaded.")
-                continue
-
             image_edges = _detectEdges(image)
             if debug: _saveImage(image_edges, file, 2, logger)
 
@@ -651,42 +485,6 @@ def main():
             elif len(rejects) >= MAX_FAILURES:
                 logger.warning("Too many rejections during QA. Stopping process.")
                 break
-
-            # debug_img, aligned = __drawContours__(image, approx, logger)
-            # if debug: __saveImage__(debug_img, file, 3, logger)
-            # if debug: __saveImage__(aligned, file, 4, logger)
-
-            # roi, score, status = __roiExtraction__(aligned, logger)
-            # if roi is None or roi.size == 0:
-            #     logger.warning(f"ROI extraction failed for '{file}'")
-            #     results.append({
-            #         "file": file,
-            #         "status": "roi_extraction_failed",
-            #         "score": None,
-            #     })
-            #     continue
-
-            # if debug:
-            #     if status == "ok":
-            #         logger.info(f"ROI extraction successful for '{file}' with score {score:.4f}")
-            #     elif status == "blurry":
-            #         logger.warning(f"ROI for '{file}' is blurry. Score: {score:.4f}")
-            #     elif status == "low_template_match":
-            #         logger.warning(f"ROI for '{file}' has low template match score. Score: {score:.4f}")
-
-            # if debug: __saveImage__(roi, file, 5, logger)
-
-            # results.append({
-            #     "file": file,
-            #     "status": status,
-            #     "score": float(score),
-            #     "accepted": status == "ok",
-            # })
-
-            # if status == "ok":
-            #     logger.info(f"Processed '{file}' successfully. Score: {score:.4f}")
-            # else:
-            #     logger.warning(f"ROI status for {file} was '{status}'. Score: {score:.4f}",)
 
         except Exception as e: logger.warning(f"Failed to process '{file}': {e}")
     logger.debug(f"Processed {len(image_files)} files.")

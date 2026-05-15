@@ -167,6 +167,8 @@ def _downloadImage(url: str, log: LOGGER, title: str,) -> bytes:
             # Enforce strict Kaggle-compliant sanitization
             filename = sanitize_filename(f"{title}.jpg", max_len=64)
             filepath = os.path.join(DOWNLOAD_DIR, filename)
+            with open(filepath, 'wb') as f: f.write(response.content)
+            log.debug(f"Saved image to {filepath}")
 
         return response.content
     raise Exception(f"Failed to download image from {url}")
@@ -248,7 +250,7 @@ def main(**kwargs):
     if not isinstance(queries, list) or not all(isinstance(q, str) for q in queries):
         raise ValueError("Queries must be a list of strings")
     threshold = kwargs.get('threshold', 20.0)
-    if not isinstance(threshold, float): raise ValueError("Threshold must be a number")
+    if not isinstance(threshold, (int, float)): raise ValueError("Threshold must be a number")
 
     logger = logging.getLogger(NAME)
     os.makedirs('logs', exist_ok=True)
