@@ -43,7 +43,7 @@ EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
 
 ITEM_IDS = set()  # To track unique item IDs and avoid duplicates
 
-def __geteBayToken__(id: str, secret: str, log: logging.Logger) -> str:
+def _geteBayToken(id: str, secret: str, log: logging.Logger) -> str:
     """
     Fetch an OAuth2 access token from the eBay API using client credentials.
 
@@ -70,7 +70,7 @@ def __geteBayToken__(id: str, secret: str, log: logging.Logger) -> str:
     if not 'access_token' in data: raise Exception(f"Missing access_token: {data}")
     return data['access_token']
 
-def __searchPokemonCards__(token: str, q: str, price: float, log: logging.Logger, offset: int = 0, limit: int = EBAY_ITEM_LIMIT) -> dict:
+def _searchPokemonCards(token: str, q: str, price: float, log: logging.Logger, offset: int = 0, limit: int = EBAY_ITEM_LIMIT) -> dict:
     """
     Fetches up to `limit` Pokémon card listings from eBay, starting at `offset`, combining paginated results.
 
@@ -138,7 +138,7 @@ def __searchPokemonCards__(token: str, q: str, price: float, log: logging.Logger
     return {'itemSummaries': all_items}
 
 
-def __downloadImage__(url: str, log: logging.Logger, title: str,) -> bytes:
+def _downloadImage(url: str, log: logging.Logger, title: str,) -> bytes:
     """
     Download an image from eBay and optionally save it locally.
 
@@ -177,7 +177,7 @@ def __downloadImage__(url: str, log: logging.Logger, title: str,) -> bytes:
 
     return response.content
 
-def __getCardDetails__(items: dict, log: logging.Logger, debug: bool = False) -> list[dict]:
+def _getCardDetails(items: dict, log: logging.Logger, debug: bool = False) -> list[dict]:
     """
     Extract relevant card details from an eBay item summary.
 
@@ -204,7 +204,7 @@ def __getCardDetails__(items: dict, log: logging.Logger, debug: bool = False) ->
                 log.warning(f"No image URL found for {title} - {product_url}")
                 continue
 
-            img = bytearray(__downloadImage__(image_url, log, title if debug else ''))
+            img = bytearray(_downloadImage(image_url, log, title if debug else ''))
             details.append({'title': title,'url': product_url,'image': img, 'itemId': item_id})
     return details
 
@@ -215,7 +215,7 @@ def health(log: logging.Logger) -> tuple[list[str], list[bool]]:
     checklist.append("eBay API Authentication")
     try:
         CLIENT_ID, CLIENT_SECRET = env('EBAY_CLIENT_ID,EBAY_CLIENT_SECRET')
-        token = __geteBayToken__(CLIENT_ID, CLIENT_SECRET, logging.getLogger(NAME))
+        token = _geteBayToken(CLIENT_ID, CLIENT_SECRET, logging.getLogger(NAME))
         checks.append(True)
     except Exception as e:
         token = ''
@@ -224,7 +224,7 @@ def health(log: logging.Logger) -> tuple[list[str], list[bool]]:
     
     checklist.append("eBay API Search")
     try:
-        results = __searchPokemonCards__(token, price=20.0, q="Wartortle 42/102", log=log, limit=1)
+        results = _searchPokemonCards(token, price=20.0, q="Wartortle 42/102", log=log, limit=1)
         checks.append('itemSummaries' in results)
     except Exception as e:
         results = {}
@@ -233,7 +233,7 @@ def health(log: logging.Logger) -> tuple[list[str], list[bool]]:
     
     checklist.append("eBay Listing Image Download")
     try:
-        details = __getCardDetails__(results, log)
+        details = _getCardDetails(results, log)
         if len(details) > 0 and 'image' in details[0]:
             checks.append(True)
         else:
@@ -275,16 +275,16 @@ def main(**kwargs):
     CLIENT_ID, CLIENT_SECRET = env('EBAY_CLIENT_ID,EBAY_CLIENT_SECRET')
 
     logger.debug("Authenticating with eBay...")
-    token = __geteBayToken__(CLIENT_ID, CLIENT_SECRET, logger)
+    token = _geteBayToken(CLIENT_ID, CLIENT_SECRET, logger)
 
     items = []
 
     for query in queries:
         logger.debug(f"Searching eBay for query: {query} with price threshold: {threshold}")
-        results = __searchPokemonCards__(token, price=threshold, q=query, log=logger)
+        results = _searchPokemonCards(token, price=threshold, q=query, log=logger)
 
         logger.debug("Downloading listing images...")
-        details = __getCardDetails__(results, logger, debug)
+        details = _getCardDetails(results, logger, debug)
         items.extend(details)
             
         logger.debug(f"Total items fetched: {len(items)}")

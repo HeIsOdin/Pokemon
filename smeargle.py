@@ -39,7 +39,7 @@ MIN_BOX_AREA_RATIO     = 0.20
 MAX_BOX_AREA_RATIO     = 0.98
 MIN_CONTOUR_AREA_RATIO = 0.10
 
-def __showImage__(img: IMG, log: LOGGER) -> bool:
+def _showImage(img: IMG, log: LOGGER) -> bool:
     """
     Display an image in a window with error handling.
 
@@ -66,7 +66,7 @@ def __showImage__(img: IMG, log: LOGGER) -> bool:
         return False
     return True
 
-def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
+def _saveImage(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
     """
     Save an image to disk with error handling.
 
@@ -92,7 +92,7 @@ def __saveImage__(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
         log.error(f"Failed to save image '{path}': {e}")
         return ""
 
-def __saveForYOLO__(img: IMG, label: str, filename: str, log: LOGGER) -> str:
+def _saveForYOLO(img: IMG, label: str, filename: str, log: LOGGER) -> str:
     """
     Save a YOLO label to disk with error handling.
 
@@ -116,7 +116,7 @@ def __saveForYOLO__(img: IMG, label: str, filename: str, log: LOGGER) -> str:
         log.error(f"Failed to save label '{path}': {e}")
         return ""
 
-def __orderPoints__(pts: np.ndarray, log: LOGGER) -> np.ndarray:
+def _orderPoints(pts: np.ndarray, log: LOGGER) -> np.ndarray:
     """
     Reorder corner points into a consistent top-left, top-right, bottom-right, bottom-left order.
 
@@ -136,7 +136,7 @@ def __orderPoints__(pts: np.ndarray, log: LOGGER) -> np.ndarray:
     log.debug(f"Ordered points: {rect}")
     return rect
 
-def __loadFileFromDirectory__(input_dir: str, filepath: str, log: LOGGER) -> IMG | None:
+def _loadFileFromDirectory(input_dir: str, filepath: str, log: LOGGER) -> IMG | None:
     """
     Load an image from a directory and prepare a save path for debug outputs.
 
@@ -160,7 +160,7 @@ def __loadFileFromDirectory__(input_dir: str, filepath: str, log: LOGGER) -> IMG
         img = np.zeros((100, 100, 3), dtype=np.uint8)
     return img
 
-def __loadFileFromBytearray__(file: bytearray, log: LOGGER):
+def _loadFileFromBytearray(file: bytearray, log: LOGGER):
     """
     Load an image from a bytearray (typically from web sources).
 
@@ -178,7 +178,7 @@ def __loadFileFromBytearray__(file: bytearray, log: LOGGER):
         img = np.zeros((100, 100, 3), dtype=np.uint8)
     return img
 
-def __detectEdges__(img: IMG) -> IMG:
+def _detectEdges(img: IMG) -> IMG:
     """
     Convert an image to grayscale, apply blur, and detect edges using Canny.
 
@@ -194,7 +194,7 @@ def __detectEdges__(img: IMG) -> IMG:
     edges = cv2.Canny(blur, 50, 150)
     return edges
 
-def __detectContours__(img: IMG, edges: IMG, log: LOGGER) -> IMG:
+def _detectContours(img: IMG, edges: IMG, log: LOGGER) -> IMG:
     """
     Detect the largest external contour in an edge image.
     
@@ -231,7 +231,7 @@ def __detectContours__(img: IMG, edges: IMG, log: LOGGER) -> IMG:
     # Use fallback box if not exactly 4 points
     if len(approx) == 4:
         return approx
-    edges = __detectEdges__(img)
+    edges = _detectEdges(img)
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contours:
         card_contour = max(contours, key=cv2.contourArea)
@@ -250,7 +250,7 @@ def __detectContours__(img: IMG, edges: IMG, log: LOGGER) -> IMG:
             return np.array(box, dtype=np.int32)
     return np.empty((0, 2), dtype=np.int32)
 
-def __contourToYOLO__(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str, float] = {}):
+def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str, float] = {}):
     """
     Convert a 4-point contour into a YOLO axis-aligned bounding-box label.
 
@@ -315,7 +315,7 @@ def __contourToYOLO__(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[
 
     return image, f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
 
-def __drawContours__(img: IMG, approx: IMG, log: LOGGER) -> tuple[IMG, IMG]:
+def _drawContours(img: IMG, approx: IMG, log: LOGGER) -> tuple[IMG, IMG]:
     """
     Apply a perspective transform to align and deskew the card.
 
@@ -336,13 +336,13 @@ def __drawContours__(img: IMG, approx: IMG, log: LOGGER) -> tuple[IMG, IMG]:
     cv2.drawContours(debug_img, [approx], -1, (0, 255, 0), 3)
 
     # Apply perspective warp
-    rect = __orderPoints__(pts, log)
+    rect = _orderPoints(pts, log)
     dst = np.array([[0, 0], [CARD_WIDTH - 1, 0], [CARD_WIDTH - 1, CARD_HEIGHT - 1], [0, CARD_HEIGHT - 1]], dtype="float32")
     M = cv2.getPerspectiveTransform(rect, dst)
     aligned = cv2.warpPerspective(img, M, (CARD_WIDTH, CARD_HEIGHT), flags=cv2.INTER_LANCZOS4)
     return debug_img, aligned
 
-def __alignWithOrb__(img: IMG, template, out_wh, log: LOGGER) -> IMG | None:
+def _alignWithOrb(img: IMG, template, out_wh, log: LOGGER) -> IMG | None:
     h, w = out_wh[1], out_wh[0]
     orb = cv2.ORB.create(1500)
     kp1, des1 = orb.detectAndCompute(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), np.array([]))
@@ -361,7 +361,7 @@ def __alignWithOrb__(img: IMG, template, out_wh, log: LOGGER) -> IMG | None:
         return None
     return cv2.warpPerspective(img, H, (w, h), flags=cv2.INTER_LANCZOS4)
 
-def __refineROIByNCC__(aligned: IMG, log: LOGGER, search: int = 8):
+def _refineROIByNCC(aligned: IMG, log: LOGGER, search: int = 8):
     x, y, w, h = ROI_BOX
 
     roi_template = cv2.imread(ROI_TEMPLATE, cv2.IMREAD_COLOR)
@@ -413,9 +413,9 @@ def __refineROIByNCC__(aligned: IMG, log: LOGGER, search: int = 8):
     dx, dy = best_off
     return (x + dx, y + dy, w, h), best
 
-def __robustROI__(aligned: IMG, log: LOGGER, search=8):
+def _robustROI(aligned: IMG, log: LOGGER, search=8):
     # 1) optional local refinement
-    box_refined, score = __refineROIByNCC__(aligned, log, search)
+    box_refined, score = _refineROIByNCC(aligned, log, search)
     x,y,w,h = box_refined
     roi = aligned[y:y+h, x:x+w]
 
@@ -432,7 +432,7 @@ def __robustROI__(aligned: IMG, log: LOGGER, search=8):
     if score < 0.6: return roi, score, "low_template_match"
     return roi, score, "ok"
 
-def __roiExtraction__(aligned: np.ndarray, log: LOGGER, search: int = 8):
+def _roiExtraction(aligned: np.ndarray, log: LOGGER, search: int = 8):
     """
     Extract the defined region of interest (ROI) from an aligned image.
 
@@ -444,7 +444,7 @@ def __roiExtraction__(aligned: np.ndarray, log: LOGGER, search: int = 8):
     - MatLike: Cropped ROI image.
     """
     # 1) optional local refinement
-    box_refined, score = __refineROIByNCC__(aligned, log, search)
+    box_refined, score = _refineROIByNCC(aligned, log, search)
     x,y,w,h = box_refined
     roi = aligned[y:y+h, x:x+w]
 
@@ -461,7 +461,7 @@ def __roiExtraction__(aligned: np.ndarray, log: LOGGER, search: int = 8):
     if score < 0.6: return roi, score, "low_template_match"
     return roi, score, "ok"
 
-def __qualityAssurance__(log: LOGGER) -> bool:
+def _qualityAssurance(log: LOGGER) -> bool:
     total = 50
     allowed_failures = 5
     data = [os.path.join(root, dir) for root, dirs, _ in os.walk(OUTPUT_DIR) for dir in dirs]
@@ -473,7 +473,7 @@ def __qualityAssurance__(log: LOGGER) -> bool:
         accepted = os.path.isfile(label_path)
         img = cv2.imread(image_path)
         if img is None: continue
-        if not (accepted and __showImage__(img, log)): allowed_failures -= 1
+        if not (accepted and _showImage(img, log)): allowed_failures -= 1
         if allowed_failures < 0: return False     
     return True
 
@@ -539,47 +539,47 @@ def main():
                 logger.info(f"Skipping '{file}' because it has already been processed.")
                 continue
 
-            image = __loadFileFromDirectory__(input_dir, file, logger)
+            image = _loadFileFromDirectory(input_dir, file, logger)
             if image is None:
                 logger.warning(f"Skipping '{file}' due to load failure.")
                 continue
 
-            if debug: __saveImage__(image, file, 1, logger)
+            if debug: _saveImage(image, file, 1, logger)
 
             if image is None or image.size == 0:
                 logger.warning(f"Skipping '{file}' because it is empty or could not be loaded.")
                 continue
 
-            image_edges = __detectEdges__(image)
-            if debug: __saveImage__(image_edges, file, 2, logger)
+            image_edges = _detectEdges(image)
+            if debug: _saveImage(image_edges, file, 2, logger)
 
-            approx = __detectContours__(image, image_edges, logger)
+            approx = _detectContours(image, image_edges, logger)
 
             if len(approx) != 4:
                 logger.warning(f"Skipping '{file}' because card corners could not be detected.")
                 continue
 
-            yolo_img, label = __contourToYOLO__(image.copy(), approx, logger)
+            yolo_img, label = _contourToYOLO(image.copy(), approx, logger)
 
             if yolo_img is None:
                 logger.warning(f"Skipping '{file}' because YOLO image could not be generated.")
                 continue
 
-            choice = __showImage__(yolo_img, logger)
+            choice = _showImage(yolo_img, logger)
             label_exist = os.path.isfile(os.path.splitext(save_path)[0] + ".txt")
             if not choice:
                 logger.debug(f"User rejected '{file}'")
                 if label_exist:
                     rejects.append((file, label))
-                    __saveImage__(yolo_img, file, 3, logger)  # save rejected image for debugging
+                    _saveImage(yolo_img, file, 3, logger)  # save rejected image for debugging
                 label = ''
             else:
                 logger.debug(f"User accepted '{file}'")
                 if not label_exist:
                     rejects.append((file, label))
-                    __saveImage__(yolo_img, file, 3, logger)  # save accepted image for debugging
+                    _saveImage(yolo_img, file, 3, logger)  # save accepted image for debugging
 
-            if not qa: __saveForYOLO__(image, label, file, logger)
+            if not qa: _saveForYOLO(image, label, file, logger)
             elif len(rejects) >= MAX_FAILURES:
                 logger.warning("Too many rejections during QA. Stopping process.")
                 break
