@@ -69,7 +69,7 @@ def _geteBayToken(id: str, secret: str, log: LOGGER) -> str:
     if not 'access_token' in data: raise Exception(f"Missing access_token: {data}")
     return data['access_token']
 
-def _searchPokemonCards(token: str, q: str, price: float, log: LOGGER, offset: int = 0, limit: int = EBAY_ITEM_LIMIT) -> dict:
+def _searchPokemonCards(token: str, q: str, price: float, limit: int, log: LOGGER, offset: int = 0) -> dict:
     """
     Fetches up to `limit` Pokémon card listings from eBay, starting at `offset`, combining paginated results.
 
@@ -113,12 +113,12 @@ def _searchPokemonCards(token: str, q: str, price: float, log: LOGGER, offset: i
     while total_fetched < limit:
         batch_limit = min(EBAY_PAGE_SIZE, limit - total_fetched)
         params = {
-        'q'            : q,
-        'sort'         : EBAY_SORTING,
-        'filter'       : f'{','.join([f"{k}:{v}" for k, v in filters.items()])}',
-        'category_ids' : EBAY_CATEGORY_ID,
-        'limit'       : str(batch_limit),
-        'offset'      : str(offset + total_fetched),
+            'q'            : q,
+            'sort'         : EBAY_SORTING,
+            'filter'       : f'{','.join([f"{k}:{v}" for k, v in filters.items()])}',
+            'category_ids' : EBAY_CATEGORY_ID,
+            'limit'        : str(batch_limit),
+            'offset'       : str(offset + total_fetched),
         }
 
         response = requests.get(search_url, headers=headers, params=params, timeout=TIMEOUT)
@@ -185,10 +185,10 @@ def _getCardDetails(items: dict, item_ids: set, log: LOGGER, debug: bool = False
     details = []
     for item in items.get('itemSummaries', []):
             
-            title       = str(item.get('title', ''))
-            item_id     = str(item.get('itemId', ''))
-            prod_url = str(item.get('itemWebUrl', ''))
-            image_url   = str(item.get('image', {}).get('imageUrl', ''))
+            title     = str(item.get('title', ''))
+            item_id   = str(item.get('itemId', ''))
+            prod_url  = str(item.get('itemWebUrl', ''))
+            image_url = str(item.get('image', {}).get('imageUrl', ''))
 
             if not item_id:
                 log.warning(f"No item ID found for listing: {title} - {prod_url}")
@@ -244,13 +244,15 @@ def health(log: LOGGER) -> tuple[list[str], list[bool]]:
     
     return checklist, checks
 
-def main(**kwargs):
+def main(**kwargs) -> list[dict]:
     debug = kwargs.get('debug', False) or len(sys.argv) > 1 and sys.argv[1] == "debug"
     queries = kwargs.get('queries', ["Wartortle 42/102"])
     if not isinstance(queries, list) or not all(isinstance(q, str) for q in queries):
         raise ValueError("Queries must be a list of strings")
     threshold = kwargs.get('threshold', 20.0)
     if not isinstance(threshold, (int, float)): raise ValueError("Threshold must be a number")
+    limit = kwargs.get('limit', EBAY_ITEM_LIMIT)
+    if not isinstance(limit, int) or limit <= 0: raise ValueError("Limit must be non-negative")
 
     logger = logging.getLogger(NAME)
     os.makedirs('logs', exist_ok=True)
@@ -281,7 +283,7 @@ def main(**kwargs):
 
     for query in queries:
         logger.debug(f"Searching eBay for query: {query} with price threshold: {threshold}")
-        results = _searchPokemonCards(token, price=threshold, q=query, log=logger)
+        results = _searchPokemonCards(token, query, threshold, limit, logger)
 
         logger.debug("Downloading listing images...")
         details = _getCardDetails(results, item_ids, logger, debug)

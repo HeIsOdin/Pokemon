@@ -10,10 +10,14 @@ It is also used in applying perspective transforms, and refining ROIs using temp
 The module is structured to facilitate debugging by saving intermediate results at each step of the process.
 """
 
+from venv import logger
+
 from dotenv import load_dotenv
+from sympy import imageset
 from rotom import env
 from spinarak import main as spinarak_main
 from datetime import datetime
+from ultralytics import YOLO
 from cv2.typing import MatLike as IMG # for type hinting only, not an actual import
 from logging import Logger as LOGGER  # for type hinting only, not an actual import
 
@@ -45,6 +49,8 @@ MIN_BOX_AREA_RATIO     = 0.20
 MAX_BOX_AREA_RATIO     = 0.98
 MIN_CONTOUR_AREA_RATIO = 0.10
 
+MODEL_PATH = os.path.join('.', 'yolov8n.pt')
+
 def _showImage(img: IMG, log: LOGGER) -> bool:
     """
     Display an image in a window with error handling.
@@ -62,7 +68,6 @@ def _showImage(img: IMG, log: LOGGER) -> bool:
 
         cv2.imshow(title, img)
         ch = cv2.waitKey(0)
-        cv2.destroyWindow(title)
         if ch == 27:
             raise SystemExit("User requested exit.")
         if ch != 13:
@@ -122,7 +127,7 @@ def _saveForYOLO(img: IMG, label: str, filename: str, log: LOGGER) -> str:
         log.error(f"Failed to save label '{path}': {e}")
         return ""
 
-def _loadFileFromDirectory(input_dir: str, filepath: str, log: LOGGER) -> IMG | None:
+def _loadImagesFromDirectory(directory: str, filepaths: list[str], log: LOGGER) -> list[IMG | None]:
     """
     Load an image from a directory and prepare a save path for debug outputs.
 
@@ -134,17 +139,21 @@ def _loadFileFromDirectory(input_dir: str, filepath: str, log: LOGGER) -> IMG | 
     - tuple: (image matrix, save path string)
     """
 
-    image_path = os.path.join(input_dir, filepath)
+    images: list[IMG|None] = []
+    for filename in filepaths:
+        image_path = os.path.join(directory, filename)
+        if not os.path.isfile(image_path):
+            log.warning(f"Image file '{image_path}' does not exist.")
+            images.append(None)
+            continue
 
-    if not os.path.isfile(image_path):
-        log.warning(f"Image file '{image_path}' does not exist.")
-        return None
-
-    img = cv2.imread(image_path)
-    if img is None:
-        log.warning(f"Failed to load image '{image_path}'")
-        return None
-    return img
+        img = cv2.imread(image_path)
+        if img is None:
+            log.warning(f"Failed to load image '{image_path}'")
+            images.append(None)
+            continue
+        images.append(img)
+    return images
 
 def _detectEdges(img: IMG) -> IMG:
     """
@@ -162,7 +171,7 @@ def _detectEdges(img: IMG) -> IMG:
     edges = cv2.Canny(blur, 50, 150)
     return edges
 
-def _detectContours(img: IMG, edges: IMG, log: LOGGER) -> IMG:
+def _detectContours(img: IMG, log: LOGGER) -> IMG:
     """
     Detect the largest external contour in an edge image.
     
@@ -284,6 +293,83 @@ def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str
 
     return image, f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
 
+def generate(logger: LOGGER, qa: bool = False, debug: bool = False):
+    queries = ["pokemon tcg card", "pokemon card vintage", "pokemon card lot", "pokemon card"]
+    threshold = float('inf')
+
+    input_dir = DATASET_DIR if qa else INPUT_DIR
+    if not os.path.isdir(input_dir) or len([f for f in os.listdir(input_dir)]) < 5:
+        logger.warning(f"{input_dir} has too few images. Running Spinarak to populate it...")
+        spinarak_main(debug=True, queries=queries, threshold=threshold)
+
+    if not input_dir or not os.path.isdir(input_dir):
+        raise Exception(f"Input directory '{input_dir}' does not exist or is not a directory.")
+
+    files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and
+            os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
+    if not files: raise Exception(f"No files found in input directory '{input_dir}'")
+
+    image_files = random.sample(files, min(SAMPLE_SIZE, len(files))) if qa else sorted(files)
+    if not image_files: raise Exception(f"No image files found in directory '{input_dir}'")
+
+    logger.debug(f"Found {len(image_files)} image files in '{input_dir}'")
+
+    rejects = []
+    images: list[IMG|None] = _loadImagesFromDirectory(input_dir, image_files, logger)
+    for file, image in zip(image_files, images):
+        try:
+            if image is None:
+                logger.warning(f"Skipping '{file}' due to load failure.")
+                continue
+            # skip if already processed
+            save_path = os.path.join(DATASET_DIR, file)
+            if os.path.isfile(save_path) and not qa:
+                logger.info(f"Skipping '{file}' because it has already been processed.")
+                continue
+
+            if debug: _saveImage(image, file, 1, logger)
+
+            image_edges = _detectEdges(image)
+            if debug: _saveImage(image_edges, file, 2, logger)
+
+            approx = _detectContours(image, logger)
+
+            if len(approx) != 4:
+                logger.warning(f"Skipping '{file}' because card corners could not be detected.")
+                continue
+
+            yolo_img, label = _contourToYOLO(image.copy(), approx, logger)
+
+            if yolo_img is None:
+                logger.warning(f"Skipping '{file}' because YOLO image could not be generated.")
+                continue
+
+            choice = _showImage(yolo_img, logger)
+            label_exist = os.path.isfile(os.path.splitext(save_path)[0] + ".txt")
+            if not choice:
+                logger.debug(f"User rejected '{file}'")
+                if label_exist:
+                    rejects.append((file, label))
+                    _saveImage(yolo_img, file, 3, logger)  # save rejected image for debugging
+                label = ''
+            else:
+                logger.debug(f"User accepted '{file}'")
+                if not label_exist:
+                    rejects.append((file, label))
+                    _saveImage(yolo_img, file, 3, logger)  # save accepted image for debugging
+
+            if not qa: _saveForYOLO(image, label, file, logger)
+            elif len(rejects) >= MAX_FAILURES:
+                logger.warning("Too many rejections during QA. Stopping process.")
+                break
+
+        except Exception as e: logger.warning(f"Failed to process '{file}': {e}")
+    logger.debug(f"Processed {len(image_files)} files.")
+    if qa:
+        print(f"QA results: {len(image_files)-len(rejects)} accepted, {len(rejects)} rejected.")
+        print("Rejected files: " + ", ".join(f"{file} (label: '{label}')" for file, label in rejects))
+
+
 def _splitDataset(image_files: list[str]):
     """
     This function splits the dataset (train, val, test) based on SPLIT_RATIO.
@@ -379,28 +465,188 @@ def push(remote_dataset_path: str = DATASET_DIR):
     _createYAML(remote_dataset_path)
     _pushToKaggle()
 
+def loadYOLOModel() -> YOLO:
+    """
+    Load the YOLO model with error handling.
+    Args:
+        logger (Logger): Logger for debug messages.
+    Returns:
+        YOLO: Loaded YOLO model instance.
+    """
+    logger = logging.getLogger(NAME)
+    yolo_model_path = env('YOLO_MODEL_PATH', MODEL_PATH)[0]
+    if not os.path.isfile(yolo_model_path):
+        logger.error(f"'{yolo_model_path}' does not exist. Provide a valid YOLO model path.")
+        raise SystemExit(f"'{yolo_model_path}' does not exist. Provide a valid YOLO model path.")
+    
+    _model = YOLO(yolo_model_path)
+    logger.debug(f"Loaded YOLO model from '{yolo_model_path}'")
+    return _model
+
+def _detectCards(model: YOLO, img: IMG, logger: LOGGER, conf: float = 0.4) -> list:
+    """
+    Run YOLO inference and return standardized detections.
+    Args:
+        - img (MatLike): Input image matrix.
+        - logger (Logger): Logger for debug messages.
+        - conf (float): Confidence threshold for detections.
+    Returns:
+        list: A list of detections, where each detection is a dictionary containing:
+    """
+
+    results = model.predict(
+        source=img,
+        conf=conf,
+        verbose=False
+    )
+
+    detections = []
+
+    for result in results:
+        boxes = result.boxes
+
+        if boxes is None: continue
+
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+
+            detections.append({
+                "bbox": (x1, y1, x2, y2),
+                "confidence": float(box.conf[0]),
+                "class_id": int(box.cls[0])
+            })
+
+    return detections
+
+def _extractCrop(img: IMG, bbox: tuple) -> IMG:
+    """
+    Extract detected card crop.
+    Args:
+    - img (MatLike): Original image matrix.
+    - bbox (tuple): Bounding box coordinates (x1, y1, x2, y2) defining the region to crop.
+    Returns:
+        MatLike: Cropped image matrix corresponding to the detected card.
+    """
+
+    x1, y1, x2, y2 = bbox
+
+    h, w = img.shape[:2]
+
+    x1 = max(0, x1)
+    y1 = max(0, y1)
+    x2 = min(w, x2)
+    y2 = min(h, y2)
+
+    return img[y1:y2, x1:x2]
+
+def _loadImagesFromBytearray(raw_images: list[bytearray|None], log: LOGGER) -> list[IMG | None]:
+    """
+    Load an image from a bytearray (typically from web sources).
+
+    Args:
+        - file (bytearray): Raw image bytes.
+        - log (Logger): Logger for debug messages.
+
+    Returns:
+    - tuple: (image matrix, save path string)
+    """
+    images: list[IMG|None] = []
+    for raw_image in raw_images:
+        try:
+            if raw_image is None:
+                log.warning("Raw image bytearray is None.")
+                images.append(None)
+                continue
+            image_bytes = np.frombuffer(raw_image, dtype=np.uint8)
+            img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
+            if img is None:
+                log.warning("Failed to decode image from byte array")
+                images.append(None)
+                continue
+            images.append(img)
+        except Exception as e:
+            log.warning(f"Exception occurred while loading image from byte array: {e}")
+            images.append(None)
+    return images
+
+def infer(raw_images: list[bytearray | None], model: YOLO, conf_threshold: float = 0.4, batch_size: int = 16, debug: bool = False,) -> list[dict]:
+    """
+    Full inference pipeline: load → batch detect → crop → structured results.
+
+    Args:
+        - raw_images (list):      Raw image bytearrays; None entries are skipped.
+        - model (YOLO):           Pre-loaded YOLO model. Use _loadYOLOModel() to obtain one.
+        - conf_threshold (float): Minimum YOLO detection confidence to accept. Default 0.4.
+        - batch_size (int):       Images per YOLO batch. Default 16.
+        - debug (bool):           If True, attaches the raw crop array to each result dict.
+
+    Returns:
+        list[dict]: One entry per accepted detection across all source images, each containing:
+            - source_idx (int):             Index into the original raw_images list.
+            - detection_idx (int):          Per-image detection counter.
+            - bbox (tuple):                 (x1, y1, x2, y2) pixel coordinates.
+            - detector_confidence (float):  YOLO confidence score.
+            - crop (IMG | None):            Cropped card image (only if debug=True).
+    """
+    log = logging.getLogger(NAME)
+    valid_images: list[IMG] = []
+    valid_indices: list[int] = []
+    for i, img in enumerate(_loadImagesFromBytearray(raw_images, log)):
+        if img is not None:
+            valid_images.append(img)
+            valid_indices.append(i)
+
+    log.debug(f"Processing {len(valid_images)}/{len(raw_images)} valid images in batches of {batch_size}.")
+
+    all_results: list[dict] = []
+
+    for batch_start in range(0, len(valid_images), batch_size):
+        batch = valid_images[batch_start:batch_start + batch_size]
+
+        results = model.predict(source=batch, conf=conf_threshold, verbose=False)
+
+        for local_idx, result in enumerate(results):
+            source_idx = valid_indices[batch_start + local_idx]
+            img = batch[local_idx]
+
+            if result.boxes is None:
+                continue
+
+            boxes = result.boxes
+            if boxes is None: continue
+
+            xyxy_list = boxes.xyxy.tolist()
+            conf_list = boxes.conf.tolist()
+            for det_idx, (coords, conf_score)in enumerate(zip(xyxy_list, conf_list)):
+                x1, y1, x2, y2 = map(int, coords)
+
+                if x1 >= x2 or y1 >= y2:
+                    log.warning(f"Skipping degenerate bbox ({x1},{y1},{x2},{y2}) on source image {source_idx}.")
+                    continue
+
+                crop = _extractCrop(img, (x1, y1, x2, y2))
+                entry: dict = {
+                    "source_idx":          source_idx,
+                    "detection_idx":       det_idx,
+                    "bbox":                (x1, y1, x2, y2),
+                    "detector_confidence": float(conf_score),
+                    "crop":                crop if debug else None,
+                }
+                if debug: _showImage(crop, log)  # optional visual check of each detected crop
+                log.debug(
+                    f"Image {source_idx} | det {det_idx} | bbox={entry['bbox']} "
+                    f"| conf={entry['detector_confidence']:.2f}"
+                )
+                all_results.append(entry)
+
+    return all_results
+
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "progress":
-        accepted = rejected = 0
-        if not os.path.isdir(DATASET_DIR): raise Exception(f"'{DATASET_DIR}' does not exist")
-        files = [f for f in os.listdir(DATASET_DIR)
-                if os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
-        for file in files:
-            label_file = os.path.join(DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
-            if os.path.isfile(label_file): accepted += 1
-            else: rejected += 1
-        print(f"Progress: {accepted} accepted, {rejected} rejected, {rejected + accepted} total")
-        return
-    
-    if len(sys.argv) > 1 and sys.argv[1] == "push":
-        path = sys.argv[2] if len(sys.argv) > 2 else DATASET_DIR
-        return push(path)
-    
-    qa = len(sys.argv) > 1 and sys.argv[1] == "qa"
-    
     debug = len(sys.argv) > 1 and "debug" in sys.argv
     logger = logging.getLogger(NAME)
+    logger.debug(f"Starting {NAME}...")
     os.makedirs('logs', exist_ok=True)
+
     if debug:
         load_dotenv() # docker-compose will set env vars, so no need to load them in production
         logger.setLevel(logging.DEBUG)
@@ -415,82 +661,27 @@ def main():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    logger.debug(f"Starting {NAME}...")
-    queries = ["pokemon tcg card", "pokemon card vintage", "pokemon card lot", "pokemon card"]
-    threshold = float('inf')
-
-    input_dir = DATASET_DIR if qa else INPUT_DIR
-    if not os.path.isdir(input_dir) or len([f for f in os.listdir(input_dir)]) < 5:
-        logger.warning(f"{input_dir} has too few images. Running Spinarak to populate it...")
-        spinarak_main(debug=True, queries=queries, threshold=threshold)
-
-    if not input_dir or not os.path.isdir(input_dir):
-        raise Exception(f"Input directory '{input_dir}' does not exist or is not a directory.")
-
-    files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and
-            os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
-    if not files: raise Exception(f"No files found in input directory '{input_dir}'")
-
-    image_files = random.sample(files, min(SAMPLE_SIZE, len(files))) if qa else sorted(files)
-    if not image_files: raise Exception(f"No image files found in directory '{input_dir}'")
-
-    logger.debug(f"Found {len(image_files)} image files in '{input_dir}'")
-
-    rejects = []
-    for file in image_files:
-        try:
-            # skip if already processed
-            save_path = os.path.join(DATASET_DIR, file)
-            if os.path.isfile(save_path) and not qa:
-                logger.info(f"Skipping '{file}' because it has already been processed.")
-                continue
-
-            image = _loadFileFromDirectory(input_dir, file, logger)
-            if image is None:
-                logger.warning(f"Skipping '{file}' due to load failure.")
-                continue
-
-            if debug: _saveImage(image, file, 1, logger)
-
-            image_edges = _detectEdges(image)
-            if debug: _saveImage(image_edges, file, 2, logger)
-
-            approx = _detectContours(image, image_edges, logger)
-
-            if len(approx) != 4:
-                logger.warning(f"Skipping '{file}' because card corners could not be detected.")
-                continue
-
-            yolo_img, label = _contourToYOLO(image.copy(), approx, logger)
-
-            if yolo_img is None:
-                logger.warning(f"Skipping '{file}' because YOLO image could not be generated.")
-                continue
-
-            choice = _showImage(yolo_img, logger)
-            label_exist = os.path.isfile(os.path.splitext(save_path)[0] + ".txt")
-            if not choice:
-                logger.debug(f"User rejected '{file}'")
-                if label_exist:
-                    rejects.append((file, label))
-                    _saveImage(yolo_img, file, 3, logger)  # save rejected image for debugging
-                label = ''
-            else:
-                logger.debug(f"User accepted '{file}'")
-                if not label_exist:
-                    rejects.append((file, label))
-                    _saveImage(yolo_img, file, 3, logger)  # save accepted image for debugging
-
-            if not qa: _saveForYOLO(image, label, file, logger)
-            elif len(rejects) >= MAX_FAILURES:
-                logger.warning("Too many rejections during QA. Stopping process.")
-                break
-
-        except Exception as e: logger.warning(f"Failed to process '{file}': {e}")
-    logger.debug(f"Processed {len(image_files)} files.")
-    if qa:
-        print(f"QA results: {len(image_files)-len(rejects)} accepted, {len(rejects)} rejected.")
-        print("Rejected files: " + ", ".join(f"{file} (label: '{label}')" for file, label in rejects))
-
+    if len(sys.argv) > 1 and sys.argv[1] == "progress":
+        logger.setLevel(logging.DEBUG)
+        accepted = rejected = 0
+        if not os.path.isdir(DATASET_DIR): raise Exception(f"'{DATASET_DIR}' does not exist")
+        files = [f for f in os.listdir(DATASET_DIR)
+                if os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
+        for file in files:
+            label_file = os.path.join(DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
+            if os.path.isfile(label_file): accepted += 1
+            else: rejected += 1
+        total = accepted + rejected
+        logger.debug(f"Progress: {accepted} accepted, {rejected} rejected, {total} total")
+        return
+    
+    if len(sys.argv) > 1 and sys.argv[1] == "push":
+        path = sys.argv[2] if len(sys.argv) > 2 else DATASET_DIR
+        return push(path)
+    
+    if len(sys.argv) > 1 and sys.argv[1] == "generate":
+        qa = len(sys.argv) > 2 and sys.argv[2] == "qa"
+        return generate(logger=logging.getLogger(NAME), qa=qa, debug=debug)
+    
 if __name__ == "__main__":
     main()
