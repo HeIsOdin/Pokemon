@@ -211,8 +211,12 @@ def _contourToYOLO(image: MAT, approx: np.ndarray,
         return None, ''
 
     if box_area_ratio < min_box_area_ratio or box_area_ratio > max_box_area_ratio:
-        logger.debug(f"Box area ratio {box_area_ratio:.4f} is out of range")
-        return None, ''
+        touches_edges = x <= 2 and y <= 2 and x + bw >= w - 2 and y + bh >= h - 2
+        card_like = aspect_ratio >= 0.6 and aspect_ratio <= 0.78
+        is_full_frame = touches_edges and box_area_ratio >= 0.98 and card_like
+        if not is_full_frame:
+            logger.warning(f"Box area ratio {box_area_ratio:.4f} is out of range")
+            return None, ''
 
     if not (min_aspect_ratio <= aspect_ratio <= max_aspect_ratio):
         logger.debug(f"Aspect ratio {aspect_ratio:.4f} is out of range")
@@ -506,7 +510,10 @@ def health(raw_images: list[bytearray]) -> tuple[list[str], list[bool]]:
                     if yolo_img is not None and label:
                         checks.append(True)
                     else:
-                        log.warning("YOLO label generation failed for an image")
+                        if yolo_img is None:
+                            log.warning("YOLO image generation failed for an image")
+                        if not label:
+                            log.warning("YOLO label generation failed for an image")
                         checks.append(False)
                 else:
                     log.warning("Contour detection failed for an image")
