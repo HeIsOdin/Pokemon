@@ -3,7 +3,6 @@
 
 from torchvision.transforms import Compose, ToTensor, Normalize, Resize, ToPILImage
 from torch.nn import Module as NNM
-from spinarak import run as spinarak
 from rotom import (
     env,
     sanitize_filename,
@@ -154,13 +153,11 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
         )
         return
 
-    queries = ["Wartortle 42/102"]
-    limit = 300
     input_dir = _DATASET_DIR if qa else _INPUT_DIR
 
     if not os.path.isdir(input_dir) or len(os.listdir(input_dir)) < _SAMPLE_SIZE:
-        logger.warning(f"{input_dir} has too few images. Running Spinarak to populate it...")
-        spinarak(debug=True, queries=queries, limit=limit)
+        logger.warning(f"{input_dir} has too few images. Run Spinarak to populate it...")
+        return
 
     if not input_dir or not os.path.isdir(input_dir):
         raise Exception(f"Input directory '{input_dir}' does not exist or is not a directory.")
@@ -214,16 +211,17 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
 
 def _create_yaml_and_json():
     paths = {
+        "gallery_dir": os.path.basename(_GALLERY_DIR),
         "embeddings_file": _EMBEDDINGS_FILE,
         "metadata_file": _METADATA_FILE,
     }
     with open("config.json", "r") as f:
-        config: dict = json.load(f)
+        config = json.load(f)
 
     os.makedirs(_DATASET_DIR, exist_ok=True)
     with open(os.path.join(_DATASET_DIR, "dataset.yaml"), "w") as f:
         yaml.dump(paths, f, default_flow_style=False, sort_keys=False)
-    with open(os.path.join(_DATASET_DIR, "config.json"), "w") as f:
+    with open(os.path.join(_DATASET_DIR, "dataset.json"), "w") as f:
         json.dump(config, f, indent=4)
 
 
@@ -514,10 +512,17 @@ def _identify_misprints(
             })
 
     probs = [o["probability"] for o in outputs if o.get("probability") is not None]
+    prob = float(np.mean(probs)) if probs else 0.0
+    status = _defect_status(
+        float(np.mean(probs)) if probs else 0.0,
+        suspicious=_get_porygon_config(config).get("overall_thresholds", {}).get("suspicious", 0.5),
+        likely=_get_porygon_config(config).get("overall_thresholds", {}).get("likely_misprint", 0.8),
+    )
     conclusion = {
         "card_id": card_id,
         "labels": sorted(suspected_labels) if suspected_labels else ["0"],
-        "prob": float(np.mean(probs)) if probs else None,
+        "prob": prob,
+        "status": status,
     }
     return conclusion, outputs
 
@@ -537,20 +542,22 @@ def _embed(img: MAT, enc: NNM, trans: Compose, dev: str) -> NPA:
     return vec / max(norm, 1e-8)
 
 
-def health(img: MAT, gallery: dict, enc: NNM | None, config: dict, target_conclusion: dict) -> tuple[list[str], list[bool]]:
+def health(img: MAT, config: dict, target_conclusion: dict) -> tuple[list[str], list[bool]]:
     configure_logger(_NAME, debug=True)
     logger = logging.getLogger(_NAME)
     checklist: list[str] = []
     checks: list[bool] = []
+    gallery = None
+    enc = None
     trans = None
     dev = None
     card_id = ""
     conclusion = None
-    config = load_config(config)[_NAME]
+    config = load_config(_NAME, config)
 
     checklist.append("Embeddings was successfully loaded from disk")
     try:
-        gallery = load_gallery(gallery)
+        gallery = load_gallery()
         checks.append("embeddings" in gallery and "metadata" in gallery)
     except Exception as e:
         logger.error(f"Failed to load gallery: {e}")
@@ -558,7 +565,7 @@ def health(img: MAT, gallery: dict, enc: NNM | None, config: dict, target_conclu
 
     checklist.append("Encoder was successfully built and can process images")
     try:
-        enc, trans, dev = build_encoder(enc, config=config)
+        enc, trans, dev = build_encoder(config=config)
         test_emb = _embed(img, enc, trans, dev)
         expected_dim = int(_get_porygon_config(config)["encoder"]["embedding_dimension"])
         checks.append(test_emb.shape == (expected_dim,))
@@ -596,8 +603,8 @@ def health(img: MAT, gallery: dict, enc: NNM | None, config: dict, target_conclu
     try:
         if conclusion is None:
             raise Exception("Conclusion was not generated.")
-        conclusion_no_prob = {k: v for k, v in conclusion.items() if k != "prob"}
-        target_no_prob = {k: v for k, v in target_conclusion.items() if k != "prob"}
+        conclusion_no_prob = {k: v for k, v in conclusion.items() if k != "prob" and k != "status"}
+        target_no_prob = {k: v for k, v in target_conclusion.items() if k != "prob" and k != "status"}
         st = conclusion_no_prob == target_no_prob
         if not st:
             logger.warning(f"Got {conclusion_no_prob}, expected {target_no_prob}")
@@ -610,11 +617,11 @@ def health(img: MAT, gallery: dict, enc: NNM | None, config: dict, target_conclu
 
 
 def run(**kwargs):
-    debug = kwargs.get("debug", False)
+    debug: bool = kwargs.get("debug", False)
     gallery = load_gallery(kwargs.get("model", None))
-    config = load_config(kwargs.get("config", {}))[_NAME]
+    config = load_config(_NAME, kwargs.get("config", {}))
     enc, trans, dev = build_encoder(kwargs.get("encoder", None), config=config)
-    imgs: list[MAT] = kwargs.get("data", [])
+    imgs: list[MAT] = kwargs.get("imgs", [])
 
     configure_logger(_NAME, debug=debug)
     logger = logging.getLogger(_NAME)
@@ -622,10 +629,6 @@ def run(**kwargs):
 
     all_results = []
     for img in imgs:
-        if img is None:
-            logger.warning("Received None image in data. Skipping.")
-            continue
-
         predicted_card, id_results = _identify_card(img, gallery, enc, trans, dev)
         if not predicted_card:
             all_results.append(({"card_id": "", "labels": ["0"], "prob": None}, []))

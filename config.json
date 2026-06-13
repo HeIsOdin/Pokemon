@@ -9,16 +9,34 @@
       "imagenet_std": [0.229, 0.224, 0.225]
     },
 
-    "aligned_dimensions": [960, 1360],
+    "aligned_dimensions": [960, 1360]
+  },
 
-    "cards": {
+  "smeargle": {
+    "detector": {
+      "id": "yolov8n_25_v1",
+      "model": "yolov8n.pt",
+      "epochs": 50,
+      "imgsz": 640,
+      "batch_size": 64,
+      "conf": 0.25,
+      "iou": 0.45
+    }
+  },
+
+  "cards": {
       "wartortle_42_102": {
-        "queries": [
-          "Wartortle 42/102",
-          "Wartortle base set",
-          "Wartortle WOTC base",
-          "Wartortle vintage"
-        ],
+        "spinarak": {
+          "min_price": 1,
+          "max_price": 110,
+
+          "queries": [
+            "Wartortle 42/102",
+            "Wartortle base set",
+            "Wartortle WOTC base",
+            "Wartortle vintage"
+          ]
+        },
 
         "label_map": {
           "0": "normal",
@@ -44,5 +62,4 @@
         }
       }
     }
-  }
 }

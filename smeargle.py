@@ -10,8 +10,7 @@ It is also used in applying perspective transforms, and refining ROIs using temp
 The module is structured to facilitate debugging by saving intermediate results at each stage.
 """
 
-from rotom import configure_logger, env, show_image, module_arguments, save_image, push_dataset_to_kaggle
-from spinarak import run as spinarak
+from rotom import configure_logger, env, show_image, module_arguments, save_image, push_dataset_to_kaggle, load_config
 from ultralytics import YOLO
 from cv2.typing import MatLike as MAT # for type hinting only, not an actual import
 
@@ -24,7 +23,7 @@ import shutil
 import yaml
 import json
 
-_NAME            = 'Smeargle'
+_NAME            = 'smeargle'
 _KAGGLE_ARTIFACT = os.path.join(env("KAGGLE_ARTIFACT", "kaggle")[0])
 _MAX_FALSES      = int(env("MAX_FALSES", "5")[0])
 _RUN_DIR         = env("RUN_DIR", 'localization')[0]
@@ -258,13 +257,11 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
         logger.debug(f"Progress: {accepted}/{total} accepted, {rejected}/{total} rejected")
         return
     logger = logging.getLogger(_NAME)
-    queries = ["pokemon tcg card", "pokemon card vintage", "pokemon card lot", "pokemon card"]
-    threshold = float('inf')
 
     input_dir = _DATASET_DIR if qa else _INPUT_DIR
     if not os.path.isdir(input_dir) or len([f for f in os.listdir(input_dir)]) < _SAMPLE_SIZE:
-        logger.warning(f"{input_dir} has too few images. Running Spinarak to populate it...")
-        spinarak(debug=True, queries=queries, threshold=threshold)
+        logger.error(f"{input_dir} has too few images. Run Spinarak to populate it...")
+        return
 
     if not input_dir or not os.path.isdir(input_dir):
         raise Exception(f"Input directory '{input_dir}' does not exist or is not a directory.")
@@ -370,43 +367,33 @@ def _splitDataset(image_files: list[str]):
                 dest = os.path.join(_DATASET_DIR, "labels", split, os.path.basename(label_file))
                 shutil.move(label_file, dest)
 
-def _create_yaml_and_json(remote_dataset_path: str):
+def _create_yaml_and_json():
     """
     This function creates a YAML file for the dataset configuration.
     It assumes that the dataset has been split into train, val, and test directories.
-
-    Args:
-        - remote_dataset_path (str): The path where the dataset will be located on Kaggle.
     """
-    dataset_config = {
-        "path": remote_dataset_path,
+    paths = {
         "train": "images/train",
         "val": "images/val",
         "test": "images/test",
         "names": {"0": "pokemon_card"},
-    }
-    model_config = {
-        "yolo_version": "yolov8n.pt",
-        "epochs": 50,
-        "imgsz": 640,
-        "batch_size": 64,
         "model_dir": _MODELS_DIR,
         "run_dir": _RUN_DIR,
         "predictions_dir": _PREDICTIONS_DIR,
-        "conf": 0.25,
-        "iou": 0.45,
     }
+    config = load_config(_NAME)
     yaml_path = os.path.join(_DATASET_DIR, "dataset.yaml")
-    json_path = os.path.join(_DATASET_DIR, "model.json")
-    with open(yaml_path, "w") as f: yaml.dump(dataset_config, f, default_flow_style=False, sort_keys=False)
-    with open(json_path, "w") as f: json.dump(model_config, f, indent=4)
+    json_path = os.path.join(_DATASET_DIR, "dataset.json")
+    with open(yaml_path, "w") as f: yaml.dump(paths, f, default_flow_style=False, sort_keys=False)
+    with open(json_path, "w") as f: json.dump(config, f, indent=4)
 
-def push(message: str, remote_dataset_path: str = _DATASET_DIR):
+def push(message: str):
     """
     This function splits the dataset (train, val, test), creates a YAML file and pushes to Kaggle.
     Args:
         - remote_dataset_path (str): The path where the dataset will be located on Kaggle.
     """
+    logger = logging.getLogger(_NAME)
     # load dataset files
     for m in ("images", "labels"):
         for s in ("train", "val", "test"):
@@ -423,8 +410,12 @@ def push(message: str, remote_dataset_path: str = _DATASET_DIR):
     _splitDataset(positives)
     _splitDataset(negatives)
     
-    _create_yaml_and_json(remote_dataset_path)
-    push_dataset_to_kaggle(_DATASET_DIR, message)
+    _create_yaml_and_json()
+    res = push_dataset_to_kaggle(os.path.abspath(_DATASET_DIR), message)
+    if res.returncode == 0:
+        logger.debug("Dataset pushed to Kaggle successfully.")
+    else:
+        logger.error(f"Failed to push dataset to Kaggle: {res.stdout} {res.stderr}")
 
 def load_yolo_model(yolo_model: str | None | YOLO = None) -> YOLO:
     """
@@ -473,7 +464,7 @@ def _load_images_from_bytearray(raw_images: list[bytearray]) -> list[MAT | None]
     - tuple: (image matrix, save path string)
     """
     logger = logging.getLogger(_NAME)
-    images: list[MAT|None] = []
+    images: list[MAT | None] = []
     for raw_image in raw_images:
         try:
             image_bytes = np.frombuffer(raw_image, dtype=np.uint8)
@@ -550,11 +541,13 @@ def health(raw_images: list[bytearray]) -> tuple[list[str], list[bool]]:
 def run(**kwargs) -> list[dict]:
     """
     """
+    debug: bool = kwargs.get('debug', False)
     imgs: list[bytearray] = kwargs.get('imgs', [])
     model: YOLO = load_yolo_model(kwargs.get('model', None))
-    conf: float = kwargs.get('conf', 0.25)
-    size: int = kwargs.get('size', 16)
-    debug: bool = kwargs.get('debug', False)
+    config: dict = load_config(kwargs.get('config', {}))
+
+    conf: float = config.get('conf', 0.25)
+    batch_size: int = config.get('batch_size', 16)
 
     configure_logger(_NAME, debug=debug)
     log = logging.getLogger(_NAME)
@@ -566,12 +559,12 @@ def run(**kwargs) -> list[dict]:
             valid_images.append(img)
             valid_indices.append(i)
 
-    log.debug(f"Processing {len(valid_images)}/{len(imgs)}, {size} at a time")
+    log.debug(f"Processing {len(valid_images)}/{len(imgs)}, {batch_size} at a time")
 
     all_results: list[dict] = []
 
-    for batch_start in range(0, len(valid_images), size):
-        batch = valid_images[batch_start:batch_start + size]
+    for batch_start in range(0, len(valid_images), batch_size):
+        batch = valid_images[batch_start:batch_start + batch_size]
 
         results = model.predict(source=batch, conf=conf, verbose=False)
 
@@ -600,7 +593,6 @@ def run(**kwargs) -> list[dict]:
                     "detector_confidence": float(conf_score),
                     "crop":                crop,
                 }
-                if debug: show_image(crop, _NAME)  # optional visual check of each detected crop
                 log.debug(
                     f"Image {source_idx} | det {det_idx} | bbox={entry['bbox']} "
                     f"| conf={entry['detector_confidence']:.2f}"
@@ -626,9 +618,6 @@ def main():
                     "--message" : {
                         "type": str, "help": "Commit message", "default": "Update dataset"
                     },
-                    "--path": {
-                        "type": str, "help": "Full dataset path on Kaggle", "default": _DATASET_DIR, 
-                    }
                 }
             },
             "run": {
@@ -659,7 +648,7 @@ def main():
     if args.command == "generate":
         generate(qa=args.qa, debug=args.debug, progress=args.progress)
     elif args.command == "push":
-        push(args.message, remote_dataset_path=args.path)
+        push(args.message)
     elif args.command == "run":
         model = load_yolo_model(args.model)
         imgs: list[bytearray] = []

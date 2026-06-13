@@ -24,7 +24,14 @@ for defect detection.
 """
 
 from time import sleep
-from rotom import configure_logger, env, module_arguments, sanitize_filename, save_image
+from rotom import (
+    configure_logger,
+    env,
+    module_arguments,
+    sanitize_filename,
+    save_image,
+    load_config
+)
 
 import requests
 import os
@@ -34,7 +41,7 @@ import logging
 import msgpack
 import hashlib
 
-_NAME               = 'Spinarak'
+_NAME               = 'spinarak'
 DELAY               = 0.25  # seconds between API calls to respect rate limits
 TIMEOUT             = 10    # seconds
 DOWNLOAD_DIR        = env("INPUT_DIR", os.path.join('.', 'input'))[0]
@@ -44,6 +51,35 @@ EBAY_ITEM_LIMIT     = 100  # Max total items to fetch across all queries
 EBAY_CATEGORY_ID    = '183454'  # eBay category ID for Pokémon Cards
 EBAY_CONDITION_IDS  = "1000|3000|4000"
 EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
+
+def _get_queries_and_thresholds(config: dict, cli_queries: list[str]) -> tuple[list[str], list[tuple[float, float]]]:
+    """
+    Extracts search queries and price thresholds from configuration and CLI arguments.
+
+    Args:
+        - config (dict)       : Configuration dictionary loaded from file.
+        - cli_queries (list)  : List of queries provided via command-line arguments.
+    Returns:
+        tuple: (queries, thresholds)
+            - queries (list[str]): List of search query strings.
+            - thresholds (list[float]): Corresponding list of price thresholds for each query.
+    """
+    queries = []
+    thresholds = []
+    if 'queries' in config:
+        for entry in config['queries']:
+            if isinstance(entry, dict) and 'query' in entry:
+                queries.append(entry['query'])
+                thresholds.append(float(entry.get('threshold', float('inf'))))
+            elif isinstance(entry, str):
+                queries.append(entry)
+                thresholds.append(float('inf'))
+    if cli_queries:
+        for q in cli_queries:
+            if q not in queries:
+                queries.append(q)
+                thresholds.append(float('inf'))
+    return queries, thresholds
 
 def _get_ebay_token(id: str, secret: str) -> str:
     """
@@ -73,14 +109,14 @@ def _get_ebay_token(id: str, secret: str) -> str:
     if not 'access_token' in data: raise Exception(f"Missing access_token: {data}")
     return data['access_token']
 
-def _search_pokemon_cards(token: str, query: str, price: float, limit: int) -> dict:
+def _search_pokemon_cards(token: str, query: str, price: tuple[float, float], limit: int) -> dict:
     """
     Fetches up to `limit` Pokémon card listings from eBay, combining paginated results.
 
     Args:
         - token (str)   : OAuth2 bearer token.
         - query (str)   : Search query string.
-        - price (float) : Maximum price filter.
+        - price (tuple) : Price range as (min_price, max_price).
         - limit (int)   : Total number of listings to fetch.
         - offset (int)  : Index to start fetching from.
 
@@ -89,7 +125,7 @@ def _search_pokemon_cards(token: str, query: str, price: float, limit: int) -> d
     """
     EBAY_SORTING        = "newlyListed"
     EBAY_PAGE_SIZE      = 50
-    EBAY_ITEM_LIMIT     = 100  # Max total items to fetch across all queries
+    #EBAY_ITEM_LIMIT     = 100  # Max total items to fetch across all queries
     EBAY_CATEGORY_ID    = '183454'  # eBay category ID for Pokémon Cards
     EBAY_CONDITION_IDS  = "1000|3000|4000"
     EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
@@ -101,7 +137,7 @@ def _search_pokemon_cards(token: str, query: str, price: float, limit: int) -> d
         'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
     }
     filters = {
-        'price': f'[0..{price}]',
+        'price': f'[{price[0]}..{price[1]}]',
         'buyingOptions': f'{{{EBAY_BUYING_OPTIONS}}}',
         'conditionIds': f'{{{EBAY_CONDITION_IDS}}}',
         'priceCurrency': 'USD',
@@ -176,6 +212,11 @@ def _get_card_details(items: dict, img_hashes: set, debug: bool = False) -> list
         - debug (bool)     : If True, saves images locally for debugging purposes.
     Returns:
         list[dict]: List of dictionaries containing card details and image bytes.
+        The card details include:
+        - title (str) : The title of the eBay listing.
+        - url (str)   : The URL of the eBay listing.
+        - image (bytes): The raw bytes of the card image.
+        - itemId (str): The unique eBay item ID for the listing.
     """
     logger = logging.getLogger(_NAME)
     details = []
@@ -232,7 +273,7 @@ def health() -> tuple[list[str], list[bool]]:
     
     checklist.append("eBay API Search")
     try:
-        results = _search_pokemon_cards(token, "Wartortle 42/102", 20.0, 1)
+        results = _search_pokemon_cards(token, "Wartortle 42/102", (0, 20.0), 1)
         checks.append('itemSummaries' in results)
     except Exception as e:
         results = {}
@@ -252,12 +293,13 @@ def health() -> tuple[list[str], list[bool]]:
         checks.append(False)
     return checklist, checks
 
-def run(**kwargs):
-    queries: list[str] = kwargs.get('queries', ["Wartortle 42/102"])
-    threshold: float = kwargs.get('threshold', float('inf'))
-    limit: int = kwargs.get('limit', EBAY_ITEM_LIMIT)
-    progress: bool = kwargs.get('progress', False)
-    debug: bool = kwargs.get('debug', False) or progress
+def run(**kwargs) -> list[dict]:
+    debug: bool = kwargs.get('debug', False)
+    config: dict = load_config(_NAME, kwargs.get('config', {}))
+
+    queries: list[str] = config.get('queries', [])
+    thresholds: tuple[float, float] = config.get('threshold', (1, float('inf')))
+    limit: int = config.get('limit', EBAY_ITEM_LIMIT)
 
     configure_logger(_NAME, debug=debug)
     logger = logging.getLogger(_NAME)
@@ -268,7 +310,6 @@ def run(**kwargs):
         unpacked = msgpack.unpack(f)
         img_hashes = set(unpacked) if isinstance(unpacked, list) else set()
     logger.debug(f"Loaded {len(img_hashes)} existing image hashes.")
-    if progress: return
 
     logger.debug(f"Starting {_NAME}...")
     if debug: shutil.rmtree(DOWNLOAD_DIR)
@@ -279,8 +320,8 @@ def run(**kwargs):
 
     items: list[dict] = []
     for query in queries:
-        logger.debug(f"Searching eBay for query: {query} with price threshold: {threshold}")
-        results = _search_pokemon_cards(token, query, threshold, limit)
+        logger.debug(f"Searching for {query} with price between {thresholds[0]} and {thresholds[1]}...")
+        results = _search_pokemon_cards(token, query, thresholds, limit)
 
         logger.debug("Downloading listing images...")
         details = _get_card_details(results, img_hashes, debug)
@@ -318,10 +359,6 @@ def main():
                     '--debug': {
                         'action': 'store_true',
                         'help': "Enable debug mode with verbose logging and local image saving."
-                    },
-                    '--progress': {
-                        'action': 'store_true',
-                        'help': f"Display the number of hashes stored in {_NAME}.bin"
                     },
                 }
             },

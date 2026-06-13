@@ -236,7 +236,7 @@ def push_dataset_to_kaggle(dataset_dir: str, message: str = '') -> subprocess.Co
     args = ["kaggle", "datasets", "version", "-p", dataset_dir, "-m", message, "-r", "zip"]
     return subprocess.run(args, cwd=dataset_dir)
 
-def load_config(config: str| dict = 'config.json') -> dict:
+def load_config(name: str, config: str| dict = 'config.json') -> dict:
     """
     Load a JSON configuration file and return it as a dictionary.
     Args:
@@ -244,7 +244,8 @@ def load_config(config: str| dict = 'config.json') -> dict:
     Returns:
         dict: The loaded configuration as a dictionary.
     """
-    if isinstance(config, dict) and len(config.keys()) > 0: return config
+    if isinstance(config, dict) and len(config.keys()) > 0:
+        return config[name] if name in config else config
     if not isinstance(config, str) or not config.strip():
         raise ValueError("Config must be a file path or a non-empty dictionary.")
     config_path = config
@@ -253,7 +254,7 @@ def load_config(config: str| dict = 'config.json') -> dict:
     with open(config_path, 'r') as f:
         try:
             cfg = json.load(f)
-            return cfg
+            return cfg[name] if name in cfg else cfg
         except json.JSONDecodeError as e:
             raise ValueError(f"Error parsing JSON configuration: {e}")
         except Exception as e:
