@@ -286,7 +286,7 @@ def health() -> tuple[list[str], list[bool]]:
         if len(details) > 0 and 'image' in details[0]:
             checks.append(True)
         else:
-            log.exception(f"Image download failed: No valid image found")
+            log.error(f"Image download failed: No valid image found")
             checks.append(False)
     except Exception as e:
         log.exception(f"Image download failed: {e}")

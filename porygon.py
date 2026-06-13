@@ -601,8 +601,7 @@ def health(img: MAT, config: dict, target_conclusion: dict) -> tuple[list[str], 
 
     checklist.append("The predicted conclusion matches the expected conclusion for the test image")
     try:
-        if conclusion is None:
-            raise Exception("Conclusion was not generated.")
+        if conclusion is None: raise Exception("Conclusion was not generated.")
         conclusion_no_prob = {k: v for k, v in conclusion.items() if k != "prob" and k != "status"}
         target_no_prob = {k: v for k, v in target_conclusion.items() if k != "prob" and k != "status"}
         st = conclusion_no_prob == target_no_prob
