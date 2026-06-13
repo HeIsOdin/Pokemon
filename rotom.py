@@ -31,41 +31,11 @@ import json
 import psycopg2
 import cv2
 import numpy as np
-import zipfile
 import shutil
 import logging
 import re
 import subprocess
 import hashlib
-
-def print_with_color(string: str, mode: int, quit: bool = True) -> None:
-    """
-    Print a colored message to the terminal.
-    
-    Args:
-        - string (str): The message to display.
-        - mode (int): 1 = ERROR, 2 = SUCCESS, 3 = WARNING, 4 = INFO.
-        - quit (bool): If True, exits the program on ERROR.
-    """
-    def helper(mode: int) -> str:
-        if mode == 1: return 'ERROR'
-        elif mode == 2: return 'SUCCESS'
-        elif mode == 3: return 'WARNING'
-        elif mode == 4: return 'INFO'
-        else: return ''
-    
-    # Print colored output
-    print(f"\033[3{str(mode)}m[{helper(mode)}] {string}\033[0m")
-    
-    # Exit on error if specified
-    if mode == 1 and quit:
-        exit()
-
-def clear_terminal():
-    """
-    Clear the terminal screen on Windows or Unix systems.
-    """
-    os.system('cls' if os.name == 'nt' else 'clear')
 
 def env(vars: str, defaults: str = '', delimiter: str = ",") -> tuple[str, ...]:
     """
@@ -91,115 +61,6 @@ def env(vars: str, defaults: str = '', delimiter: str = ",") -> tuple[str, ...]:
         raise Exception(f"Some or all values in {vars} not set in environment without defaults.")
 
     return tuple(values)
-
-def enviromentals(*vars: str) -> tuple:
-    """
-    Retrieve environment variables.
-
-    Args:
-        - *vars (unknown number of strings): variables set in the environment
-    
-    Returns:
-    - tuple (number of arguments passed): values of environmental variables
-    """
-    values = []
-    for var in vars:
-        value = os.getenv(var)
-        if value: values.append(value)
-
-    if len(values) != len(vars):
-        print(f"\033[31m[ERROR] Some or all values in {vars} not set in environment.\033[0m")
-        exit()
-    return tuple(values)
-
-def directory_check(data_dir: str) -> bool:
-    """
-    Check if the directory contains any image files (jpg, png, jpeg).
-    
-    Args:
-        - data_dir (str): The directory path to check.
-    
-    Returns:
-    - bool: True if image files are found, False otherwise.
-    """
-    file_names = []
-    try:
-        for root, _, files in os.walk(data_dir):
-            for file in files:
-                if file.endswith((".jpg", ".png", ".jpeg")):
-                    file_names.append(os.path.join(root, file))
-    except FileNotFoundError:
-        print_with_color(f"No such directory '{data_dir}'", 1, False)
-        return False
-    else:
-        print_with_color(f"Found {len(file_names)} images in {data_dir}", 4)
-        return len(file_names) > 0
-
-def clear_directory(data_dir: str) -> None:
-
-    # Check if the directory exists before attempting to delete it
-    if os.path.isdir(data_dir):
-        try:
-            shutil.rmtree(data_dir)
-            print(f"Directory '{data_dir}' and its contents have been deleted successfully.")
-        except FileNotFoundError:
-            print(f"Directory '{data_dir}' not found.")
-        except PermissionError:
-            print(f"Permission denied to delete the directory '{data_dir}'.")
-        except Exception as e:
-            print(f"An error occurred while deleting the directory: {e}")
-    else:
-        print(f"Directory '{data_dir}' does not exist.")
-
-def extract_zipfile(TRAINING_DIR: str) -> str:
-    """
-    Extract a ZIP file to a directory.
-    
-    Args:
-        - TRAINING_DIR (str): Path to the ZIP file.
-    
-    Returns:
-    - str: Path to the extracted directory.
-    """
-    zip_file_path = TRAINING_DIR
-    extract_to = TRAINING_DIR.replace(".zip", "")
-    print_with_color(f"Extracting compressed dataset to {extract_to}...", 4)
-    try:
-        with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
-            zip_ref.extractall(extract_to)
-    except Exception as e:
-        print_with_color(f"Unable to extract compressed dataset: {str(e)}", 1)
-    else:
-        print_with_color("Dataset Extracted Successfully.", 2)
-    return extract_to
-
-def parse_json_as_arguments(file: str, defect: str, arg_template: list) -> dict:
-    """
-    Parse a JSON configuration file and extract arguments for a given defect.
-    
-    Args:
-        - file (str): Path to the JSON file.
-        - defect (str): The defect key to look up.
-        - arg_template (list): List of keys to extract.
-    
-    Returns:
-    - dict: Dictionary containing argument values.
-    """
-    with open(file, 'r') as fp:
-        configs: dict = json.load(fp)[defect]
-    
-    args = {}
-    for key, value in configs.items():
-        if key in arg_template:
-            if isinstance(value, list):
-                args[key] = tuple(value)
-            elif key == "dataset":
-                if type(value) == str:
-                    args['author'], args['dataset'] = value.split("/")
-                if type(value) == list: args['author'], args['dataset'] = value
-            else:
-                args[key] = value
-    return args
 
 def module_arguments(desc: str, subcommands: dict[str, dict] | None = None) -> Namespace:
     """
@@ -374,3 +235,26 @@ def push_dataset_to_kaggle(dataset_dir: str, message: str = '') -> subprocess.Co
     if not message: message = f"Updated dataset at {datetime.now().isoformat()}"
     args = ["kaggle", "datasets", "version", "-p", dataset_dir, "-m", message, "-r", "zip"]
     return subprocess.run(args, cwd=dataset_dir)
+
+def load_config(config: str| dict = 'config.json') -> dict:
+    """
+    Load a JSON configuration file and return it as a dictionary.
+    Args:
+        - config (str or dict): Path to the JSON configuration file or a preloaded dictionary.
+    Returns:
+        dict: The loaded configuration as a dictionary.
+    """
+    if isinstance(config, dict) and len(config.keys()) > 0: return config
+    if not isinstance(config, str) or not config.strip():
+        raise ValueError("Config must be a file path or a non-empty dictionary.")
+    config_path = config
+    if not os.path.isfile(config_path):
+        raise FileNotFoundError(f"Configuration file not found at {config_path}")
+    with open(config_path, 'r') as f:
+        try:
+            cfg = json.load(f)
+            return cfg
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Error parsing JSON configuration: {e}")
+        except Exception as e:
+            raise Exception(f"Unexpected error loading configuration: {e}")

@@ -33,8 +33,6 @@ import logging
 import requests
 import secrets
 
-import spinarak
-
 app = Flask(__name__)
 CORS(app, supports_credentials=True,
     origins=list(env('CORS_ORIGIN', 'http://localhost:3000')))
@@ -164,11 +162,11 @@ def __register_helper__(username: str, password: str):
 
     except ValueError as ve:
         app.logger.debug(f"[Registration Debug]: {ve}")
-        resp = {'message':str(ve), 'success':False}
+        resp = {'message': str(ve), 'success': False}
 
     except Exception as e:
         app.logger.exception(f"[Registration Error]: {e}")
-        resp = {'message':"An error occurred. Please try again", 'success':False}
+        resp = {'message': "An error occurred. Please try again", 'success': False}
 
     return resp
 
@@ -437,7 +435,7 @@ def ping():
         checks.append(False)
     app.logger.debug(f"User deletion is functional. {'Success' if checks[-1] else 'Failure'}")
 
-    spinarak_checklist, spinarak_checks = spinarak_health(app.logger)
+    spinarak_checklist, spinarak_checks = spinarak_health()
     checklist.extend(spinarak_checklist)
     checks.extend(spinarak_checks)
     

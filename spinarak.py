@@ -24,11 +24,12 @@ for defect detection.
 """
 
 from time import sleep
-from rotom import configure_logger, env, clear_directory, module_arguments, sanitize_filename, save_image
+from rotom import configure_logger, env, module_arguments, sanitize_filename, save_image
 
 import requests
 import os
 import sys
+import shutil
 import logging
 import msgpack
 import hashlib
@@ -270,7 +271,7 @@ def run(**kwargs):
     if progress: return
 
     logger.debug(f"Starting {_NAME}...")
-    if debug: clear_directory(DOWNLOAD_DIR)
+    if debug: shutil.rmtree(DOWNLOAD_DIR)
     logger.debug(f"Loading eBay API credentials...")
     CLIENT_ID, CLIENT_SECRET = env('EBAY_CLIENT_ID,EBAY_CLIENT_SECRET')
     logger.debug("Authenticating with eBay...")

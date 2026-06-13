@@ -1,6 +1,5 @@
 # Porygon
 # Embedding encoder, gallery loading, card retrieval, and ROI misprint inference
-# for PokéPrint Inspector.
 
 from torchvision.transforms import Compose, ToTensor, Normalize, Resize, ToPILImage
 from torch.nn import Module as NNM
@@ -13,6 +12,7 @@ from rotom import (
     module_arguments,
     configure_logger,
     push_dataset_to_kaggle,
+    load_config,
 )
 from cv2.typing import MatLike as MAT
 from numpy.typing import NDArray as NPA
@@ -64,18 +64,15 @@ def _get_aligned_dimensions(config: dict | None, card_id: str | None = None) -> 
     return int(dims[0]), int(dims[1])
 
 
-def _load_canonical(card_id: str) -> MAT | None:
+def _load_canonical(card_id: str) -> MAT:
     """Load canonical from packaged gallery first, then fall back to dataset folder."""
-    candidates = [
-        os.path.join(_GALLERY_DIR, "canonicals", f"{card_id}.jpg"),
-        os.path.join(_GALLERY_DIR, "canonicals", f"{card_id}.png"),
-        os.path.join(_DATASET_DIR, card_id, "canonical.jpg"),
-        os.path.join(_DATASET_DIR, card_id, "canonical.png"),
-    ]
-    for path in candidates:
-        if os.path.isfile(path):
-            return cv2.imread(path, cv2.IMREAD_COLOR)
-    return None
+    path = os.path.join(_GALLERY_DIR, "canonicals", f"{card_id}.jpg")
+    if os.path.isfile(path):
+        img = cv2.imread(path, cv2.IMREAD_COLOR)
+        if img is not None:
+            return img
+        raise Exception(f"Failed to load canonical image for '{card_id}' from path '{path}'")
+    raise Exception(f"Canonical image not found for card_id '{card_id}' at path '{path}'")
 
 
 def _load_data_from_directory(path: str, qa: bool = False) -> list[tuple[MAT, str, str]]:
@@ -549,7 +546,7 @@ def health(img: MAT, gallery: dict, enc: NNM | None, config: dict, target_conclu
     dev = None
     card_id = ""
     conclusion = None
-    config = config[_NAME]
+    config = load_config(config)[_NAME]
 
     checklist.append("Embeddings was successfully loaded from disk")
     try:
@@ -615,7 +612,7 @@ def health(img: MAT, gallery: dict, enc: NNM | None, config: dict, target_conclu
 def run(**kwargs):
     debug = kwargs.get("debug", False)
     gallery = load_gallery(kwargs.get("model", None))
-    config = kwargs.get("config", {})[_NAME]
+    config = load_config(kwargs.get("config", {}))[_NAME]
     enc, trans, dev = build_encoder(kwargs.get("encoder", None), config=config)
     imgs: list[MAT] = kwargs.get("data", [])
 
@@ -659,9 +656,11 @@ def main():
             "run": {
                 "desc": "Runtime inference entrypoint placeholder.",
                 "args": {
-                    "--path": {"type": str, "help": "Path to raw images folder", "default": _INPUT_DIR},
-                    "--debug": {"action": "store_true", "help": "Enable debug logging"},
-                },
+                    "--model": {"type": str, "help": "Path to gallery directory or preloaded gallery dict"},
+                    "--config": {"type": str, "help": "Path to config.json with porygon settings", "default": "config.json"},
+                    "--encoder": {"type": str, "help": "Path to pretrained encoder weights (optional)"},
+                    "--data": {"type": str, "help": "Path to input images or preloaded list of images", "default": "input"}
+                }
             },
         },
     )
