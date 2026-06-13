@@ -62,6 +62,20 @@ def _get_aligned_dimensions(config: dict | None, card_id: str | None = None) -> 
         dims = card_cfg.get("aligned_dimensions", dims)
     return int(dims[0]), int(dims[1])
 
+def _status_rank(status: str) -> int:
+    ranks = {
+        "normal": 0,
+        "roi_extraction_failed": 1,
+        "suspicious": 2,
+        "likely_misprint": 3,
+    }
+    return ranks.get(status, 0)
+
+
+def _strongest_status(statuses: list[str]) -> str:
+    if not statuses:
+        return "normal"
+    return max(statuses, key=_status_rank)
 
 def _load_canonical(card_id: str) -> MAT:
     """Load canonical from packaged gallery first, then fall back to dataset folder."""
@@ -456,16 +470,18 @@ def _identify_misprints(
 
     output_size = _get_aligned_dimensions(config, card_id)
     canonical = _load_canonical(card_id)
+
     if canonical is None:
         raise Exception(f"No canonical found for {card_id}")
 
     outputs: list[dict] = []
     card_defects = meta.get("defects", {}).get(card_id, {})
-    suspected_labels: set[str] = set()
 
     for misprint_name, regions in card_defects.items():
         for region_name, region_info in regions.items():
+            target_label = str(region_info.get("target_label", ""))
             roi_box = tuple(region_info["roi_box"])
+
             roi, aligned, H_mat, inliers = _extract_aligned_roi(
                 image=img,
                 canonical=canonical,
@@ -477,7 +493,7 @@ def _identify_misprints(
                 outputs.append({
                     "card_id": card_id,
                     "misprint": misprint_name,
-                    "label": str(region_info.get("target_label", "")),
+                    "label": target_label,
                     "region": region_name,
                     "status": "roi_extraction_failed",
                     "probability": None,
@@ -486,10 +502,12 @@ def _identify_misprints(
                 continue
 
             roi_embedding = _embed_one(roi, enc, trans, dev)
+
             weight = arrays[region_info["weight_key"]]
             bias = arrays[region_info["bias_key"]]
 
             prob = _predict_defect_probability(roi_embedding, weight, bias)
+
             thresholds = region_info["thresholds"]
             status = _defect_status(
                 prob,
@@ -497,13 +515,10 @@ def _identify_misprints(
                 likely=float(thresholds["likely_misprint"]),
             )
 
-            target_label = str(region_info.get("target_label", ""))
-            if status in ("suspicious", "likely_misprint") and target_label:
-                suspected_labels.add(target_label)
-
             outputs.append({
                 "card_id": card_id,
                 "misprint": misprint_name,
+                "label": target_label,
                 "region": region_name,
                 "probability": prob,
                 "status": status,
@@ -511,19 +526,64 @@ def _identify_misprints(
                 "roi": roi,
             })
 
-    probs = [o["probability"] for o in outputs if o.get("probability") is not None]
-    prob = float(np.mean(probs)) if probs else 0.0
-    status = _defect_status(
-        float(np.mean(probs)) if probs else 0.0,
-        suspicious=_get_porygon_config(config).get("overall_thresholds", {}).get("suspicious", 0.5),
-        likely=_get_porygon_config(config).get("overall_thresholds", {}).get("likely_misprint", 0.8),
-    )
+    misprint_groups: dict[str, list[dict]] = {}
+
+    for output in outputs:
+        misprint_groups.setdefault(output["misprint"], []).append(output)
+
+    misprint_summaries: dict[str, dict] = {}
+
+    for misprint_name, group in misprint_groups.items():
+        group_probs = [
+            float(o["probability"])
+            for o in group
+            if o.get("probability") is not None
+        ]
+
+        group_statuses = [
+            str(o["status"])
+            for o in group
+        ]
+
+        misprint_summaries[misprint_name] = {
+            "prob": max(group_probs) if group_probs else 0.0,
+            "status": _strongest_status(group_statuses),
+            "regions": group,
+        }
+
+    detected_misprints = [
+        misprint_name
+        for misprint_name, summary in misprint_summaries.items()
+        if summary["status"] in ("suspicious", "likely_misprint")
+    ]
+
+    labels: list[str] = []
+
+    for misprint_name in detected_misprints:
+        for region_info in card_defects.get(misprint_name, {}).values():
+            target_label = str(region_info.get("target_label", ""))
+
+            if target_label:
+                labels.append(target_label)
+                break
+
+    all_probs = [
+        float(summary["prob"])
+        for summary in misprint_summaries.values()
+    ]
+
+    all_statuses = [
+        str(summary["status"])
+        for summary in misprint_summaries.values()
+    ]
+
     conclusion = {
         "card_id": card_id,
-        "labels": sorted(suspected_labels) if suspected_labels else ["0"],
-        "prob": prob,
-        "status": status,
+        "labels": sorted(set(labels)) if labels else ["0"],
+        "prob": max(all_probs) if all_probs else 0.0,
+        "status": _strongest_status(all_statuses),
     }
+
     return conclusion, outputs
 
 
