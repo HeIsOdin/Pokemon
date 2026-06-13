@@ -7,155 +7,91 @@ This is a utility module for image processing and region of interest (ROI) extra
 It is designed to handle the alignment and cropping of Pokémon card images for defect detection.
 It includes functions for loading images, detecting edges and contours.
 It is also used in applying perspective transforms, and refining ROIs using template matching.
-The module is structured to facilitate debugging by saving intermediate results at each step of the process.
+The module is structured to facilitate debugging by saving intermediate results at each stage.
 """
 
-from venv import logger
-
-from dotenv import load_dotenv
-from sympy import imageset
-from rotom import env
-from spinarak import main as spinarak_main
-from datetime import datetime
+from rotom import configure_logger, env, show_image, module_arguments, save_image, push_dataset_to_kaggle
+from spinarak import run as spinarak
 from ultralytics import YOLO
-from cv2.typing import MatLike as IMG # for type hinting only, not an actual import
-from logging import Logger as LOGGER  # for type hinting only, not an actual import
+from cv2.typing import MatLike as MAT # for type hinting only, not an actual import
 
 import cv2
 import numpy as np
 import os
-import sys
 import logging
 import random
 import shutil
 import yaml
-import subprocess
+import json
 
-NAME         = 'Smeargle'
-ROI_BOX      = (40, 45, 60, 60)  # Example ROI box (x, y, width, height)
-CARD_DIM     = (480, 680)  # Target dimensions for aligned card images
-INPUT_DIR    = os.path.join('.', 'input')   # Directory for input images
-OUTPUT_DIR   = os.path.join('.', 'output')  # Directory for debug outputs
-DATASET_DIR  = os.path.join('.', 'dataset') # Directory for final processed dataset
-SAMPLE_SIZE  = 50  # Number of images to sample for QA review
-SPLIT_RATIO  = (0.8, 0.1, 0.1)  # Train/Val/Test split ratios
-ROI_TEMPLATE = os.path.join('roi_templates', 'wartortle_evolution_error.jpg')  # for NCC refinement
-DATASET_NAME = "pokemon-tcg-cards"
-MAX_FAILURES = 5
+_NAME            = 'Smeargle'
+_KAGGLE_ARTIFACT = os.path.join(env("KAGGLE_ARTIFACT", "kaggle")[0])
+_MAX_FALSES      = int(env("MAX_FALSES", "5")[0])
+_RUN_DIR         = env("RUN_DIR", 'localization')[0]
+_YOLO_DIR        = os.path.join(_KAGGLE_ARTIFACT, env("YOLO_DIR", os.path.join("runs", "detect"))[0])
+_MODELS_DIR      = env("MODELS_DIR", 'models')[0]
+_INPUT_DIR       = env("INPUT_DIR", os.path.join('.', 'input'))[0]
+_OUTPUT_DIR      = env("IMAGE_DEBUG_DIR", os.path.join('.', 'output'))[0]
+_DATASET_DIR     = env("SMEARGLE_DATASET_DIR", os.path.join('datasets', 'localization'))[0]
+_PREDICTIONS_DIR = env("PREDICTIONS_DIR", 'predictions')[0]
 
-MIN_ASPECT_RATIO       = 0.45
-MAX_ASPECT_RATIO       = 0.90
-MIN_BOX_AREA_RATIO     = 0.20
-MAX_BOX_AREA_RATIO     = 0.98
-MIN_CONTOUR_AREA_RATIO = 0.10
+_SAMPLE_SIZE = int(env("SAMPLE_SIZE", "50")[0])
+_SPLIT_RATIO = tuple(map(float, env("SPLIT_RATIO", "0.8 0.1 0.1")[0].split())) # train/val/test
 
-MODEL_PATH = os.path.join('.', 'yolov8n.pt')
+_MIN_ASPECT_RATIO       = 0.45
+_MAX_ASPECT_RATIO       = 0.90
+_MIN_BOX_AREA_RATIO     = 0.20
+_MAX_BOX_AREA_RATIO     = 0.98
+_MIN_CONTOUR_AREA_RATIO = 0.10
 
-def _showImage(img: IMG, log: LOGGER) -> bool:
-    """
-    Display an image in a window with error handling.
+_MODEL_PATH = env("YOLO_MODEL_PATH",
+                os.path.join(_YOLO_DIR, _MODELS_DIR, _RUN_DIR, "weights", "best.pt"))[0]
 
-    Args:
-        - img (MatLike): Image matrix to display.
-        - log (Logger): Logger for debug messages.
-    """
-    title = "Smeargle - Review Detected Contour"
-    try:
-        cv2.namedWindow(title, cv2.WINDOW_NORMAL)
-
-        cv2.resizeWindow(title, 1400, 1000)
-        cv2.moveWindow(title, 50, 50)
-
-        cv2.imshow(title, img)
-        ch = cv2.waitKey(0)
-        if ch == 27:
-            raise SystemExit("User requested exit.")
-        if ch != 13:
-            return False
-    except Exception as e:
-        log.error(f"Failed to display image '{title}': {e}")
-        return False
-    return True
-
-def _saveImage(img: IMG, filename: str, stage: int, log: LOGGER) -> str:
-    """
-    Save an image to disk with error handling.
-
-    Args:
-        - img (MatLike): Image matrix to save.
-        - filename (str): Name of the file to save.
-        - log (Logger): Logger for debug messages.
-    """
-    path = os.path.join(OUTPUT_DIR, os.path.splitext(filename)[0])
-    if not os.path.isdir(path):
-        log.warning(f"Save path '{path}' does not exist. Creating directory.")
-        os.makedirs(path, exist_ok=True)
-    try:
-        if   stage == 1: path = os.path.join(path, "1_original.jpg")
-        elif stage == 2: path = os.path.join(path, "2_edges.jpg")
-        elif stage == 3: path = os.path.join(path, "3_contours.jpg")
-        elif stage == 4: path = os.path.join(path, "4_aligned.jpg")
-        elif stage == 5: path = os.path.join(path, "5_roi.jpg")
-        cv2.imwrite(path, img)
-        log.debug(f"Saved image to {path}")
-        return path
-    except Exception as e:
-        log.error(f"Failed to save image '{path}': {e}")
-        return ""
-
-def _saveForYOLO(img: IMG, label: str, filename: str, log: LOGGER) -> str:
+def _saveForYOLO(img: MAT, label: str, filename: str) -> str:
     """
     Save a YOLO label to disk with error handling.
 
     Args:
         - label (str): Label string to save.
         - filename (str): Name of the file to save.
-        - log (Logger): Logger for debug messages.
+    Returns:
+        str: Path where the image and label were saved, or empty string on failure.
     """
     filename = os.path.splitext(filename)[0]
-    path = os.path.join(DATASET_DIR, filename)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    try:
-        cv2.imwrite(f"{path}.jpg", img)
-        if not label: return ""
-        with open(f"{path}.txt", "w", encoding="utf-8") as f: f.write(label + "\n")
-        return path
-    except SystemExit:
-        log.info(f"User requested exit. Stopping processing.")
-        sys.exit(0)
-    except Exception as e:
-        log.error(f"Failed to save label '{path}': {e}")
-        return ""
+    path = os.path.join(_DATASET_DIR, filename)
+    cv2.imwrite(f"{path}.jpg", img)
+    if not label: return ""
+    with open(f"{path}.txt", "w", encoding="utf-8") as f: f.write(label + "\n")
+    return path
 
-def _loadImagesFromDirectory(directory: str, filepaths: list[str], log: LOGGER) -> list[IMG | None]:
+def _loadImagesFromDirectory(directory: str, filepaths: list[str]) -> list[MAT | None]:
     """
     Load an image from a directory and prepare a save path for debug outputs.
 
     Args:
         - file (str): Filename of the image.
-        - log (Logger): Logger for debug messages.
 
     Returns:
-    - tuple: (image matrix, save path string)
+        tuple: (image matrix, save path string)
     """
-
-    images: list[IMG|None] = []
+    logger = logging.getLogger(_NAME)
+    images: list[MAT|None] = []
     for filename in filepaths:
         image_path = os.path.join(directory, filename)
         if not os.path.isfile(image_path):
-            log.warning(f"Image file '{image_path}' does not exist.")
+            logger.warning(f"Image file '{image_path}' does not exist.")
             images.append(None)
             continue
 
         img = cv2.imread(image_path)
         if img is None:
-            log.warning(f"Failed to load image '{image_path}'")
+            logger.warning(f"Failed to load image '{image_path}'")
             images.append(None)
             continue
         images.append(img)
     return images
 
-def _detectEdges(img: IMG) -> IMG:
+def _detectEdges(img: MAT) -> MAT:
     """
     Convert an image to grayscale, apply blur, and detect edges using Canny.
 
@@ -171,18 +107,17 @@ def _detectEdges(img: IMG) -> IMG:
     edges = cv2.Canny(blur, 50, 150)
     return edges
 
-def _detectContours(img: IMG, log: LOGGER) -> IMG:
+def _detectContours(img: MAT) -> MAT | None:
     """
     Detect the largest external contour in an edge image.
     
     Args:
         - img (MatLike): Image to be processed.
-        - edges (MatLike): Binary edge map.
-        - log (Logger): Logger for debug messages.
 
     Returns:
-    - np.ndarray: Approximated polygon contour points.
+        np.ndarray: Approximated polygon contour points.
     """
+    logger = logging.getLogger(_NAME)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # Define HSV range for yellow (may need tuning)
@@ -198,7 +133,7 @@ def _detectContours(img: IMG, log: LOGGER) -> IMG:
     # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
-        return np.empty((0, 2), dtype=np.int32)
+        return None
 
     # Choose the largest yellow region
     border_contour = max(contours, key=cv2.contourArea)
@@ -220,43 +155,44 @@ def _detectContours(img: IMG, log: LOGGER) -> IMG:
             hull = cv2.convexHull(card_contour)
             approx = cv2.approxPolyDP(hull, 0.02 * cv2.arcLength(hull, True), True)
             if len(approx) == 4:
-                log.warning("[3] Using convex hull fallback")
+                logger.warning("[3] Using convex hull fallback")
                 return approx
             rect = cv2.minAreaRect(card_contour)
             box = cv2.boxPoints(rect)
             return np.array(box, dtype=np.int32)
-    return np.empty((0, 2), dtype=np.int32)
+    return None
 
-def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str, float]|None = None) -> tuple[IMG|None, str]:
+def _contourToYOLO(image: MAT, approx: np.ndarray,
+                   ratios: dict[str, float]|None = None) -> tuple[MAT|None, str]:
     """
     Convert a 4-point contour into a YOLO axis-aligned bounding-box label.
 
     Args:
         - image (MatLike): Original image for reference dimensions.
         - approx (np.ndarray): Approximated contour points (should be 4 points).
-        - log (Logger): Logger for debug messages.
         - ratios (dict): thresholds for filtering contours based on aspect ratio and area ratios.
     Returns:
         tuple: (image with drawn contours, YOLO label string) or (None, '') if invalid
     """
+    logger = logging.getLogger(_NAME)
     if ratios is None: ratios = {}
-    min_aspect_ratio       = ratios.get("min_aspect_ratio", MIN_ASPECT_RATIO)
-    max_aspect_ratio       = ratios.get("max_aspect_ratio", MAX_ASPECT_RATIO)
-    min_box_area_ratio     = ratios.get("min_box_area_ratio", MIN_BOX_AREA_RATIO)
-    max_box_area_ratio     = ratios.get("max_box_area_ratio", MAX_BOX_AREA_RATIO)
-    min_contour_area_ratio = ratios.get("min_contour_area_ratio", MIN_CONTOUR_AREA_RATIO)
+    min_aspect_ratio       = ratios.get("min_aspect_ratio", _MIN_ASPECT_RATIO)
+    max_aspect_ratio       = ratios.get("max_aspect_ratio", _MAX_ASPECT_RATIO)
+    min_box_area_ratio     = ratios.get("min_box_area_ratio", _MIN_BOX_AREA_RATIO)
+    max_box_area_ratio     = ratios.get("max_box_area_ratio", _MAX_BOX_AREA_RATIO)
+    min_contour_area_ratio = ratios.get("min_contour_area_ratio", _MIN_CONTOUR_AREA_RATIO)
     
     if image is None or getattr(image, "size", 0) == 0:
-        log.error("Image is None or empty.")
+        logger.error("Image is None or empty.")
         return None, ''
 
     if approx is None or len(approx) != 4:
-        log.error(f"Expected 4 points, got {'None' if approx is None else len(approx)}")
+        logger.exception(f"Expected 4 points, got {'None' if approx is None else len(approx)}")
         return None, ''
 
     h, w = image.shape[:2]
     if h <= 0 or w <= 0:
-        log.error(f"Invalid image dimensions: width={w}, height={h}")
+        logger.exception(f"Invalid image dimensions: width={w}, height={h}")
         return None, ''
 
     pts = approx.reshape(-1, 2).astype(np.float32)
@@ -272,15 +208,15 @@ def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str
 
     # Reject tiny contours, nearly full-frame weird boxes, or square-ish icon boxes
     if contour_area_ratio < min_contour_area_ratio:
-        log.debug(f"Contour area ratio {contour_area_ratio:.4f} is below threshold")
+        logger.debug(f"Contour area ratio {contour_area_ratio:.4f} is below threshold")
         return None, ''
 
     if box_area_ratio < min_box_area_ratio or box_area_ratio > max_box_area_ratio:
-        log.debug(f"Box area ratio {box_area_ratio:.4f} is out of range")
+        logger.debug(f"Box area ratio {box_area_ratio:.4f} is out of range")
         return None, ''
 
     if not (min_aspect_ratio <= aspect_ratio <= max_aspect_ratio):
-        log.debug(f"Aspect ratio {aspect_ratio:.4f} is out of range")
+        logger.debug(f"Aspect ratio {aspect_ratio:.4f} is out of range")
         return None, ''
 
     x_center = (x + bw / 2.0) / w
@@ -293,14 +229,42 @@ def _contourToYOLO(image: IMG, approx: np.ndarray, log: LOGGER, ratios: dict[str
 
     return image, f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
 
-def generate(logger: LOGGER, qa: bool = False, debug: bool = False):
+def generate(qa: bool = False, progress: bool = False, debug: bool = False):
+    """
+    Main function to generate the dataset by processing images in the input directory.
+    It detects card contours, applies perspective transforms, and saves YOLO labels.
+    If 'qa' is True, it will sample a subset of images for manual review.
+    If 'progress' is True, it will show the progress of dataset generation.
+    If 'debug' is True, it will save intermediate images for debugging purposes.
+    
+    Args:
+        - qa (bool): If True, sample a subset of images for manual review.
+        - progress (bool): If True, show the progress of dataset generation.
+        - debug (bool): If True, save intermediate images for debugging purposes.
+    """
+    debug = debug or qa or progress
+    configure_logger(_NAME, debug=debug)
+    logger = logging.getLogger(_NAME)
+    if progress:
+        accepted = rejected = 0
+        if not os.path.isdir(_DATASET_DIR): raise Exception(f"'{_DATASET_DIR}' does not exist")
+        files = [f for f in os.listdir(_DATASET_DIR)
+                if os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
+        for file in files:
+            label_file = os.path.join(_DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
+            if os.path.isfile(label_file): accepted += 1
+            else: rejected += 1
+        total = accepted + rejected
+        logger.debug(f"Progress: {accepted}/{total} accepted, {rejected}/{total} rejected")
+        return
+    logger = logging.getLogger(_NAME)
     queries = ["pokemon tcg card", "pokemon card vintage", "pokemon card lot", "pokemon card"]
     threshold = float('inf')
 
-    input_dir = DATASET_DIR if qa else INPUT_DIR
-    if not os.path.isdir(input_dir) or len([f for f in os.listdir(input_dir)]) < 5:
+    input_dir = _DATASET_DIR if qa else _INPUT_DIR
+    if not os.path.isdir(input_dir) or len([f for f in os.listdir(input_dir)]) < _SAMPLE_SIZE:
         logger.warning(f"{input_dir} has too few images. Running Spinarak to populate it...")
-        spinarak_main(debug=True, queries=queries, threshold=threshold)
+        spinarak(debug=True, queries=queries, threshold=threshold)
 
     if not input_dir or not os.path.isdir(input_dir):
         raise Exception(f"Input directory '{input_dir}' does not exist or is not a directory.")
@@ -309,79 +273,87 @@ def generate(logger: LOGGER, qa: bool = False, debug: bool = False):
             os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
     if not files: raise Exception(f"No files found in input directory '{input_dir}'")
 
-    image_files = random.sample(files, min(SAMPLE_SIZE, len(files))) if qa else sorted(files)
+    image_files = random.sample(files, min(_SAMPLE_SIZE, len(files))) if qa else sorted(files)
     if not image_files: raise Exception(f"No image files found in directory '{input_dir}'")
 
     logger.debug(f"Found {len(image_files)} image files in '{input_dir}'")
 
-    rejects = []
-    images: list[IMG|None] = _loadImagesFromDirectory(input_dir, image_files, logger)
+    rejects: list[tuple[str, str]] = []
+    images: list[MAT|None] = _loadImagesFromDirectory(input_dir, image_files)
     for file, image in zip(image_files, images):
         try:
             if image is None:
                 logger.warning(f"Skipping '{file}' due to load failure.")
                 continue
+
             # skip if already processed
-            save_path = os.path.join(DATASET_DIR, file)
+            save_path = os.path.join(_DATASET_DIR, file)
             if os.path.isfile(save_path) and not qa:
                 logger.info(f"Skipping '{file}' because it has already been processed.")
                 continue
 
-            if debug: _saveImage(image, file, 1, logger)
+            if debug:
+                path = os.path.join(_OUTPUT_DIR, os.path.splitext(file)[0], file)
+                save_image(image, path, "original")
+                path = os.path.join(_OUTPUT_DIR, os.path.splitext(file)[0], file)
+                save_image(_detectEdges(image), path, "edges")
 
-            image_edges = _detectEdges(image)
-            if debug: _saveImage(image_edges, file, 2, logger)
+            approx = _detectContours(image)
 
-            approx = _detectContours(image, logger)
-
-            if len(approx) != 4:
+            if approx is None or len(approx) != 4:
                 logger.warning(f"Skipping '{file}' because card corners could not be detected.")
                 continue
 
-            yolo_img, label = _contourToYOLO(image.copy(), approx, logger)
+            yolo_img, label = _contourToYOLO(image.copy(), approx)
 
             if yolo_img is None:
                 logger.warning(f"Skipping '{file}' because YOLO image could not be generated.")
                 continue
 
-            choice = _showImage(yolo_img, logger)
+            choice = show_image(yolo_img, _NAME)
             label_exist = os.path.isfile(os.path.splitext(save_path)[0] + ".txt")
             if not choice:
                 logger.debug(f"User rejected '{file}'")
-                if label_exist:
+                if qa and label_exist:
                     rejects.append((file, label))
-                    _saveImage(yolo_img, file, 3, logger)  # save rejected image for debugging
+                    path = os.path.join(_OUTPUT_DIR, os.path.splitext(file)[0], file)
+                    save_image(yolo_img, path, "rejected")  # save rejected image for debugging
                 label = ''
             else:
                 logger.debug(f"User accepted '{file}'")
-                if not label_exist:
+                if qa and not label_exist:
                     rejects.append((file, label))
-                    _saveImage(yolo_img, file, 3, logger)  # save accepted image for debugging
+                    path = os.path.join(_OUTPUT_DIR, os.path.splitext(file)[0], file)
+                    save_image(yolo_img, path, "accepted")  # save accepted image for debugging
 
-            if not qa: _saveForYOLO(image, label, file, logger)
-            elif len(rejects) >= MAX_FAILURES:
+            if not qa: _saveForYOLO(image, label, file)
+            elif len(rejects) >= _MAX_FALSES:
                 logger.warning("Too many rejections during QA. Stopping process.")
                 break
 
         except Exception as e: logger.warning(f"Failed to process '{file}': {e}")
     logger.debug(f"Processed {len(image_files)} files.")
     if qa:
-        print(f"QA results: {len(image_files)-len(rejects)} accepted, {len(rejects)} rejected.")
-        print("Rejected files: " + ", ".join(f"{file} (label: '{label}')" for file, label in rejects))
+        rej = len(rejects)
+        acc = len(image_files) - rej
+        logger.debug(f"""QA results: {acc} accepted, {rej} rejected.""")
+        logger.warning("Rejected files: " + ", ".join(f"{f} (label: '{l}')" for f, l in rejects))
 
 
 def _splitDataset(image_files: list[str]):
     """
-    This function splits the dataset (train, val, test) based on SPLIT_RATIO.
-    It assumes that DATASET_DIR contains all the processed images and labels.
+    This function splits the dataset (train, val, test) based on _SPLIT_RATIO.
+    It assumes that _DATASET_DIR contains all the processed images and labels.
     It moves files into subdirectories for each split.
+
+    Args:
+        - image_files (list[str]): List of image filenames to split.
     """
     # Get all image files
     random.shuffle(image_files)
-    
     total = len(image_files)
-    train_end = int(total * SPLIT_RATIO[0])
-    val_end = train_end + int(total * SPLIT_RATIO[1])
+    train_end = int(total * _SPLIT_RATIO[0])
+    val_end = train_end + int(total * _SPLIT_RATIO[1])
 
     splits = {
         "train": image_files[:train_end],
@@ -391,134 +363,86 @@ def _splitDataset(image_files: list[str]):
 
     for split, files in splits.items():
         for file in files:
-            label_file = os.path.join(DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
-            shutil.move(os.path.join(DATASET_DIR, file), os.path.join(DATASET_DIR, "images", split, file))
+            label_file = os.path.join(_DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
+            dest = os.path.join(_DATASET_DIR, "images", split, file)
+            shutil.move(os.path.join(_DATASET_DIR, file), dest)
             if os.path.isfile(label_file):
-                shutil.move(label_file, os.path.join(DATASET_DIR, "labels", split, os.path.basename(label_file)))
+                dest = os.path.join(_DATASET_DIR, "labels", split, os.path.basename(label_file))
+                shutil.move(label_file, dest)
 
-def _createYAML(remote_dataset_path: str):
+def _create_yaml_and_json(remote_dataset_path: str):
     """
     This function creates a YAML file for the dataset configuration.
     It assumes that the dataset has been split into train, val, and test directories.
+
+    Args:
+        - remote_dataset_path (str): The path where the dataset will be located on Kaggle.
     """
-    config = {
+    dataset_config = {
         "path": remote_dataset_path,
         "train": "images/train",
         "val": "images/val",
         "test": "images/test",
-        "names": {"0": "pokemon_card"}
+        "names": {"0": "pokemon_card"},
     }
-    yaml_path = os.path.join(DATASET_DIR, "dataset.yaml")
-    with open(yaml_path, "w") as f: yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    model_config = {
+        "yolo_version": "yolov8n.pt",
+        "epochs": 50,
+        "imgsz": 640,
+        "batch_size": 64,
+        "model_dir": _MODELS_DIR,
+        "run_dir": _RUN_DIR,
+        "predictions_dir": _PREDICTIONS_DIR,
+        "conf": 0.25,
+        "iou": 0.45,
+    }
+    yaml_path = os.path.join(_DATASET_DIR, "dataset.yaml")
+    json_path = os.path.join(_DATASET_DIR, "model.json")
+    with open(yaml_path, "w") as f: yaml.dump(dataset_config, f, default_flow_style=False, sort_keys=False)
+    with open(json_path, "w") as f: json.dump(model_config, f, indent=4)
 
-def _pushToKaggle():
-    """
-    This function pushes the dataset to Kaggle using the Kaggle API.
-    It assumes that the Kaggle API is configured and authenticated properly.
-    """
-    # check if kaggle CLI is available
-    if shutil.which("kaggle") is None: raise Exception("Please install the Kaggle API")
-
-    # check if kaggle.json exists
-    kaggle_json = os.path.join(os.path.expanduser("~"), ".kaggle", "kaggle.json")
-    if not os.path.isfile(kaggle_json): raise Exception(f"Put your Kaggle API key at {kaggle_json}")
-
-    # check if images, labels, and yaml exist
-    if not os.path.isdir(os.path.join(DATASET_DIR, "images")):
-        raise Exception("Images directory is missing")
-    if not os.path.isdir(os.path.join(DATASET_DIR, "labels")):
-        raise Exception("Labels directory is missing")
-    if not os.path.isfile(os.path.join(DATASET_DIR, "dataset.yaml")):
-        raise Exception("dataset.yaml is missing")
-    
-    # check if dataset_metadata.json exists (created by kaggle CLI on first push)
-    metadata_path = os.path.join(DATASET_DIR, "dataset-metadata.json")
-    if not os.path.isfile(metadata_path):
-        raise Exception(f"Missing Kaggle dataset metadata. Initialize or download the dataset")
-
-    # push to Kaggle
-    message = f"Updated dataset with new cards at {datetime.now().isoformat()}"
-    args = ["kaggle", "datasets", "version", "-p", DATASET_DIR, "-m", message, "-r", "zip"]
-    subprocess.run(args, check=True)
-
-def push(remote_dataset_path: str = DATASET_DIR):
+def push(message: str, remote_dataset_path: str = _DATASET_DIR):
     """
     This function splits the dataset (train, val, test), creates a YAML file and pushes to Kaggle.
+    Args:
+        - remote_dataset_path (str): The path where the dataset will be located on Kaggle.
     """
     # load dataset files
-    if not os.path.isdir(DATASET_DIR): raise Exception(f"'{DATASET_DIR}' does not exist")
     for m in ("images", "labels"):
         for s in ("train", "val", "test"):
-            path = os.path.join(DATASET_DIR, m, s)
+            path = os.path.join(_DATASET_DIR, m, s)
             os.makedirs(path, exist_ok=True)
     
     positives = []
     negatives = []
-    for file in os.listdir(DATASET_DIR):
+    for file in os.listdir(_DATASET_DIR):
         if os.path.splitext(file)[1].lower() in (".jpg", ".jpeg", ".png"):
-            label_file = os.path.join(DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
+            label_file = os.path.join(_DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
             if os.path.isfile(label_file): positives.append(file)
             else: negatives.append(file)
     _splitDataset(positives)
     _splitDataset(negatives)
     
-    _createYAML(remote_dataset_path)
-    _pushToKaggle()
+    _create_yaml_and_json(remote_dataset_path)
+    push_dataset_to_kaggle(_DATASET_DIR, message)
 
-def loadYOLOModel() -> YOLO:
+def load_yolo_model(yolo_model: str | None | YOLO = None) -> YOLO:
     """
     Load the YOLO model with error handling.
-    Args:
-        logger (Logger): Logger for debug messages.
     Returns:
         YOLO: Loaded YOLO model instance.
     """
-    logger = logging.getLogger(NAME)
-    yolo_model_path = env('YOLO_MODEL_PATH', MODEL_PATH)[0]
-    if not os.path.isfile(yolo_model_path):
-        logger.error(f"'{yolo_model_path}' does not exist. Provide a valid YOLO model path.")
-        raise SystemExit(f"'{yolo_model_path}' does not exist. Provide a valid YOLO model path.")
+    if isinstance(yolo_model, YOLO): return yolo_model
     
-    _model = YOLO(yolo_model_path)
+    logger = logging.getLogger(_NAME)
+    yolo_model_path = yolo_model if isinstance(yolo_model, str) else _MODEL_PATH
+    logger.debug(f"Attempting to load YOLO model from '{yolo_model_path}'")
+    if not os.path.isfile(yolo_model_path): raise SystemExit(f"'{yolo_model_path}' is invalid")
+    
     logger.debug(f"Loaded YOLO model from '{yolo_model_path}'")
-    return _model
+    return YOLO(yolo_model_path)
 
-def _detectCards(model: YOLO, img: IMG, logger: LOGGER, conf: float = 0.4) -> list:
-    """
-    Run YOLO inference and return standardized detections.
-    Args:
-        - img (MatLike): Input image matrix.
-        - logger (Logger): Logger for debug messages.
-        - conf (float): Confidence threshold for detections.
-    Returns:
-        list: A list of detections, where each detection is a dictionary containing:
-    """
-
-    results = model.predict(
-        source=img,
-        conf=conf,
-        verbose=False
-    )
-
-    detections = []
-
-    for result in results:
-        boxes = result.boxes
-
-        if boxes is None: continue
-
-        for box in boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-
-            detections.append({
-                "bbox": (x1, y1, x2, y2),
-                "confidence": float(box.conf[0]),
-                "class_id": int(box.cls[0])
-            })
-
-    return detections
-
-def _extractCrop(img: IMG, bbox: tuple) -> IMG:
+def _extractCrop(img: MAT, bbox: tuple) -> MAT:
     """
     Extract detected card crop.
     Args:
@@ -539,89 +463,133 @@ def _extractCrop(img: IMG, bbox: tuple) -> IMG:
 
     return img[y1:y2, x1:x2]
 
-def _loadImagesFromBytearray(raw_images: list[bytearray|None], log: LOGGER) -> list[IMG | None]:
+def _load_images_from_bytearray(raw_images: list[bytearray]) -> list[MAT | None]:
     """
     Load an image from a bytearray (typically from web sources).
 
     Args:
         - file (bytearray): Raw image bytes.
-        - log (Logger): Logger for debug messages.
-
     Returns:
     - tuple: (image matrix, save path string)
     """
-    images: list[IMG|None] = []
+    logger = logging.getLogger(_NAME)
+    images: list[MAT|None] = []
     for raw_image in raw_images:
         try:
-            if raw_image is None:
-                log.warning("Raw image bytearray is None.")
-                images.append(None)
-                continue
             image_bytes = np.frombuffer(raw_image, dtype=np.uint8)
             img = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
             if img is None:
-                log.warning("Failed to decode image from byte array")
+                logger.warning("Failed to decode image from byte array")
                 images.append(None)
                 continue
             images.append(img)
         except Exception as e:
-            log.warning(f"Exception occurred while loading image from byte array: {e}")
+            logger.warning(f"Exception occurred while loading image from byte array: {e}")
             images.append(None)
     return images
 
-def infer(raw_images: list[bytearray | None], model: YOLO, conf_threshold: float = 0.4, batch_size: int = 16, debug: bool = False,) -> list[dict]:
-    """
-    Full inference pipeline: load → batch detect → crop → structured results.
+def health(raw_images: list[bytearray]) -> tuple[list[str], list[bool]]:
+    configure_logger(_NAME, debug=True)
+    log = logging.getLogger(_NAME)
+    checklist: list[str] = []
+    checks: list[bool] = []
+    imgs = None
+    model = None
 
-    Args:
-        - raw_images (list):      Raw image bytearrays; None entries are skipped.
-        - model (YOLO):           Pre-loaded YOLO model. Use _loadYOLOModel() to obtain one.
-        - conf_threshold (float): Minimum YOLO detection confidence to accept. Default 0.4.
-        - batch_size (int):       Images per YOLO batch. Default 16.
-        - debug (bool):           If True, attaches the raw crop array to each result dict.
+    checklist.append("Images loaded successfully")
+    try:
+        imgs = _load_images_from_bytearray(raw_images)
+        checks.append(True)
+    except Exception as e:
+        log.exception(f"Image loading failed: {e}")
+        checks.append(False)
+    
+    checklist.append("Contours detected and exported as YOLO labels")
+    try:
+        if imgs is None: raise Exception("No images to process")
+        for img in imgs:
+            if img is not None:
+                approx = _detectContours(img)
+                if approx is not None and len(approx) == 4:
+                    yolo_img, label = _contourToYOLO(img.copy(), approx)
+                    if yolo_img is not None and label:
+                        checks.append(True)
+                    else:
+                        log.warning("YOLO label generation failed for an image")
+                        checks.append(False)
+                else:
+                    log.warning("Contour detection failed for an image")
+                    checks.append(False)
+            else:
+                log.warning("One of the images is None, skipping contour detection")
+                checks.append(False)
+    except Exception as e:
+        log.exception(f"Contour detection or YOLO label generation failed: {e}")
+        checks.append(False)
 
-    Returns:
-        list[dict]: One entry per accepted detection across all source images, each containing:
-            - source_idx (int):             Index into the original raw_images list.
-            - detection_idx (int):          Per-image detection counter.
-            - bbox (tuple):                 (x1, y1, x2, y2) pixel coordinates.
-            - detector_confidence (float):  YOLO confidence score.
-            - crop (IMG | None):            Cropped card image (only if debug=True).
+    checklist.append("YOLO model loaded and inference ran without errors")
+    try:
+        model = load_yolo_model()
+        if imgs is None: raise Exception("No images to process for inference")
+        for img in imgs:
+            if img is not None:
+                results = model.predict(source=[img], conf=0.4, verbose=False)
+                if results and results[0].boxes is not None:
+                    checks.append(True)
+                else:
+                    log.warning("YOLO inference did not return valid results for an image")
+                    checks.append(False)
+            else:
+                log.warning("One of the images is None, skipping inference")
+                checks.append(False)
+    except Exception as e:
+        log.exception(f"YOLO model loading or inference failed: {e}")
+        checks.append(False)
+    return checklist, checks
+
+def run(**kwargs) -> list[dict]:
     """
-    log = logging.getLogger(NAME)
-    valid_images: list[IMG] = []
+    """
+    imgs: list[bytearray] = kwargs.get('imgs', [])
+    model: YOLO = load_yolo_model(kwargs.get('model', None))
+    conf: float = kwargs.get('conf', 0.25)
+    size: int = kwargs.get('size', 16)
+    debug: bool = kwargs.get('debug', False)
+
+    configure_logger(_NAME, debug=debug)
+    log = logging.getLogger(_NAME)
+    
+    valid_images: list[MAT] = []
     valid_indices: list[int] = []
-    for i, img in enumerate(_loadImagesFromBytearray(raw_images, log)):
+    for i, img in enumerate(_load_images_from_bytearray(imgs)):
         if img is not None:
             valid_images.append(img)
             valid_indices.append(i)
 
-    log.debug(f"Processing {len(valid_images)}/{len(raw_images)} valid images in batches of {batch_size}.")
+    log.debug(f"Processing {len(valid_images)}/{len(imgs)}, {size} at a time")
 
     all_results: list[dict] = []
 
-    for batch_start in range(0, len(valid_images), batch_size):
-        batch = valid_images[batch_start:batch_start + batch_size]
+    for batch_start in range(0, len(valid_images), size):
+        batch = valid_images[batch_start:batch_start + size]
 
-        results = model.predict(source=batch, conf=conf_threshold, verbose=False)
+        results = model.predict(source=batch, conf=conf, verbose=False)
 
         for local_idx, result in enumerate(results):
             source_idx = valid_indices[batch_start + local_idx]
             img = batch[local_idx]
 
-            if result.boxes is None:
-                continue
+            if result.boxes is None: continue
 
             boxes = result.boxes
-            if boxes is None: continue
 
             xyxy_list = boxes.xyxy.tolist()
             conf_list = boxes.conf.tolist()
-            for det_idx, (coords, conf_score)in enumerate(zip(xyxy_list, conf_list)):
+            for det_idx, (coords, conf_score) in enumerate(zip(xyxy_list, conf_list)):
                 x1, y1, x2, y2 = map(int, coords)
 
                 if x1 >= x2 or y1 >= y2:
-                    log.warning(f"Skipping degenerate bbox ({x1},{y1},{x2},{y2}) on source image {source_idx}.")
+                    log.warning(f"Skipping degenerate bbox ({x1},{y1},{x2},{y2})")
                     continue
 
                 crop = _extractCrop(img, (x1, y1, x2, y2))
@@ -630,58 +598,84 @@ def infer(raw_images: list[bytearray | None], model: YOLO, conf_threshold: float
                     "detection_idx":       det_idx,
                     "bbox":                (x1, y1, x2, y2),
                     "detector_confidence": float(conf_score),
-                    "crop":                crop if debug else None,
+                    "crop":                crop,
                 }
-                if debug: _showImage(crop, log)  # optional visual check of each detected crop
+                if debug: show_image(crop, _NAME)  # optional visual check of each detected crop
                 log.debug(
                     f"Image {source_idx} | det {det_idx} | bbox={entry['bbox']} "
                     f"| conf={entry['detector_confidence']:.2f}"
                 )
                 all_results.append(entry)
-
     return all_results
 
 def main():
-    debug = len(sys.argv) > 1 and "debug" in sys.argv
-    logger = logging.getLogger(NAME)
-    logger.debug(f"Starting {NAME}...")
-    os.makedirs('logs', exist_ok=True)
-
-    if debug:
-        load_dotenv() # docker-compose will set env vars, so no need to load them in production
-        logger.setLevel(logging.DEBUG)
-        handler = logging.StreamHandler(sys.stdout)
-    else:
-        logger.setLevel(logging.WARNING)
-        LOG_DIR = env('LOG_DIR', 'logs')[0]
-        LOG_FILE = f'{LOG_DIR}/{NAME}.log'
-        open(LOG_FILE, 'w').close()  # Ensure log file exists
-        handler = logging.FileHandler(LOG_FILE)
-    formatter = logging.Formatter('[%(name)s] %(asctime)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    if len(sys.argv) > 1 and sys.argv[1] == "progress":
-        logger.setLevel(logging.DEBUG)
-        accepted = rejected = 0
-        if not os.path.isdir(DATASET_DIR): raise Exception(f"'{DATASET_DIR}' does not exist")
-        files = [f for f in os.listdir(DATASET_DIR)
-                if os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
-        for file in files:
-            label_file = os.path.join(DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
-            if os.path.isfile(label_file): accepted += 1
-            else: rejected += 1
-        total = accepted + rejected
-        logger.debug(f"Progress: {accepted} accepted, {rejected} rejected, {total} total")
+    args = module_arguments(
+        desc="Smeargle: Pokémon card image processor for ROI extraction and dataset generation.",
+        subcommands={
+            "generate": {
+                "desc": "Process raw images to generate YOLO-labeled dataset.",
+                "args": {
+                    "--qa": {"action": "store_true", "help": "Sample a subset of images for manual review."},
+                    "--debug": {"action": "store_true", "help": "Save intermediate images"},
+                    "--progress": {"action": "store_true", "help": "Show dataset generation progress"},
+                }
+            },
+            "push": {
+                "desc": "Split dataset, create YAML, and push to Kaggle.",
+                "args": {
+                    "--message" : {
+                        "type": str, "help": "Commit message", "default": "Update dataset"
+                    },
+                    "--path": {
+                        "type": str, "help": "Full dataset path on Kaggle", "default": _DATASET_DIR, 
+                    }
+                }
+            },
+            "run": {
+                "desc": "Run inference on raw images using a YOLO model.",
+                "args": {
+                    "--path": {
+                        "type": str, "help": "Path to the raw images folder", "default": _INPUT_DIR
+                    },
+                    "--model": {
+                        "type": str, "help": "Path to the YOLO model file.", "default": _MODEL_PATH
+                    },
+                    "--conf": {
+                        "type": float, "default": 0.4, "help": "Minimum confidence for detections."
+                    },
+                    "--size": {
+                        "type": int, "default": 16, "help": "Number of images in a batch."
+                    },
+                    "--debug": {
+                        "action": "store_true", "help": "Save cropped card images for debugging."
+                    }
+                }
+            },
+        }
+    )
+    if not hasattr(args, "command") or args.command is None:
+        print("No command provided. Use --help for usage information.")
         return
+    if args.command == "generate":
+        generate(qa=args.qa, debug=args.debug, progress=args.progress)
+    elif args.command == "push":
+        push(args.message, remote_dataset_path=args.path)
+    elif args.command == "run":
+        model = load_yolo_model(args.model)
+        imgs: list[bytearray] = []
+        if args.path:
+            if not os.path.isdir(args.path):
+                print(f"Provided path '{args.path}' does not exist or is not a directory.")
+                return
+            
+            for filename in os.listdir(args.path):
+                file_path = os.path.join(args.path, filename)
+                if os.path.isfile(file_path) and os.path.splitext(filename)[1].lower() in (".jpg", ".jpeg", ".png"):
+                    with open(file_path, "rb") as f: imgs.append(bytearray(f.read()))
+        results = run(imgs=imgs, model=model, conf=args.conf, size=args.size, debug=args.debug)
+        for result in results[:5]: result['crop'] = 'Cannot Show'
+        print(results[:5])
     
-    if len(sys.argv) > 1 and sys.argv[1] == "push":
-        path = sys.argv[2] if len(sys.argv) > 2 else DATASET_DIR
-        return push(path)
-    
-    if len(sys.argv) > 1 and sys.argv[1] == "generate":
-        qa = len(sys.argv) > 2 and sys.argv[2] == "qa"
-        return generate(logger=logging.getLogger(NAME), qa=qa, debug=debug)
-    
+
 if __name__ == "__main__":
     main()

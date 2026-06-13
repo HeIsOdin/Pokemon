@@ -1,21 +1,48 @@
 {
-	"wartortle_evolution_error": {
-		"title": "Wartortle Evolution Box Error",
-		"dataset": "benjaminadedowole/wartortle-evolution-error",
-		"queries": [
-			"Wartortle 42/102",
-			"Wartortle base set",
-			"Wartortle WOTC base",
-			"Wartortle vintage"
-		],
-		"marketplace": ["eBay"],
-		"input_shape": [128, 128],
-		"num_classes": 2,
-		"dimensions": [480, 680],
-		"roi": [40, 45, 60, 60],
-		"input_dir": "imag",
-		"debugging_dir": "adjust",
-		"training_dir": "wartortle-evolution-error",
-		"roi_template": "roi_templates/wartortle_evolution_error.jpg"
-	}
+  "porygon": {
+    "encoder": {
+      "id": "efficientnet_b0_448_imagenet_v1",
+      "model": "efficientnet_b0",
+      "image_size": 448,
+      "embedding_dimension": 1280,
+      "imagenet_mean": [0.485, 0.456, 0.406],
+      "imagenet_std": [0.229, 0.224, 0.225]
+    },
+
+    "aligned_dimensions": [960, 1360],
+
+    "cards": {
+      "wartortle_42_102": {
+        "queries": [
+          "Wartortle 42/102",
+          "Wartortle base set",
+          "Wartortle WOTC base",
+          "Wartortle vintage"
+        ],
+
+        "label_map": {
+          "0": "normal",
+          "1": "wartortle_evolution_error"
+        },
+
+        "misprints": {
+          "wartortle_evolution_error": {
+            "label_id": 1,
+
+            "regions": {
+              "evolution_portrait": {
+                "roi": [65, 100, 125, 125],
+                "classifier": "LogisticRegression"
+              }
+            },
+
+            "thresholds": {
+              "suspicious": 0.5,
+              "likely_misprint": 0.6
+            }
+          }
+        }
+      }
+    }
+  }
 }

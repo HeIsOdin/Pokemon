@@ -24,6 +24,8 @@ dataset*/*
 input/*
 output/*
 
-# Weights
-*.pt
-runs/*
+# Kaggle artifacts
+kaggle/*
+
+# Binaries
+*.bin
