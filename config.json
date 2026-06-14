@@ -55,7 +55,7 @@
             },
 
             "thresholds": {
-              "suspicious": 0.55,
+              "suspicious": 0.5,
               "likely_misprint": 0.6
             }
           }
