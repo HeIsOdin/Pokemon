@@ -38,7 +38,7 @@ def _save_to_database(card_details: list[dict]):
             ('id', 'market_id', 'card', 'misprint', 'url', 'image', 'certainty'),
             {
                 'id': detail['id'],
-                'market_id': detail['itemId'],
+                'market_id': detail['item_id'],
                 'card': detail['card'],
                 'misprint': detail['misprint'],
                 'url': detail['url'],
@@ -131,12 +131,15 @@ def run(**kwargs):
             logger.debug("Running Smeargle...")
             crop_details = smeargle(**smeargle_cfg, imgs=card_images, debug=debug)
 
+            expanded_details = []
             for crop_detail in crop_details:
-                source_idx: int = crop_detail['source_idx']
-                if 'crop' not in crop_detail or crop_detail['crop'] is None:
-                    logger.warning(f"No crop source index {source_idx}.")
-                    continue
-                card_details[source_idx]['crop'] = crop_detail['crop']
+                source_idx = crop_detail["source_idx"]
+                detail = dict(card_details[source_idx])
+                detail["crop"] = crop_detail["crop"]
+                detail["bbox"] = crop_detail["bbox"]
+                detail["detector_confidence"] = crop_detail["detector_confidence"]
+                expanded_details.append(detail)
+            card_details = expanded_details
 
             # remove any card details that don't have crops for Porygon
             card_details = [d for d in card_details if 'crop' in d and d['crop'] is not None]
