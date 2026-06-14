@@ -52,36 +52,9 @@ EBAY_ITEM_LIMIT     = 100  # Max total items to fetch across all queries
 EBAY_CATEGORY_ID    = '183454'  # eBay category ID for Pokémon Cards
 EBAY_CONDITION_IDS  = "1000|3000|4000"
 EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
+    
 
-def _get_ebay_token(id: str, secret: str) -> str:
-    """
-    Fetch an OAuth2 access token from the eBay API using client credentials.
-
-    Args:
-        - client_id (str)     : eBay API client ID.
-        - client_secret (str) : eBay API client secret.
-
-    Returns:
-        str: Access token for authenticated API requests.
-    """
-    logger = logging.getLogger(_NAME)
-    url = 'https://api.ebay.com/identity/v1/oauth2/token'
-    headers = {
-        'Content-Type': 'application/x-www-form-urlencoded'
-    }
-    data = {
-        'grant_type': 'client_credentials',
-        'scope': 'https://api.ebay.com/oauth/api_scope'
-    }
-
-    response = requests.post(url, headers=headers, data=data, auth=(id, secret), timeout=TIMEOUT)
-    response.raise_for_status()
-    data = response.json()
-    logger.debug(f"eBay token response: {data}")
-    if not 'access_token' in data: raise Exception(f"Missing access_token: {data}")
-    return data['access_token']
-
-def _search_pokemon_cards(token: str, query: str, price: tuple[float, float], limit: int) -> dict:
+def _search_ebay(queries: list[str], price: tuple[float, float], limit: int) -> list[dict]:
     """
     Fetches up to `limit` Pokémon card listings from eBay, combining paginated results.
 
@@ -102,7 +75,32 @@ def _search_pokemon_cards(token: str, query: str, price: tuple[float, float], li
     EBAY_CONDITION_IDS  = "1000|3000|4000"
     EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
     logger = logging.getLogger(_NAME)
+    token_url = 'https://api.ebay.com/identity/v1/oauth2/token'
+    token_headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
+    token_data = {
+        'grant_type': 'client_credentials',
+        'scope': 'https://api.ebay.com/oauth/api_scope'
+    }
+
+    logger.debug(f"Loading eBay API credentials...")
+    id, secret = env('EBAY_CLIENT_ID,EBAY_CLIENT_SECRET')
+
+    logger.debug("Authenticating with eBay...")
+    response = requests.post(
+        token_url,
+        headers=token_headers,
+        data=token_data,
+        auth=(id, secret),
+        timeout=TIMEOUT
+    )
+    response.raise_for_status()
+    data = response.json()
+    logger.debug(f"eBay token response: {data}")
+    if not 'access_token' in data: raise Exception(f"Missing access_token: {data}")
+    token = data['access_token']
+
     search_url = 'https://api.ebay.com/buy/browse/v1/item_summary/search'
+    
     headers = {
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json',
@@ -114,42 +112,56 @@ def _search_pokemon_cards(token: str, query: str, price: tuple[float, float], li
         'conditionIds': f'{{{EBAY_CONDITION_IDS}}}',
         'priceCurrency': 'USD',
     }
-    if price == float('inf'): del filters['price']  # Remove price filter if no max price is set
-    all_items = []
+    if price[1] == float('inf'): del filters['price']  # Remove price filter if no max price is set
+    listings = []
     total_fetched = 0
 
     # 1000 = New / Brand New / New Factory Sealed
     # 3000 = Used; for trading cards, this means used
     # 4000 = Very Good; for trading cards, this means ungraded
-    while total_fetched < limit:
-        batch_limit = min(EBAY_PAGE_SIZE, limit - total_fetched)
-        params = {
-            'q'            : query,
-            'sort'         : EBAY_SORTING,
-            'filter'       : f'{','.join([f"{k}:{v}" for k, v in filters.items()])}',
-            'category_ids' : EBAY_CATEGORY_ID,
-            'limit'        : str(batch_limit),
-            'offset'       : str(total_fetched),
-        }
+    for query in queries:
+        while total_fetched < limit:
+            batch_limit = min(EBAY_PAGE_SIZE, limit - total_fetched)
+            params = {
+                'q'            : query,
+                'sort'         : EBAY_SORTING,
+                'filter'       : ",".join([f"{k}:{v}" for k, v in filters.items()]),
+                'category_ids' : EBAY_CATEGORY_ID,
+                'limit'        : str(batch_limit),
+                'offset'       : str(total_fetched),
+            }
 
-        response = requests.get(search_url, headers=headers, params=params, timeout=TIMEOUT)
+            response = requests.get(search_url, headers=headers, params=params, timeout=TIMEOUT)
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        data: dict = response.json()
-        items = data.get('itemSummaries', [])
-        if not items:
-            logger.debug(f"No more items found for '{query}' after fetching {total_fetched} items.")
-            break
+            data: dict = response.json()
+            items = data.get('itemSummaries', [])
+            if not items:
+                logger.debug(f"No more items found for '{query}' after fetching {total_fetched} items.")
+                break
 
-        all_items.extend(items)
-        total_fetched += len(items)
+            listings.extend(items)
+            total_fetched += len(items)
 
-        if len(items) < batch_limit: break
+            if len(items) < batch_limit: break
 
-        sleep(DELAY)   
+            sleep(DELAY)   
+    listings = [
+        {
+            'title': listing.get('title', ''),
+            'item_id': listing.get('itemId', ''),
+            'url': listing.get('itemWebUrl', ''),
+            'image_url': listing.get('image', {}).get('imageUrl', '')
+        } for listing in listings
+    ]
+    return listings
 
-    return {'itemSummaries': all_items}
+def _search_cards(queries: list[str], price: tuple[float, float], limit: int) -> list[dict]:
+    all_items = []
+    ebay_results = _search_ebay(queries, price, limit)
+    all_items.extend(ebay_results)
+    return all_items
 
 def _download_image(url: str) -> tuple[bytes, str]:
     """
@@ -174,7 +186,7 @@ def _download_image(url: str) -> tuple[bytes, str]:
         return response.content, high_res_url
     raise Exception(f"Failed to download image from {url}")
 
-def _get_card_details(items: dict, img_hashes: set, debug: bool = False) -> list[dict]:
+def _get_card_details(items: list[dict], img_hashes: set, debug: bool = False) -> list[dict]:
     """
     Extract relevant card details from an eBay item summary.
 
@@ -192,44 +204,43 @@ def _get_card_details(items: dict, img_hashes: set, debug: bool = False) -> list
     """
     logger = logging.getLogger(_NAME)
     details = []
-    for item in items.get('itemSummaries', []):
-            
-            title     = str(item.get('title', ''))
-            item_id   = str(item.get('itemId', ''))
-            prod_url  = str(item.get('itemWebUrl', ''))
-            image_url = str(item.get('image', {}).get('imageUrl', ''))
+    for item in items:
+        title     = str(item.get('title', ''))
+        item_id   = str(item.get('item_id', ''))
+        prod_url  = str(item.get('url', ''))
+        image_url = str(item.get('image_url', ''))
 
-            if not item_id:
-                logger.warning(f"No item ID found for listing: {title} - {prod_url}")
-                continue
+        if not item_id:
+            logger.warning(f"No item ID found for listing: {title} - {prod_url}")
+            continue
 
-            if not image_url:
-                logger.warning(f"No image URL found for {title} - {prod_url}")
-                continue
+        if not image_url:
+            logger.warning(f"No image URL found for {title} - {prod_url}")
+            continue
 
-            title = f"{sanitize_filename(title)}"
-            img_byte, image_url = _download_image(image_url)
-            img = bytearray(img_byte)
+        title = f"{sanitize_filename(title)}"
+        img_byte, image_url = _download_image(image_url)
+        img = bytearray(img_byte)
 
-            pypikachuId = hashlib.md5(img).hexdigest()
-            img_hash = f"{pypikachuId[:8]}.jpg"
-            if img_hash in img_hashes:
-                logger.warning(f"Skipping duplicate image for {title}")
-                continue
+        pypikachu_id = hashlib.md5(img).hexdigest()
+        img_hash = f"{pypikachu_id[:8]}.jpg"
+        if img_hash in img_hashes:
+            logger.debug(f"Skipping duplicate image for {title}")
+            continue
 
-            if debug:
-                path = os.path.join(DOWNLOAD_DIR, img_hash)
-                logger.debug(f"Saving image for '{title}' with hash {img_hash} at {path}")
-                save_image(img, path)
+        if debug:
+            path = os.path.join(DOWNLOAD_DIR, img_hash)
+            logger.debug(f"Saving image for '{title}' with hash {img_hash} at {path}")
+            save_image(img, path)
 
-            details.append({
-                'id': pypikachuId,
-                'title': title,
-                'url': prod_url,
-                'image_url': image_url,
-                'image': img,
-                'itemId': item_id})
-            img_hashes.add(img_hash)
+        details.append({
+            'id': pypikachu_id,
+            'title': title,
+            'url': prod_url,
+            'image_url': image_url,
+            'image': img,
+            'item_id': item_id})
+        img_hashes.add(img_hash)
     return details
 
 def health(**kwargs) -> tuple[list[str], list[bool]]:
@@ -244,7 +255,7 @@ def health(**kwargs) -> tuple[list[str], list[bool]]:
     checks: list[bool] = []
     img_hashes = set()
 
-    query: str = kwargs.get('queries', ["Wartortle 42/102"])[0]
+    queries: list[str] = kwargs.get('queries', ["Wartortle 42/102"])
     threshold: tuple[float, float] = kwargs.get('min_price', 1), kwargs.get('max_price', float('inf'))
 
     checklist.append("Image hashes bucket is accessible")
@@ -258,22 +269,13 @@ def health(**kwargs) -> tuple[list[str], list[bool]]:
     except Exception as e:
         log.exception(f"Failed to access image hashes bucket: {e}")
         checks.append(False)
-
-    checklist.append("eBay API Authentication")
-    try:
-        token = _get_ebay_token(env('EBAY_CLIENT_ID')[0], env('EBAY_CLIENT_SECRET')[0])
-        checks.append(True)
-    except Exception as e:
-        token = ''
-        log.exception(f"eBay API authentication failed: {e}")
-        checks.append(False)
     
     checklist.append("eBay API Search")
     try:
-        results = _search_pokemon_cards(token, query, threshold, 1)
-        checks.append('itemSummaries' in results)
+        results = _search_cards(queries, threshold, 1)
+        checks.append(True if results else False)
     except Exception as e:
-        results = {}
+        results = []
         log.exception(f"eBay API search failed: {e}")
         checks.append(False)
     
@@ -295,41 +297,38 @@ def run(**kwargs) -> list[dict]:
     config: dict = load_config(_NAME, kwargs.get('config', {}))
 
     queries: list[str] = config.get('queries', [])
-    thresholds: tuple[float, float] = config.get('min_price', 1), config.get('max_price', float('inf'))
+    prices: tuple[float, float] = config.get('min_price', 1), config.get('max_price', float('inf'))
     limit: int = config.get('limit', EBAY_ITEM_LIMIT)
-
+    
     configure_logger(_NAME, debug=debug)
     logger = logging.getLogger(_NAME)
 
     if not os.path.exists(f"{_NAME}.bin") or os.path.getsize(f"{_NAME}.bin") == 0:
-        with open(f"{_NAME}.bin", 'wb') as f:
-            msgpack.pack([], f)
+        with open(f"{_NAME}.bin", 'wb') as f: msgpack.pack([], f)
     with open(f"{_NAME}.bin", 'rb') as f:  # Ensure we have a set of item IDs to avoid duplicates
         unpacked = msgpack.unpack(f)
         img_hashes = set(unpacked) if isinstance(unpacked, list) else set()
-    logger.debug(f"Loaded {len(img_hashes)} existing image hashes.")
+        logger.debug(f"Loaded {len(img_hashes)} existing image hashes.")
+    items: list[dict] = []
 
     logger.debug(f"Starting {_NAME}...")
-    if debug and os.path.isdir(DOWNLOAD_DIR): shutil.rmtree(DOWNLOAD_DIR)
-    logger.debug(f"Loading eBay API credentials...")
-    CLIENT_ID, CLIENT_SECRET = env('EBAY_CLIENT_ID,EBAY_CLIENT_SECRET')
-    logger.debug("Authenticating with eBay...")
-    token = _get_ebay_token(CLIENT_ID, CLIENT_SECRET)
-
-    items: list[dict] = []
-    for query in queries:
-        logger.debug(f"Searching for {query} with price between {thresholds[0]} and {thresholds[1]}...")
-        results = _search_pokemon_cards(token, query, thresholds, limit)
+    try:
+        if debug and os.path.isdir(DOWNLOAD_DIR): shutil.rmtree(DOWNLOAD_DIR)
+        results = _search_cards(queries, prices, limit)
 
         logger.debug("Downloading listing images...")
         details = _get_card_details(results, img_hashes, debug)
         items.extend(details)
-            
+                
         logger.debug(f"Total items fetched: {len(items)}")
-    
-    with open(f"{_NAME}.bin", 'wb') as f: msgpack.pack(list(img_hashes), f)
-    logger.debug(f"Stored {len(img_hashes)} image hashes to {_NAME}.bin")
-    return items
+    except Exception as e:
+        logger.exception(f"An error occurred during Spinarak execution: {e}")
+        return []
+    finally:
+        with open(f"{_NAME}.bin", 'wb') as f:
+            msgpack.pack(list(img_hashes), f)
+        logger.debug(f"Stored {len(img_hashes)} image hashes to {_NAME}.bin")
+        return items
 
 def main():
     args = module_arguments(
@@ -370,7 +369,9 @@ def main():
         sys.exit(1)
     if args.command == 'health':
         checklist, checks = health()
-        for item, check in zip(checklist, checks): print(f"{item}: {"PASS" if check else "FAIL"}")
+        for item, check in zip(checklist, checks):
+            status = "PASS" if check else "FAIL"
+            print(f"{item}: {status}")
     elif args.command == "run": run(**{k: v for k, v in vars(args).items() if k != 'command'})
     else:
         print(f"Unknown command: {args.command}")
