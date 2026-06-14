@@ -326,7 +326,8 @@ def _visualize_results(query_img: MAT, results: list[dict], title: str = "Retrie
 def build_encoder(encoder: NNM | None = None, config: dict | None = None) -> tuple[NNM, Compose, str]:
     """Build or normalize the shared Porygon encoder from config["porygon"]["encoder"]."""
     logger = logging.getLogger(_NAME)
-    encoder_cfg = _get_porygon_config(config).get("encoder", {})
+    config = config or load_config(_NAME)
+    encoder_cfg = _get_porygon_config(config)['encoder']
 
     model_name = encoder_cfg["model"]
     img_size = int(encoder_cfg["image_size"])
@@ -567,21 +568,20 @@ def _identify_misprints(
                 labels.append(target_label)
                 break
 
-    all_probs = [
-        float(summary["prob"])
-        for summary in misprint_summaries.values()
-    ]
+    # all_probs = [
+    #     float(summary["prob"])
+    #     for summary in misprint_summaries.values()
+    # ]
 
-    all_statuses = [
-        str(summary["status"])
-        for summary in misprint_summaries.values()
-    ]
+    # all_statuses = [
+    #     str(summary["status"])
+    #     for summary in misprint_summaries.values()
+    # ]
 
     conclusion = {
         "card_id": card_id,
         "labels": sorted(set(labels)) if labels else ["0"],
-        "prob": max(all_probs) if all_probs else 0.0,
-        "status": _strongest_status(all_statuses),
+        "misprints": misprint_summaries,
     }
 
     return conclusion, outputs
@@ -662,8 +662,8 @@ def health(img: MAT, config: dict, target_conclusion: dict) -> tuple[list[str], 
     checklist.append("The predicted conclusion matches the expected conclusion for the test image")
     try:
         if conclusion is None: raise Exception("Conclusion was not generated.")
-        conclusion_no_prob = {k: v for k, v in conclusion.items() if k != "prob" and k != "status"}
-        target_no_prob = {k: v for k, v in target_conclusion.items() if k != "prob" and k != "status"}
+        conclusion_no_prob = {k: v for k, v in conclusion.items() if k != "misprints"}
+        target_no_prob = {k: v for k, v in target_conclusion.items() if k != "misprints"}
         st = conclusion_no_prob == target_no_prob
         if not st:
             logger.warning(f"Got {conclusion_no_prob}, expected {target_no_prob}")
@@ -686,7 +686,7 @@ def run(**kwargs):
     logger = logging.getLogger(_NAME)
     logger.debug(f"Starting {_NAME}...")
 
-    all_results = []
+    all_results: list[tuple[dict, list[dict]]] = []
     for img in imgs:
         predicted_card, id_results = _identify_card(img, gallery, enc, trans, dev)
         if not predicted_card:

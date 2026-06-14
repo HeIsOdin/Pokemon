@@ -251,7 +251,7 @@ def home():
         records = postgresql(
             'SELECT {{columns}} FROM {{tables}}',
             env('POSTGRESQL_TABLE_FOR_LISTINGS'),
-            ('id', 'url', 'image', 'misprint', 'certainty')
+            ('id', 'card', 'url', 'image', 'misprint', 'certainty')
         )
         if not records: raise ValueError("No listings found.")
     

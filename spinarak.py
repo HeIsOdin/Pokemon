@@ -24,6 +24,7 @@ for defect detection.
 """
 
 from time import sleep
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 from rotom import (
     configure_logger,
     env,
@@ -51,35 +52,6 @@ EBAY_ITEM_LIMIT     = 100  # Max total items to fetch across all queries
 EBAY_CATEGORY_ID    = '183454'  # eBay category ID for Pokémon Cards
 EBAY_CONDITION_IDS  = "1000|3000|4000"
 EBAY_BUYING_OPTIONS = "FIXED_PRICE|AUCTION"
-
-def _get_queries_and_thresholds(config: dict, cli_queries: list[str]) -> tuple[list[str], list[tuple[float, float]]]:
-    """
-    Extracts search queries and price thresholds from configuration and CLI arguments.
-
-    Args:
-        - config (dict)       : Configuration dictionary loaded from file.
-        - cli_queries (list)  : List of queries provided via command-line arguments.
-    Returns:
-        tuple: (queries, thresholds)
-            - queries (list[str]): List of search query strings.
-            - thresholds (list[float]): Corresponding list of price thresholds for each query.
-    """
-    queries = []
-    thresholds = []
-    if 'queries' in config:
-        for entry in config['queries']:
-            if isinstance(entry, dict) and 'query' in entry:
-                queries.append(entry['query'])
-                thresholds.append(float(entry.get('threshold', float('inf'))))
-            elif isinstance(entry, str):
-                queries.append(entry)
-                thresholds.append(float('inf'))
-    if cli_queries:
-        for q in cli_queries:
-            if q not in queries:
-                queries.append(q)
-                thresholds.append(float('inf'))
-    return queries, thresholds
 
 def _get_ebay_token(id: str, secret: str) -> str:
     """
@@ -238,7 +210,8 @@ def _get_card_details(items: dict, img_hashes: set, debug: bool = False) -> list
             title = f"{sanitize_filename(title)}"
             img = bytearray(_download_image(image_url))
 
-            img_hash = f"{hashlib.md5(img).hexdigest()[:8]}.jpg"
+            pypikachuId = hashlib.md5(img).hexdigest()
+            img_hash = f"{pypikachuId[:8]}.jpg"
             if img_hash in img_hashes:
                 logger.warning(f"Skipping duplicate image for {title}")
                 continue
@@ -248,19 +221,42 @@ def _get_card_details(items: dict, img_hashes: set, debug: bool = False) -> list
                 logger.debug(f"Saving image for '{title}' with hash {img_hash} at {path}")
                 save_image(img, path)
 
-            details.append({'title': title,'url': prod_url,'image': img, 'itemId': item_id})
+            details.append({
+                'id': pypikachuId,
+                'title': title,
+                'url': prod_url,
+                'image_url': image_url,
+                'image': img,
+                'itemId': item_id})
             img_hashes.add(img_hash)
     return details
 
-def health() -> tuple[list[str], list[bool]]:
+def health(**kwargs) -> tuple[list[str], list[bool]]:
     """
     Perform health checks to verify eBay API connectivity and functionality. 
     """
-    configure_logger(_NAME, debug=True)
+    debug = True
+
+    configure_logger(_NAME, debug=debug)
     log = logging.getLogger(_NAME)
     checklist: list[str] = []
     checks: list[bool] = []
     img_hashes = set()
+
+    query: str = kwargs.get('queries', ["Wartortle 42/102"])[0]
+    threshold: tuple[float, float] = kwargs.get('min_price', 1), kwargs.get('max_price', float('inf'))
+
+    checklist.append("Image hashes bucket is accessible")
+    try:
+        if not os.path.exists(f"{_NAME}.bin"):
+            with open(f"{_NAME}.bin", 'wb') as f: pass
+        with open(f"{_NAME}.bin", 'rb') as f:
+            unpacked = msgpack.unpack(f)
+            img_hashes = set(unpacked) if isinstance(unpacked, list) else set()
+        checks.append(True)
+    except Exception as e:
+        log.exception(f"Failed to access image hashes bucket: {e}")
+        checks.append(False)
 
     checklist.append("eBay API Authentication")
     try:
@@ -273,7 +269,7 @@ def health() -> tuple[list[str], list[bool]]:
     
     checklist.append("eBay API Search")
     try:
-        results = _search_pokemon_cards(token, "Wartortle 42/102", (0, 20.0), 1)
+        results = _search_pokemon_cards(token, query, threshold, 1)
         checks.append('itemSummaries' in results)
     except Exception as e:
         results = {}
@@ -298,21 +294,22 @@ def run(**kwargs) -> list[dict]:
     config: dict = load_config(_NAME, kwargs.get('config', {}))
 
     queries: list[str] = config.get('queries', [])
-    thresholds: tuple[float, float] = config.get('threshold', (1, float('inf')))
+    thresholds: tuple[float, float] = config.get('min_price', 1), config.get('max_price', float('inf'))
     limit: int = config.get('limit', EBAY_ITEM_LIMIT)
 
     configure_logger(_NAME, debug=debug)
     logger = logging.getLogger(_NAME)
 
-    if not os.path.exists(f"{_NAME}.bin"):
-        with open(f"{_NAME}.bin", 'wb') as f: pass
+    if not os.path.exists(f"{_NAME}.bin") or os.path.getsize(f"{_NAME}.bin") == 0:
+        with open(f"{_NAME}.bin", 'wb') as f:
+            msgpack.pack([], f)
     with open(f"{_NAME}.bin", 'rb') as f:  # Ensure we have a set of item IDs to avoid duplicates
         unpacked = msgpack.unpack(f)
         img_hashes = set(unpacked) if isinstance(unpacked, list) else set()
     logger.debug(f"Loaded {len(img_hashes)} existing image hashes.")
 
     logger.debug(f"Starting {_NAME}...")
-    if debug: shutil.rmtree(DOWNLOAD_DIR)
+    if debug and os.path.isdir(DOWNLOAD_DIR): shutil.rmtree(DOWNLOAD_DIR)
     logger.debug(f"Loading eBay API credentials...")
     CLIENT_ID, CLIENT_SECRET = env('EBAY_CLIENT_ID,EBAY_CLIENT_SECRET')
     logger.debug("Authenticating with eBay...")

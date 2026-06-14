@@ -551,10 +551,12 @@ def run(**kwargs) -> list[dict]:
     debug: bool = kwargs.get('debug', False)
     imgs: list[bytearray] = kwargs.get('imgs', [])
     model: YOLO = load_yolo_model(kwargs.get('model', None))
-    config: dict = load_config(kwargs.get('config', {}))
+    # config may come from kwargs so we don't keep loading the config
+    config: dict = load_config(_NAME, kwargs.get('config', {}))["detector"]
 
-    conf: float = config.get('conf', 0.25)
-    batch_size: int = config.get('batch_size', 16)
+    conf: float = config['conf']
+    iou: float = config['iou']
+    batch_size: int = config['batch_size']
 
     configure_logger(_NAME, debug=debug)
     log = logging.getLogger(_NAME)
@@ -573,7 +575,7 @@ def run(**kwargs) -> list[dict]:
     for batch_start in range(0, len(valid_images), batch_size):
         batch = valid_images[batch_start:batch_start + batch_size]
 
-        results = model.predict(source=batch, conf=conf, verbose=False)
+        results = model.predict(source=batch, conf=conf, iou=iou, verbose=debug)
 
         for local_idx, result in enumerate(results):
             source_idx = valid_indices[batch_start + local_idx]

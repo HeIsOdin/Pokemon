@@ -1,135 +1,202 @@
-import spinarak
-import smeargle
-import porygon
-import rotom
+from spinarak import run as spinarak, health as spinarak_health
+from smeargle import run as smeargle, health as smeargle_health, load_yolo_model
+from porygon import run as porygon, health as porygon_health, load_gallery, build_encoder
+from rotom import configure_logger, load_config, module_arguments, cv2, np, postgresql, env
+from time import sleep
 
-def main(defect: str, threshold: float, USE_LOCAL_STORAGE: bool, USE_RGB: bool, download_dataset: bool, verbose: bool = False, AI: porygon.models.Sequential | None = None,):
-    args = rotom.parse_JSON_as_arguments('config.json', defect,
-        [
-            "input_shape",
-            "dataset",
-            "num_classes",
-            "dimensions",
-            "roi",
-            "input_dir",
-            "debugging_dir",
-            "training_dir",
-            'queries'
-        ]
-    )
+import logging
 
-    rotom.clear_terminal()
+_NAME = "arceus"
 
-    if not AI:
-        directoryCheck = rotom.directory_check(args.get("training_dir", ""))
-        attempts = 3
-        while not directoryCheck:
-            if attempts < 0:
-                exit()
-            args.update({
-                'training_dir': porygon.get_dataset(
-                    args.get("training_dir", ""),
-                    args['author'],
-                    args['dataset'],
-                    download_dataset,
-                    USE_LOCAL_STORAGE
-                )})
-            attempts -= 1
-            directoryCheck = rotom.directory_check(args.get("training_dir", ""))
+def _load_essentials():
+    logger = logging.getLogger(_NAME)
 
-        images, labels, filenames = porygon.load_dataset_from_directory(args.get("training_dir", ""), args.get('input_shape', [128, 128]), USE_RGB)
-        if verbose: porygon.display_sample(images, labels, filenames)
-        new_images, new_labels = porygon.convert_and_reshape(images, labels)
-        training_images, testing_images, training_labels, testing_labels = porygon.split_dataset(new_images, new_labels)
-    
-        AI = porygon.build_model(args.get('num_classes', ''), USE_RGB)
-        porygon.train_model(AI, training_images, training_labels)
-        porygon.evaluate_model(AI, testing_images, testing_labels)
-        porygon.predict_and_visualize(AI, testing_images, testing_labels, USE_RGB, testing=True)
+    logger.debug("Loading configuration...")
+    config = load_config(_NAME)
+    logger.debug("Configuration loaded")
 
-    CLIENT_ID, CLIENT_SECRET = rotom.enviromentals('EBAY_CLIENT_ID', 'EBAY_CLIENT_SECRET')
+    logger.debug("Loading YOLO model...")
+    yolo_model = load_yolo_model()
+    logger.debug("YOLO model loaded successfully.")
 
-    rotom.print_with_color("Authenticating with eBay...", 4)
-    token = spinarak.get_ebay_token(CLIENT_ID, CLIENT_SECRET)
+    logger.debug("Loading gallery...")
+    gallery = load_gallery()
+    logger.debug("Gallery loaded successfully.")
 
-    items = []
+    logger.debug("Building encoder...")
+    enc, _, _ = build_encoder()
+    logger.debug("Encoder built successfully.")
 
-    queries = args.get('queries', [])
+    return config, yolo_model, gallery, enc
 
-    for query in queries:
-        rotom.print_with_color(f"Searching for Pokémon card listings '{query}'...", 4)
-        results = spinarak.search_pokemon_cards(token, price=threshold, query=query)
-
-        rotom.print_with_color("Downloading listing images...", 4)
-
-        for item in results.get('itemSummaries', []):
-            card = {
-                'title': item.get('title', ''),
-                'product_url': item.get('itemWebUrl', ''),
-                'image_url': item.get('image', {}).get('imageUrl', '')
+def _save_to_database(card_details: list[dict]):
+    logger = logging.getLogger(_NAME)
+    for detail in card_details:
+        postgresql("INSERT INTO {{tables}} ({{columns}}) VALUES ({{values}})", 
+            env('POSTGRESQL_TABLE_FOR_REPORTS'),
+            ('id', 'market_id', 'card', 'misprint', 'url', 'image', 'certainty'),
+            {
+                'id': detail['id'],
+                'market_id': detail['itemId'],
+                'card': detail['card'],
+                'misprint': detail['misprint'],
+                'url': detail['url'],
+                'image': detail['image_url'],
+                'certainty': detail['certainty'],
             }
-        
-            if card['image_url']:
-                card['image'] = bytearray(spinarak.download_image(card['image_url'], card['title'], args.get('input_dir', ''), USE_LOCAL_STORAGE))
-                items.append(card)
+        )
+    logger.debug(f"Saved {len(card_details)} suspected cards to the database.")
+    
+
+def health(raw_image: bytearray|None = None, image_name: str = '') -> tuple[list[str], list[bool]]:
+    configure_logger(_NAME, debug=True)
+    logger = logging.getLogger(_NAME)
+    checklist: list[str] = []
+    check: list[bool] = []
+    config = {}
+    image: np.ndarray | None = None
+    card_name = image_name.split("/")[-1].split(".")[0].rsplit("_", maxsplit=1)[0]
+    
+    checklist.append("Loaded configuration")
+    try:
+        config = load_config(_NAME)
+        check.append(True)
+    except Exception as e:
+        logger.error(f"Failed to load configuration: {e}")
+        check.append(False)
+
+    spinarak_status = spinarak_health()
+    checklist.extend(spinarak_status[0])
+    check.extend(spinarak_status[1])
+
+    if raw_image is None:
+        logger.warning("Smeargle and Porygon health checks were skipped because no test image was provided.")
+        return checklist, check
+
+    smeargle_status = smeargle_health([raw_image])
+    checklist.extend(smeargle_status[0])
+    check.extend(smeargle_status[1])
+
+    checklist.append("Read test image into OpenCV format")
+    try:
+        if raw_image is None:
+            raise Exception("No image data to read")
+        image_bytes = np.frombuffer(raw_image, dtype=np.uint8)
+        image = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
+        if image is not None:
+            check.append(True)
+        else:
+            logger.error("Failed to decode image with OpenCV")
+            check.append(False)
+    except Exception as e:
+        logger.error(f"Failed to read test image: {e}")
+        check.append(False)
+    
+    conclusion = {
+        "card_id": card_name,
+        "labels": image_name.split("/")[-1].split(".")[0].rsplit("_", maxsplit=1)[1].split("__"),
+    }
+
+    if image is not None:
+        porygon_status = porygon_health(image, config=config, target_conclusion=conclusion)
+        checklist.extend(porygon_status[0])
+        check.extend(porygon_status[1])
+
+    return checklist, check
+    
+def run(**kwargs):
+    debug: bool = kwargs.get("debug", False)
+    configure_logger(_NAME, debug=debug)
+    logger = logging.getLogger(_NAME)
+
+    logger.debug(f"Starting {_NAME}...")
+
+    config, yolo_model, gallery, enc = _load_essentials()
+
+    while True:
+        suspected_cards = []
+        for card_id, card_cfg in config['cards'].items():
+            logger.debug(f"Processing card: {card_id}")
+
+            spinarak_cfg = {}
+            spinarak_cfg['config'] = load_config("spinarak", card_cfg)
+            logger.debug("Running Spinarak...")
+            card_details = spinarak(**spinarak_cfg, debug=debug)
+
+            smeargle_cfg = {}
+            smeargle_cfg['config'] = load_config("smeargle", config)
+            smeargle_cfg['model'] = yolo_model
+            card_images: list[bytearray] = [d['image'] for d in card_details]
+            logger.debug("Running Smeargle...")
+            crop_details = smeargle(**smeargle_cfg, imgs=card_images, debug=debug)
+
+            for crop_detail in crop_details:
+                source_idx: int = crop_detail['source_idx']
+                if 'crop' not in crop_detail or crop_detail['crop'] is None:
+                    logger.warning(f"No crop source index {source_idx}.")
+                    continue
+                card_details[source_idx]['crop'] = crop_detail['crop']
+
+            # remove any card details that don't have crops for Porygon
+            card_details = [d for d in card_details if 'crop' in d and d['crop'] is not None]
+            if not card_details:
+                logger.warning("No valid crops found for any card details. Skipping Porygon.")
                 continue
-            rotom.print_with_color(f"No image found for: {card['title']}", 3)
-            
+            porygon_cfg = {}
+            porygon_cfg['config'] = config
+            porygon_cfg['encoder'] = enc
+            porygon_cfg['gallery'] = gallery
+            crop_images: list = [d['crop'] for d in card_details]
+            logger.debug("Running Porygon...")
+            results = porygon(**porygon_cfg, imgs=crop_images, debug=debug)
 
-    rotom.print_with_color("Listed Images have been downloaded! 🥳", 2)
-    rotom.pause(10)
+            assert len(results) == len(card_details), "Number of conclusions and card details must match"
 
-    rois = []
-    for item in items:
-        rotom.print_with_color(f"Processing {item['title']}...", 4)
-        image = None
-        path = ''
-        if USE_LOCAL_STORAGE:
-            image, path = smeargle.load_file_from_directory(item['title'], args.get('input_dir', ''), args.get('debugging_dir', ''))
-        else:
-            image, path = smeargle.load_file_from_bytearray(item.get('image', bytearray()), item.get('title', 'no_title'))
-        if 'image' in item:
-            item.pop('image')
-        if 'image' in item.keys():
-            item.pop('image')
-        for key in item:
-            if key == 'image':
-                item.pop('image')
-        image_edges = smeargle.detect_edges(image, path)
-
-        approx = smeargle.detect_contours(image, image_edges)
-
-        if len(approx) != 4:
-            rotom.print_with_color(f"Skipping '{item['title']}' — could not detect card corners.", 3)
-            items.remove(item)
-            continue
-
-        aligned = smeargle.draw_contours(image, approx, path, args.get('dimensions', [480, 680]))
-        roi, _, status = smeargle.roi_extraction(aligned, path, args.get('roi', [40, 45, 60, 60]))
-        if status != "ok":
-            rotom.print_with_color(f"The ROI for '{item['title']}' may be weird. Reason: {status}", 3)
-        rois.append(porygon.cv2.resize(roi, args.get('input_shape', [128, 128])))
-        rotom.print_with_color(f"Finished Processing {item['title']}", 2)
-
-    truth_values, confs = porygon.predict_and_visualize(AI, porygon.np.array(rois), USE_RGB=USE_RGB)
-
-    for truth_value, conf, card in zip(truth_values, confs, items):
-        if truth_value == -1:
-            card['truth'] = False
-            card['note'] = "uncertain_low_conf"
-        else:
-            card['truth'] = bool(truth_value == 0)
-            card['confidence'] = float(conf)
-
-    rotom.pause(5)
-    return items
+            for result, detail in zip(results, card_details):
+                concl = result[0]
+                for misprint, summary in concl['misprints'].items():
+                    if summary["status"] in ["likely_misprint", "suspicious"]:
+                        detail['misprint'] = misprint
+                        detail['certainty'] = summary["prob"]
+                        detail['card'] = concl['card_id']
+            # Only keep details that have a misprint flagged
+            card_details = [d for d in card_details if 'misprint' in d]
+            suspected_cards.extend(card_details)
+        _save_to_database(suspected_cards)
+        break  # Remove this break to run continuously
+                
+def main():
+    args = module_arguments(
+        desc="""
+        Arceus is the master module that orchestrates the entire misprint detection pipeline.
+        It integrates Spinarak for eBay data extraction, Smeargle for image processing, and Porygon for misprint classification.
+        The module continuously monitors specified cards and flags any suspicious findings based on configurable thresholds.
+        """,
+        subcommands={
+            "health": {
+                "desc": "Check the health of all submodules (Spinarak, Smeargle, Porygon) and their dependencies.",
+            },
+            "run": {
+                "desc": "Run the full misprint detection pipeline in a continuous loop, processing specified cards and flagging suspicious findings.",
+                "args": {
+                    "--debug": {
+                        "action": "store_true",
+                        "help": "Enable debug logging for detailed output.",
+                    },
+                },
+            },
+        }
+    )
+    if not hasattr(args, "command") or args.command is None:
+        print("No command provided. Use --help for more information.")
+        return
+    if args.command == "health":
+        health_status = health()
+        print("Health Status:")
+        for module, status in zip(health_status[0], health_status[1]):
+            print(f"{module}: {'OK' if status else 'FAIL'}")
+    elif args.command == "run":
+        run(debug=args.debug)
 
 if __name__ == "__main__":
-    args = rotom.pass_arguments_to_main()
-    with open('here', 'w') as fp: fp.write(str(main(
-        args.defect,
-        args.price,
-        args.use_local_storage,
-        args.use_rgb,
-        args.kaggle_download,
-        args.verbose)))
+    main()
