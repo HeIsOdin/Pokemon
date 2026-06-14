@@ -91,7 +91,7 @@ def postgresql(sql: str, table: tuple, template : tuple[str, ...] = (), pairs: d
 
             table_names = ', '.join(table); sql = sql.replace('{{tables}}', table_names)
             filters = ' AND '.join([k+' = %s' for k in pairs.keys() if k not in template]); sql = sql.replace('{{filters}}', filters)
-            data = tuple(pairs.values())
+            data = tuple(pairs[k] for k in template)
 
             columns = ', '.join(template); sql = sql.replace('{{columns}}', columns)
             values = ', '.join(['%s' for _ in template]); sql = sql.replace('{{values}}', values)
@@ -177,7 +177,7 @@ def configure_logger(name: str, debug: bool = False) -> None:
         - name (str): The name of the logger (e.g., the module or class name).
         - debug (bool): logs will be printed to the console if true otherwise to a file.
     """
-    logger = logging.getLogger(name.title())
+    logger = logging.getLogger(name)
     os.makedirs('logs', exist_ok=True)
     if logger.handlers: return  # Avoid adding multiple handlers if logger is already configured
     if debug:
