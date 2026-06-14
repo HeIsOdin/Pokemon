@@ -32,6 +32,7 @@ def _load_essentials():
 def _save_to_database(card_details: list[dict]):
     logger = logging.getLogger(_NAME)
     for detail in card_details:
+        logger.warning(f"card similarity: {detail.get('similarity', 'N/A')}, misprint: {detail.get('misprint', 'N/A')}, certainty: {detail.get('certainty', 'N/A')}")
         postgresql("INSERT INTO {{tables}} ({{columns}}) VALUES ({{values}})", 
             env('POSTGRESQL_TABLE_FOR_REPORTS'),
             ('id', 'market_id', 'card', 'misprint', 'url', 'image', 'certainty'),
@@ -154,11 +155,13 @@ def run(**kwargs):
 
             for result, detail in zip(results, card_details):
                 concl = result[0]
+                if 'misprints' not in concl: continue
                 for misprint, summary in concl['misprints'].items():
                     if summary["status"] in ["likely_misprint", "suspicious"]:
                         detail['misprint'] = misprint
                         detail['certainty'] = summary["prob"]
                         detail['card'] = concl['card_id']
+                        detail['similarity'] = concl['card_similarity']
             # Only keep details that have a misprint flagged
             card_details = [d for d in card_details if 'misprint' in d]
             suspected_cards.extend(card_details)

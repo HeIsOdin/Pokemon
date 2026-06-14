@@ -151,7 +151,7 @@ def _search_pokemon_cards(token: str, query: str, price: tuple[float, float], li
 
     return {'itemSummaries': all_items}
 
-def _download_image(url: str) -> bytes:
+def _download_image(url: str) -> tuple[bytes, str]:
     """
     Download an image from eBay and optionally save it locally.
 
@@ -171,7 +171,7 @@ def _download_image(url: str) -> bytes:
             logger.debug(f"Failed to fetch at {res} resolution. Code: {response.status_code}")
             continue
 
-        return response.content
+        return response.content, high_res_url
     raise Exception(f"Failed to download image from {url}")
 
 def _get_card_details(items: dict, img_hashes: set, debug: bool = False) -> list[dict]:
@@ -208,7 +208,8 @@ def _get_card_details(items: dict, img_hashes: set, debug: bool = False) -> list
                 continue
 
             title = f"{sanitize_filename(title)}"
-            img = bytearray(_download_image(image_url))
+            img_byte, image_url = _download_image(image_url)
+            img = bytearray(img_byte)
 
             pypikachuId = hashlib.md5(img).hexdigest()
             img_hash = f"{pypikachuId[:8]}.jpg"

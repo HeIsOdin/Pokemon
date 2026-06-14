@@ -8,7 +8,7 @@
       "imagenet_mean": [0.485, 0.456, 0.406],
       "imagenet_std": [0.229, 0.224, 0.225]
     },
-
+    "identity_threshold": 0.90,
     "aligned_dimensions": [960, 1360]
   },
 
@@ -55,7 +55,7 @@
             },
 
             "thresholds": {
-              "suspicious": 0.5,
+              "suspicious": 0.55,
               "likely_misprint": 0.6
             }
           }

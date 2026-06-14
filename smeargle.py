@@ -602,6 +602,8 @@ def run(**kwargs) -> list[dict]:
                     "detector_confidence": float(conf_score),
                     "crop":                crop,
                 }
+                # if debug:
+                #     show_image(crop, f"{_NAME}_crop_{source_idx}_{det_idx}")
                 log.debug(
                     f"Image {source_idx} | det {det_idx} | bbox={entry['bbox']} "
                     f"| conf={entry['detector_confidence']:.2f}"

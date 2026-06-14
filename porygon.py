@@ -381,16 +381,33 @@ def _embed_one(img: MAT, encoder: NNM, transform: Compose, device: str) -> np.nd
     return _embed_batch([img], encoder, transform, device)[0]
 
 
-def _identify_card(img: MAT, gallery: dict, enc: NNM, trans: Compose, dev: str) -> tuple[str, list[dict]]:
+def _identify_card(img: MAT,gallery: dict,enc: NNM,trans: Compose,dev: str,config: dict,) -> tuple[dict, list[dict]]:
+    logger = logging.getLogger(_NAME)
     arrays = gallery["embeddings"]
     meta = gallery["metadata"]
+
     id_info = meta["identification"]
 
     query_embedding = _embed_one(img, enc, trans, dev)
     embeddings = arrays[id_info["embedding_key"]]
-    results = _retrieve_similar(query_embedding, embeddings, id_info["metadata"])
 
-    predicted_card = results[0]["card_id"] if results else ""
+    results = _retrieve_similar(query_embedding, embeddings, id_info["metadata"], k=5,)
+
+    if not results:
+        return {}, []
+
+    top = results[0]
+    top_similarity = float(top.get("similarity", 0.0))
+    predicted_card = {
+        "card": str(top.get("card_id", "")),
+        "similarity": top_similarity,
+    }
+
+    porygon_cfg = _get_porygon_config(config)
+    identity_threshold = float(porygon_cfg["identity_threshold"])
+
+    if top_similarity < identity_threshold:
+        return {}, results
     return predicted_card, results
 
 
@@ -459,7 +476,7 @@ def _defect_status(prob: float, suspicious: float, likely: float) -> str:
 
 def _identify_misprints(
     img: MAT,
-    card_id: str,
+    card_info: dict,
     gallery: dict,
     enc: NNM,
     trans: Compose,
@@ -468,6 +485,7 @@ def _identify_misprints(
 ) -> tuple[dict, list[dict]]:
     arrays = gallery["embeddings"]
     meta = gallery["metadata"]
+    card_id = card_info["card"]
 
     output_size = _get_aligned_dimensions(config, card_id)
     canonical = _load_canonical(card_id)
@@ -493,6 +511,7 @@ def _identify_misprints(
             if roi is None:
                 outputs.append({
                     "card_id": card_id,
+                    "card_similarity": card_info["similarity"],
                     "misprint": misprint_name,
                     "label": target_label,
                     "region": region_name,
@@ -518,6 +537,7 @@ def _identify_misprints(
 
             outputs.append({
                 "card_id": card_id,
+                "card_similarity": card_info["similarity"],
                 "misprint": misprint_name,
                 "label": target_label,
                 "region": region_name,
@@ -580,6 +600,7 @@ def _identify_misprints(
 
     conclusion = {
         "card_id": card_id,
+        "card_similarity": card_info["similarity"],
         "labels": sorted(set(labels)) if labels else ["0"],
         "misprints": misprint_summaries,
     }
@@ -611,7 +632,7 @@ def health(img: MAT, config: dict, target_conclusion: dict) -> tuple[list[str], 
     enc = None
     trans = None
     dev = None
-    card_id = ""
+    card_info = None
     conclusion = None
     config = load_config(_NAME, config)
 
@@ -637,7 +658,7 @@ def health(img: MAT, config: dict, target_conclusion: dict) -> tuple[list[str], 
     try:
         if gallery is None or enc is None or trans is None or dev is None:
             raise Exception("Gallery or encoder not properly initialized.")
-        card_id, id_results = _identify_card(img, gallery, enc, trans, dev)
+        card_info, id_results = _identify_card(img, gallery, enc, trans, dev, config)
         st = isinstance(id_results, list) and all(isinstance(r, dict) for r in id_results)
         if not st:
             logger.warning(f"Identification results have unexpected structure: {id_results}")
@@ -650,7 +671,9 @@ def health(img: MAT, config: dict, target_conclusion: dict) -> tuple[list[str], 
     try:
         if gallery is None or enc is None or trans is None or dev is None:
             raise Exception("Gallery or encoder not properly initialized.")
-        conclusion, misprint_results = _identify_misprints(img, card_id, gallery, enc, trans, dev, config)
+        if not card_info:
+            raise Exception("Card information not available from identification step.")
+        conclusion, misprint_results = _identify_misprints(img, card_info, gallery, enc, trans, dev, config)
         st = isinstance(misprint_results, list) and all(isinstance(r, dict) for r in misprint_results)
         if not st:
             logger.warning(f"Misprint results have unexpected structure: {misprint_results}")
@@ -688,12 +711,19 @@ def run(**kwargs):
 
     all_results: list[tuple[dict, list[dict]]] = []
     for img in imgs:
-        predicted_card, id_results = _identify_card(img, gallery, enc, trans, dev)
-        if not predicted_card:
+        predicted_card_info, id_results = _identify_card(img, gallery, enc, trans, dev, config)
+        if not predicted_card_info:
             all_results.append(({"card_id": "", "labels": ["0"], "prob": None}, []))
             continue
-
-        results = _identify_misprints(img, predicted_card, gallery, enc, trans, dev, config)
+        results = _identify_misprints(img, predicted_card_info, gallery, enc, trans, dev, config)
+        # if debug:
+        #     conclusion, misprint_results = results
+        #     logger.debug(f"Predicted card: {predicted_card_info}")
+        #     logger.debug(f"Misprint conclusion: {conclusion}")
+        #     for mr in misprint_results:
+        #         logger.debug(f"  Region '{mr['region']}': status={mr['status']} prob={mr['probability']} inliers={mr['inliers']}")
+        #         if mr.get("roi") is not None:
+        #             show_image(mr["roi"], f"ROI - {mr['misprint']} {mr['region']}")
         all_results.append(results)
 
     return all_results
