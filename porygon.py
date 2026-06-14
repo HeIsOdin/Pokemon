@@ -27,16 +27,16 @@ import logging
 import random
 
 _NAME = "porygon"
-_KAGGLE_ARTIFACT = os.path.join(env("KAGGLE_ARTIFACT", "kaggle")[0])
+# _KAGGLE_ARTIFACT = os.path.join(env("KAGGLE_ARTIFACT", "kaggle")[0])
 
-_MAX_FALSES = int(env("MAX_FALSES", "5")[0])
-_INPUT_DIR = env("INPUT_DIR", os.path.join(".", "input"))[0]
-_OUTPUT_DIR = env("IMAGE_DEBUG_DIR", os.path.join(".", "output"))[0]
-_DATASET_DIR = env("PORYGON_DATASET_DIR", os.path.join("datasets", "gallery"))[0]
-_GALLERY_DIR = os.path.join(_KAGGLE_ARTIFACT, env("GALLERY_DIR", "gallery")[0])
-_EMBEDDINGS_FILE = "embeddings.npz"
-_METADATA_FILE = "metadata.json"
-_SAMPLE_SIZE = int(env("SAMPLE_SIZE", "50")[0])
+# _MAX_FALSES = int(env("MAX_FALSES", "5")[0])
+# _INPUT_DIR = env("INPUT_DIR", os.path.join(".", "input"))[0]
+# _OUTPUT_DIR = env("IMAGE_DEBUG_DIR", os.path.join(".", "output"))[0]
+# _DATASET_DIR = env("PORYGON_DATASET_DIR", os.path.join("datasets", "gallery"))[0]
+# _GALLERY_DIR = os.path.join(_KAGGLE_ARTIFACT, env("GALLERY_DIR", "gallery")[0])
+# _EMBEDDINGS_FILE = "embeddings.npz"
+# _METADATA_FILE = "metadata.json"
+# _SAMPLE_SIZE = int(env("SAMPLE_SIZE", "50")[0])
 
 TILE_SIZE = (200, 280)
 BORDER = 4
@@ -77,8 +77,9 @@ def _strongest_status(statuses: list[str]) -> str:
         return "normal"
     return max(statuses, key=_status_rank)
 
-def _load_canonical(card_id: str) -> MAT:
+def load_canonical(card_id: str) -> MAT:
     """Load canonical from packaged gallery first, then fall back to dataset folder."""
+    _GALLERY_DIR = env("GALLERY_DIR", os.path.join(".", "kaggle", "gallery"))[0]
     path = os.path.join(_GALLERY_DIR, "canonicals", f"{card_id}.jpg")
     if os.path.isfile(path):
         img = cv2.imread(path, cv2.IMREAD_COLOR)
@@ -88,7 +89,7 @@ def _load_canonical(card_id: str) -> MAT:
     raise Exception(f"Canonical image not found for card_id '{card_id}' at path '{path}'")
 
 
-def _load_data_from_directory(path: str, qa: bool = False) -> list[tuple[MAT, str, str]]:
+def _load_data_from_directory(path: str, qa: bool = False, sample_size: int = 50) -> list[tuple[MAT, str, str]]:
     """
     Load labeled images from a directory. Filenames should end with __<int_label>.
     This is build/manual tooling, not the main inference path.
@@ -110,7 +111,7 @@ def _load_data_from_directory(path: str, qa: bool = False) -> list[tuple[MAT, st
     except Exception as e:
         logger.exception(f"Error accessing directory '{path}': {e}")
 
-    if len(filenames) < _SAMPLE_SIZE:
+    if len(filenames) < sample_size:
         raise Exception(f"{path} has too few images!")
 
     for filepath in filenames:
@@ -127,7 +128,7 @@ def _load_data_from_directory(path: str, qa: bool = False) -> list[tuple[MAT, st
         ret.append((img, label, filepath))
 
     if qa:
-        return random.sample(ret, min(_SAMPLE_SIZE, len(ret))) if ret else []
+        return random.sample(ret, min(sample_size, len(ret))) if ret else []
     return ret
 
 
@@ -136,6 +137,13 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
     debug = debug or qa or progress
     configure_logger(_NAME, debug=debug)
     logger = logging.getLogger(_NAME)
+    _DATASET_DIR, _INPUT_DIR, _OUTPUT_DIR = env("PORYGON_DATASET_DIR,INPUT_DIR,IMAGE_DEBUG_DIR",
+        ','.join([
+            os.path.join("datasets", "gallery"),
+            os.path.join(".", "input"),
+            os.path.join(".", "output"),
+    ]))
+    _MAX_FALSES, _SAMPLE_SIZE = tuple(map(int, env("MAX_FALSES,SAMPLE_SIZE", "5,50")))
 
     if progress:
         if not os.path.isdir(_DATASET_DIR):
@@ -180,24 +188,16 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
     for image, label, file in _load_data_from_directory(input_dir):
         try:
             file = sanitize_filename(file)
-            normal_exist_path = os.path.isfile(os.path.join(_DATASET_DIR, f"0__{file}"))
-            misprint_exist_path = os.path.isfile(os.path.join(_DATASET_DIR, f"1__{file}"))
-            reject_exist_path = os.path.isfile(os.path.join(_DATASET_DIR, f"2__{file}"))
-
-            if not qa and (reject_exist_path or normal_exist_path or misprint_exist_path):
-                logger.info(f"Skipping '{file}' because it has already been processed.")
-                continue
-
             choice = show_image(image, _NAME)
             if choice is None:
                 logger.debug(f"User skipped '{file}'")
-                if qa and label != "2":
+                if qa and label != "x":
                     rejects.append(file)
                 if debug:
                     save_image(image, os.path.join(_OUTPUT_DIR, file), "skipped")
             elif not choice:
                 logger.debug(f"User identified '{file}' as a misprint")
-                if qa and label != "1":
+                if qa and (label == "0" or label == "x"):
                     rejects.append(file)
                 if debug:
                     save_image(image, os.path.join(_OUTPUT_DIR, file), "rejected")
@@ -223,7 +223,9 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
         logger.warning("Rejected files: " + ", ".join(rejects))
 
 
-def _create_yaml_and_json():
+def _create_yaml_and_json(directories: dict):
+    _GALLERY_DIR, _DATASET_DIR = directories["gallery_dir"], directories["dataset_dir"]
+    _EMBEDDINGS_FILE, _METADATA_FILE = directories["embeddings_file"], directories["metadata_file"]
     paths = {
         "gallery_dir": os.path.basename(_GALLERY_DIR),
         "embeddings_file": _EMBEDDINGS_FILE,
@@ -241,7 +243,19 @@ def _create_yaml_and_json():
 
 def push(message: str):
     logger = logging.getLogger(_NAME)
-    _create_yaml_and_json()
+    _KAGGLE_ARTIFACT = os.path.join(env("KAGGLE_ARTIFACT", "kaggle")[0])
+    _DATASET_DIR, _GALLERY_DIR = env("PORYGON_DATASET_DIR,GALLERY_DIR",
+        ','.join([
+            os.path.join("datasets", "gallery"),
+            os.path.join(_KAGGLE_ARTIFACT, "gallery"),
+    ]))
+    _EMBEDDINGS_FILE, _METADATA_FILE = env("EMBEDDINGS_FILE,METADATA_FILE", "embeddings.npz,metadata.json")
+    _create_yaml_and_json({
+        "gallery_dir": _GALLERY_DIR,
+        "dataset_dir": _DATASET_DIR,
+        "embeddings_file": _EMBEDDINGS_FILE,
+        "metadata_file": _METADATA_FILE,
+    })
     res = push_dataset_to_kaggle(os.path.abspath(_DATASET_DIR), message)
     if res.returncode == 0:
         logger.debug("Dataset pushed to Kaggle successfully.")
@@ -253,12 +267,19 @@ def load_gallery(gallery: str | None | dict = None) -> dict:
     """Load embeddings.npz and metadata.json from a gallery directory, or return provided gallery dict."""
     if isinstance(gallery, dict):
         return gallery
+    _KAGGLE_ARTIFACT = os.path.join(env("KAGGLE_ARTIFACT", "kaggle")[0])
+    _GALLERY_DIR = env("GALLERY_DIR", os.path.join(_KAGGLE_ARTIFACT, "gallery"))[0]
+    _EMBEDDINGS_FILE, _METADATA_FILE = env("EMBEDDINGS_FILE,METADATA_FILE", "embeddings.npz,metadata.json")
 
     gallery_dir = gallery if isinstance(gallery, str) else _GALLERY_DIR
     embeddings_path = os.path.join(gallery_dir, _EMBEDDINGS_FILE)
     metadata_path = os.path.join(gallery_dir, _METADATA_FILE)
 
     gallery_arrays = np.load(embeddings_path)
+    if not os.path.isfile(embeddings_path):
+        raise SystemExit(f"Embeddings file not found at '{embeddings_path}'")
+    if not os.path.isfile(metadata_path):
+        raise SystemExit(f"Metadata file not found at '{metadata_path}'")
     with open(metadata_path, "r") as f:
         gallery_meta: dict = json.load(f)
 
@@ -396,6 +417,13 @@ def _identify_card(img: MAT,gallery: dict,enc: NNM,trans: Compose,dev: str,confi
     if not results:
         return {}, []
 
+    logger.debug(f"""
+                \nTop retrieval results: {[{
+                    **r,
+                    'card_id': r.get('card_id', 'N/A'),
+                    'similarity': r.get('similarity', 0.0),}
+                    for r in results]}
+                """)
     top = results[0]
     top_similarity = float(top.get("similarity", 0.0))
     predicted_card = {
@@ -434,7 +462,7 @@ def _extract_aligned_roi(
         return None, None, None, 0
 
     matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
-    raw_matches = matcher.knnMatch(des_img, des_ref, k=2)
+    raw_matches = matcher.knnMatch(des_img, des_ref, k=2) # knnMatch for ratio test (0.75 threshold)
 
     good: list[cv2.DMatch] = []
     for pair in raw_matches:
@@ -483,12 +511,13 @@ def _identify_misprints(
     dev: str,
     config: dict,
 ) -> tuple[dict, list[dict]]:
+    logger = logging.getLogger(_NAME)
     arrays = gallery["embeddings"]
     meta = gallery["metadata"]
-    card_id = card_info["card"]
+    card_id = str(card_info["card"])
 
     output_size = _get_aligned_dimensions(config, card_id)
-    canonical = _load_canonical(card_id)
+    canonical = load_canonical(card_id)
 
     if canonical is None:
         raise Exception(f"No canonical found for {card_id}")
@@ -527,8 +556,8 @@ def _identify_misprints(
             bias = arrays[region_info["bias_key"]]
 
             prob = _predict_defect_probability(roi_embedding, weight, bias)
-
-            thresholds = region_info["thresholds"]
+            card_cfg = _get_cards_config(config).get(card_id, {})
+            thresholds = card_cfg["misprints"][misprint_name]["thresholds"]
             status = _defect_status(
                 prob,
                 suspicious=float(thresholds["suspicious"]),
@@ -588,15 +617,22 @@ def _identify_misprints(
                 labels.append(target_label)
                 break
 
-    # all_probs = [
-    #     float(summary["prob"])
-    #     for summary in misprint_summaries.values()
-    # ]
+    all_probs = [
+        float(summary["prob"])
+        for summary in misprint_summaries.values()
+    ]
 
-    # all_statuses = [
-    #     str(summary["status"])
-    #     for summary in misprint_summaries.values()
-    # ]
+    all_statuses = [
+        str(summary["status"])
+        for summary in misprint_summaries.values()
+    ]
+    logger.debug(f"""
+                Card '{card_id}'
+                misprint summary: detected={detected_misprints},
+                labels={labels},
+                probs={all_probs},
+                statuses={all_statuses}"""
+            )
 
     conclusion = {
         "card_id": card_id,
@@ -698,10 +734,10 @@ def health(img: MAT, config: dict, target_conclusion: dict) -> tuple[list[str], 
     return checklist, checks
 
 
-def run(**kwargs):
+def run(**kwargs) -> list[tuple[dict, list[dict]]]:
     debug: bool = kwargs.get("debug", False)
-    gallery = load_gallery(kwargs.get("model", None))
-    config = load_config(_NAME, kwargs.get("config", {}))
+    gallery = load_gallery(kwargs.get("gallery", None))
+    config = load_config("", kwargs.get("config", {}))
     enc, trans, dev = build_encoder(kwargs.get("encoder", None), config=config)
     imgs: list[MAT] = kwargs.get("imgs", [])
 
@@ -713,7 +749,9 @@ def run(**kwargs):
     for img in imgs:
         predicted_card_info, id_results = _identify_card(img, gallery, enc, trans, dev, config)
         if not predicted_card_info:
-            all_results.append(({"card_id": "", "labels": ["0"], "prob": None}, []))
+            all_results.append(
+                ({"card_id": "", "card_similarity": "", "labels": ["0"], "prob": None}, [])
+                )
             continue
         results = _identify_misprints(img, predicted_card_info, gallery, enc, trans, dev, config)
         # if debug:
@@ -748,7 +786,7 @@ def main():
             "run": {
                 "desc": "Runtime inference entrypoint placeholder.",
                 "args": {
-                    "--model": {"type": str, "help": "Path to gallery directory or preloaded gallery dict"},
+                    "--gallery": {"type": str, "help": "Path to gallery directory or preloaded gallery dict"},
                     "--config": {"type": str, "help": "Path to config.json with porygon settings", "default": "config.json"},
                     "--encoder": {"type": str, "help": "Path to pretrained encoder weights (optional)"},
                     "--data": {"type": str, "help": "Path to input images or preloaded list of images", "default": "input"}
