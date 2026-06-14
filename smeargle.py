@@ -23,16 +23,7 @@ import shutil
 import yaml
 import json
 
-_NAME            = 'smeargle'
-_KAGGLE_ARTIFACT = os.path.join(env("KAGGLE_ARTIFACT", "kaggle")[0])
-_MAX_FALSES      = int(env("MAX_FALSES", "5")[0])
-_RUN_DIR         = env("RUN_DIR", 'localization')[0]
-_YOLO_DIR        = os.path.join(_KAGGLE_ARTIFACT, env("YOLO_DIR", os.path.join("runs", "detect"))[0])
-_MODELS_DIR      = env("MODELS_DIR", 'models')[0]
-_INPUT_DIR       = env("INPUT_DIR", os.path.join('.', 'input'))[0]
-_OUTPUT_DIR      = env("IMAGE_DEBUG_DIR", os.path.join('.', 'output'))[0]
-_DATASET_DIR     = env("SMEARGLE_DATASET_DIR", os.path.join('datasets', 'localization'))[0]
-_PREDICTIONS_DIR = env("PREDICTIONS_DIR", 'predictions')[0]
+_NAME = 'smeargle'
 
 _SAMPLE_SIZE = int(env("SAMPLE_SIZE", "50")[0])
 _SPLIT_RATIO = tuple(map(float, env("SPLIT_RATIO", "0.8 0.1 0.1")[0].split())) # train/val/test
@@ -42,9 +33,6 @@ _MAX_ASPECT_RATIO       = 0.90
 _MIN_BOX_AREA_RATIO     = 0.20
 _MAX_BOX_AREA_RATIO     = 0.98
 _MIN_CONTOUR_AREA_RATIO = 0.10
-
-_MODEL_PATH = env("YOLO_MODEL_PATH",
-                os.path.join(_YOLO_DIR, _MODELS_DIR, _RUN_DIR, "weights", "best.pt"))[0]
 
 def _saveForYOLO(img: MAT, label: str, filename: str) -> str:
     """
@@ -56,6 +44,7 @@ def _saveForYOLO(img: MAT, label: str, filename: str) -> str:
     Returns:
         str: Path where the image and label were saved, or empty string on failure.
     """
+    _DATASET_DIR = env("SMEARGLE_DATASET_DIR", os.path.join('datasets', 'localization'))[0]
     filename = os.path.splitext(filename)[0]
     path = os.path.join(_DATASET_DIR, filename)
     cv2.imwrite(f"{path}.jpg", img)
@@ -151,14 +140,14 @@ def _detectContours(img: MAT) -> MAT | None:
             approx = cv2.approxPolyDP(card_contour, eps * peri, True)
             if len(approx) == 4:
                 return approx
-            hull = cv2.convexHull(card_contour)
-            approx = cv2.approxPolyDP(hull, 0.02 * cv2.arcLength(hull, True), True)
-            if len(approx) == 4:
-                logger.warning("[3] Using convex hull fallback")
-                return approx
-            rect = cv2.minAreaRect(card_contour)
-            box = cv2.boxPoints(rect)
-            return np.array(box, dtype=np.int32)
+        hull = cv2.convexHull(card_contour)
+        approx = cv2.approxPolyDP(hull, 0.02 * cv2.arcLength(hull, True), True)
+        if len(approx) == 4:
+            logger.warning("[3] Using convex hull fallback")
+            return approx
+        rect = cv2.minAreaRect(card_contour)
+        box = cv2.boxPoints(rect)
+        return np.array(box, dtype=np.int32)
     return None
 
 def _contourToYOLO(image: MAT, approx: np.ndarray,
@@ -248,6 +237,13 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
     debug = debug or qa or progress
     configure_logger(_NAME, debug=debug)
     logger = logging.getLogger(_NAME)
+    _DATASET_DIR,_INPUT_DIR,_OUTPUT_DIR = env("SMEARGLE_DATASET_DIR,INPUT_DIR,IMAGE_DEBUG_DIR",
+            ','.join([
+                os.path.join('datasets', 'localization'),
+                os.path.join('.', 'input'),
+                os.path.join('.', 'output')
+        ]))
+    _MAX_FALSES = int(env("MAX_FALSES", "5")[0])
     if progress:
         accepted = rejected = 0
         if not os.path.isdir(_DATASET_DIR): raise Exception(f"'{_DATASET_DIR}' does not exist")
@@ -266,9 +262,6 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
     if not os.path.isdir(input_dir) or len([f for f in os.listdir(input_dir)]) < _SAMPLE_SIZE:
         logger.error(f"{input_dir} has too few images. Run Spinarak to populate it...")
         return
-
-    if not input_dir or not os.path.isdir(input_dir):
-        raise Exception(f"Input directory '{input_dir}' does not exist or is not a directory.")
 
     files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and
             os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png")]
@@ -341,7 +334,7 @@ def generate(qa: bool = False, progress: bool = False, debug: bool = False):
         logger.warning("Rejected files: " + ", ".join(f"{f} (label: '{l}')" for f, l in rejects))
 
 
-def _splitDataset(image_files: list[str]):
+def _splitDataset(dataset_dir: str, image_files: list[str]):
     """
     This function splits the dataset (train, val, test) based on _SPLIT_RATIO.
     It assumes that _DATASET_DIR contains all the processed images and labels.
@@ -364,30 +357,34 @@ def _splitDataset(image_files: list[str]):
 
     for split, files in splits.items():
         for file in files:
-            label_file = os.path.join(_DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
-            dest = os.path.join(_DATASET_DIR, "images", split, file)
-            shutil.move(os.path.join(_DATASET_DIR, file), dest)
+            label_file = os.path.join(dataset_dir, f"{os.path.splitext(file)[0]}.txt")
+            dest = os.path.join(dataset_dir, "images", split, file)
+            shutil.move(os.path.join(dataset_dir, file), dest)
             if os.path.isfile(label_file):
-                dest = os.path.join(_DATASET_DIR, "labels", split, os.path.basename(label_file))
+                dest = os.path.join(dataset_dir, "labels", split, os.path.basename(label_file))
                 shutil.move(label_file, dest)
 
-def _create_yaml_and_json():
+def _create_yaml_and_json(directories: dict[str, str]):
     """
     This function creates a YAML file for the dataset configuration.
     It assumes that the dataset has been split into train, val, and test directories.
     """
+    dataset_dir = directories["dataset_dir"]
+    model_dir = directories["model_dir"]
+    run_dir = directories["run_dir"]
+    predictions_dir = directories["predictions_dir"]
     paths = {
         "train": "images/train",
         "val": "images/val",
         "test": "images/test",
         "names": {"0": "pokemon_card"},
-        "model_dir": _MODELS_DIR,
-        "run_dir": _RUN_DIR,
-        "predictions_dir": _PREDICTIONS_DIR,
+        "model_dir": model_dir,
+        "run_dir": run_dir,
+        "predictions_dir": predictions_dir
     }
     config = load_config(_NAME)
-    yaml_path = os.path.join(_DATASET_DIR, "dataset.yaml")
-    json_path = os.path.join(_DATASET_DIR, "dataset.json")
+    yaml_path = os.path.join(dataset_dir, "dataset.yaml")
+    json_path = os.path.join(dataset_dir, "dataset.json")
     with open(yaml_path, "w") as f: yaml.dump(paths, f, default_flow_style=False, sort_keys=False)
     with open(json_path, "w") as f: json.dump(config, f, indent=4)
 
@@ -398,6 +395,7 @@ def push(message: str):
         - remote_dataset_path (str): The path where the dataset will be located on Kaggle.
     """
     logger = logging.getLogger(_NAME)
+    _DATASET_DIR = env("SMEARGLE_DATASET_DIR", os.path.join('datasets', 'localization'))[0]
     # load dataset files
     for m in ("images", "labels"):
         for s in ("train", "val", "test"):
@@ -411,10 +409,15 @@ def push(message: str):
             label_file = os.path.join(_DATASET_DIR, f"{os.path.splitext(file)[0]}.txt")
             if os.path.isfile(label_file): positives.append(file)
             else: negatives.append(file)
-    _splitDataset(positives)
-    _splitDataset(negatives)
+    _splitDataset(_DATASET_DIR, positives)
+    _splitDataset(_DATASET_DIR, negatives)
     
-    _create_yaml_and_json()
+    _create_yaml_and_json({
+        "dataset_dir": _DATASET_DIR,
+        "model_dir": env("MODELS_PATH_FOR_PUSH", "models")[0],
+        "run_dir": env("RUN_DIR_FOR_PUSH", 'localization')[0],
+        "predictions_dir": env("PREDICTIONS_DIR_FOR_PUSH", 'predictions')[0]
+    })
     res = push_dataset_to_kaggle(os.path.abspath(_DATASET_DIR), message)
     if res.returncode == 0:
         logger.debug("Dataset pushed to Kaggle successfully.")
@@ -430,6 +433,9 @@ def load_yolo_model(yolo_model: str | None | YOLO = None) -> YOLO:
     if isinstance(yolo_model, YOLO): return yolo_model
     
     logger = logging.getLogger(_NAME)
+    
+    _MODEL_PATH = env("YOLO_MODEL_PATH",
+                    os.path.join('kaggle', 'runs', 'detect', 'models', 'localization', 'weights', 'best.pt'))[0]
     yolo_model_path = yolo_model if isinstance(yolo_model, str) else _MODEL_PATH
     logger.debug(f"Attempting to load YOLO model from '{yolo_model_path}'")
     if not os.path.isfile(yolo_model_path): raise SystemExit(f"'{yolo_model_path}' is invalid")
@@ -502,25 +508,27 @@ def health(raw_images: list[bytearray]) -> tuple[list[str], list[bool]]:
     checklist.append("Contours detected and exported as YOLO labels")
     try:
         if imgs is None: raise Exception("No images to process")
+        mini_checks = []
         for img in imgs:
             if img is not None:
                 approx = _detectContours(img)
                 if approx is not None and len(approx) == 4:
                     yolo_img, label = _contourToYOLO(img.copy(), approx)
                     if yolo_img is not None and label:
-                        checks.append(True)
+                        mini_checks.append(True)
                     else:
                         if yolo_img is None:
                             log.warning("YOLO image generation failed for an image")
                         if not label:
                             log.warning("YOLO label generation failed for an image")
-                        checks.append(False)
+                        mini_checks.append(False)
                 else:
                     log.warning("Contour detection failed for an image")
-                    checks.append(False)
+                    mini_checks.append(False)
             else:
                 log.warning("One of the images is None, skipping contour detection")
-                checks.append(False)
+                mini_checks.append(False)
+            checks.append(all(mini_checks))
     except Exception as e:
         log.exception(f"Contour detection or YOLO label generation failed: {e}")
         checks.append(False)
@@ -612,6 +620,10 @@ def run(**kwargs) -> list[dict]:
     return all_results
 
 def main():
+    _INPUT_DIR, _MODEL_PATH = env("INPUT_DIR,YOLO_MODEL_PATH", ','.join([
+        os.path.join('.', 'input'),
+        os.path.join('runs', 'detect', 'models', 'best.pt')
+    ]))
     args = module_arguments(
         desc="Smeargle: Pokémon card image processor for ROI extraction and dataset generation.",
         subcommands={
